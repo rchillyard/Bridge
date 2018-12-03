@@ -1,4 +1,7 @@
-import com.phasmidsoftware.bridge.RecapParser
+package com.phasmidsoftware.bridge
+
+import com.phasmid.laScala.values.Rational
+import org.scalatest.{FlatSpec, Matchers}
 
 /**
   * @author scalaprof
@@ -47,16 +50,16 @@ class ScoreSpec extends FlatSpec with Matchers {
     val p1 = Play(2,1,PlayResult(Right(130)))
     val p2 = Play(1,2,PlayResult(Right(150)))
     val t = Traveler(1,Seq(p1,p2))
-    t.matchpoint(p1) shouldBe Some(Rational.zero)
-    t.matchpoint(p2) shouldBe Some(Rational.one)
+    t.matchpoint(p1) shouldBe Some(Rational.zero[Int])
+    t.matchpoint(p2) shouldBe Some(Rational.one[Int])
   }
   it should "matchpoint properly (2)" in {
     val p1 = Play(2,1,PlayResult(Right(130)))
     val p2 = Play(1,2,PlayResult(Right(150)))
     val t = Traveler(1,Seq(p1,p2))
     val mps = t.matchpointIt
-    mps.head.mp shouldBe Some(Rational.zero)
-    mps.tail.head.mp shouldBe Some(Rational.one)
+    mps.head.mp shouldBe Some(Rational.zero[Int])
+    mps.tail.head.mp shouldBe Some(Rational.one[Int])
   }
   it should "matchpoint properly (3)" in {
     val p1 = Play(2,1,PlayResult(Right(130)))
@@ -64,7 +67,7 @@ class ScoreSpec extends FlatSpec with Matchers {
     val p3 = Play(3,3,PlayResult(Right(150)))
     val t = Traveler(1,Seq(p1,p2,p3))
     val mps = t.matchpointIt
-    mps.head.mp shouldBe Some(Rational.zero)
+    mps.head.mp shouldBe Some(Rational.zero[Int])
     mps.tail.head.mp shouldBe Some(Rational(3,4))
     Score.mpsAsString(mps.tail.head.mp.get,2) shouldBe "1.5"
     mps.tail.tail.head.mp shouldBe Some(Rational(3,4))
@@ -77,7 +80,7 @@ class ScoreSpec extends FlatSpec with Matchers {
     val t = r.get
     val firstEntry = t.ps.head
     val mps = firstEntry.matchpoints(t)
-    mps shouldBe Some(Rational.zero)
+    mps shouldBe Some(Rational.zero[Int])
   }
   it should "calculate mps" in {
     val traveler = "   T 1\n    1 1 420\n    2 2 420\n    3 4 420\n    4 3 140\n    5 5 170\n    6 6 -50\n    7 6 420."

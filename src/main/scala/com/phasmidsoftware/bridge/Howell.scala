@@ -5,6 +5,7 @@ import com.phasmidsoftware.bridge.Howell.{MovePlan, Moves, Trio}
 import scala.annotation.tailrec
 import scala.collection.generic.CanBuildFrom
 import scala.collection.mutable
+import scala.language.higherKinds
 
 /**
  * @author robinhillyard
@@ -21,22 +22,24 @@ case class Howell(tables: Int, movePlan: MovePlan) {
     val head = movement.head
     val tail = movement.tail
     val result = for (e <- current.encounters) yield e.move(head, current)
-    implicit val t = tables
+    implicit val t: Int = tables
     (Position(result),Movement(tail))
   }
   private def getMovement(implicit tables: Int): Movement = Movement(Triple.toStreams(movePlan))
-  def positions(start: Position) = {
+
+  def positions(start: Position): List[Position] = {
     @tailrec def loop(positions: List[Position], posMov: (Position,Movement), moves: Int): List[Position] = moves match {
       case 0 => positions
       case _ => loop(positions :+ posMov._1, this.moves(posMov._1, posMov._2), moves-1)
     }
-    implicit val t = tables
+
+    implicit val t: Int = tables
     loop(List(), (start, getMovement), tables)
   }
 }
 
 case class Position(encounters: Seq[Encounter]) {
-  override def toString = encounters mkString " "
+  override def toString: String = encounters mkString " "
 }
 
 abstract class MappedProduct3[T,F[_]](_1: T, _2: T, _3: T) extends Product3[T,T,T] {
@@ -52,18 +55,20 @@ abstract class MappedProduct3[T,F[_]](_1: T, _2: T, _3: T) extends Product3[T,T,
 }
 
 case class Triple[T](_1: T, _2: T, _3: T) extends Product3[T,T,T] {
-  def map[U](f: T=>U): Triple[U] = ??? // TODO
+  def map[U](f: T => U): Triple[U] = Triple(f(_1), f(_2), f(_3))
   override def toString = s"n:${_1} e:${_2} b:${_3}"
 }
 
 object Triple {
-  def zip[U](ust: Triple[Stream[U]]): Stream[Triple[U]] = ??? // TODO
-  def toStreams[U](ust: Triple[Seq[U]]): Triple[Stream[U]] = ??? // TODO
+  def zip[U](ust: Triple[Stream[U]]): Stream[Triple[U]] = ust._1 zip ust._2 zip ust._3 map { case ((x, y), z) => Triple(x, y, z) }
+
+  def toStreams[U](ust: Triple[Seq[U]]): Triple[Stream[U]] = ust.map(us => Stream.continually(us).flatten)
 }
 
 case class Movement(moves: Stream[Trio]) {
-  def head = moves.head
-  def tail = moves.tail
+  def head: Trio = moves.head
+
+  def tail: Stream[Trio] = moves.tail
 }
 
 object Movement{
@@ -77,13 +82,13 @@ object Howell extends App {
   type Moves = Triple[Stream[Int]]
 
   def howell7: (Howell,Position) = {
-    implicit val tables = 7
+    implicit val tables: Int = 7
     val howell = Howell(tables, Triple(Seq(-3), Seq(-2), Seq(-1)))
     val start = Position(Seq(Encounter(1, 1, 1, 1), Encounter(2, 1, 1, 2), Encounter(3, 1, 2, 3), Encounter(4, 2, 1, 4), Encounter(5, 2, 1, 5), Encounter(6, 1, 1, 6), Encounter(7, 1, 1, 7)))
     (howell,start)
   }
   def howell9: (Howell,Position) = {
-    implicit val tables = 9
+    implicit val tables: Int = 9
     val howell = Howell(tables, Triple(Seq(-3, -3, -2), Seq(-2), Seq(-1)))
     val start = Position(Seq(Encounter(1, 1, 1, 1), Encounter(2, 1, 1, 2), Encounter(3, 1, 2, 3), Encounter(4, 2, 1, 4), Encounter(5, 2, 1, 5), Encounter(6, 1, 1, 6), Encounter(7, 1, 1, 7), Encounter(8, 1, 1, 8), Encounter(9, 1, 1, 9)))
     (howell,start)
@@ -101,7 +106,7 @@ case class Encounter(table: Int, n: Int, e: Int, b: Int)(implicit tables: Int) {
     Encounter.fromPrevious(table,x)
   }
   // Transforms a number n in the range 1-tables..infinity into the range 1..tables
-  def modulo(n: Int): Int = ??? // TODO
+  def modulo(n: Int): Int = (n + tables - 1) % tables + 1
   override def toString = s"T$table: $n-$e@#$b"
 }
 object Encounter {

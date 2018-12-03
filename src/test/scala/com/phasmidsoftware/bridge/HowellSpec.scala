@@ -1,3 +1,7 @@
+package com.phasmidsoftware.bridge
+
+import org.scalatest.{FlatSpec, Inside, Matchers}
+
 /**
  * @author robinhillyard
  */

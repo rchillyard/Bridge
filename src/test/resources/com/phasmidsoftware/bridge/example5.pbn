@@ -1,0 +1,52 @@
+% PBN 2.1
+% EXPORT
+%Content-type: text/pbn; charset=ISO-8859-1
+%Creator: Bridgewebs
+%
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "1"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "N"]
+[Vulnerable "None"]
+[Deal "N:A97653.94.AT5.A8 K.JT862.K987.754 Q42.AKQ73.62.KT3 JT8.5.QJ43.QJ962"]
+[OptimumScore "NS 450"]
+[DoubleDummyTricks "9ba679ba672236622366"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S 11
+N  H 10
+N  D  6
+N  C  7
+N NT  9
+E  S  2
+E  H  3
+E  D  6
+E  C  6
+E NT  2
+S  S 11
+S  H 10
+S  D  6
+S  C  7
+S NT  9
+W  S  2
+W  H  3
+W  D  6
+W  C  6
+W NT  2
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1101 4H    S 10
+104  1106 3H    S 11
+105  1108 4H    S 10
+106  1110 5H    S 11
+107  1103 4H    S 10
+108  1105 4H    S 10
+109  1107 2H    N  9
+110  1109 5H    S 10
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]

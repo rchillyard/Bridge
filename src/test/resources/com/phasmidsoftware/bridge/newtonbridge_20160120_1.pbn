@@ -1,0 +1,1444 @@
+% PBN 2.1
+% EXPORT
+%Content-type: text/pbn; charset=ISO-8859-1
+%Creator: Bridgewebs
+%
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "1"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "N"]
+[Vulnerable "None"]
+[Deal "N:A97653.94.AT5.A8 K.JT862.K987.754 Q42.AKQ73.62.KT3 JT8.5.QJ43.QJ962"]
+[OptimumScore "NS 450"]
+[DoubleDummyTricks "9ba679ba672236622366"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S 11
+N  H 10
+N  D  6
+N  C  7
+N NT  9
+E  S  2
+E  H  3
+E  D  6
+E  C  6
+E NT  2
+S  S 11
+S  H 10
+S  D  6
+S  C  7
+S NT  9
+W  S  2
+W  H  3
+W  D  6
+W  C  6
+W NT  2
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1101 4H    S 10
+104  1106 3H    S 11
+105  1108 4H    S 10
+106  1110 5H    S 11
+107  1103 4H    S 10
+108  1105 4H    S 10
+109  1107 2H    N  9
+110  1109 5H    S 10
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "2"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "E"]
+[Vulnerable "NS"]
+[Deal "E:84.AK963.KJ82.JT K63.52.AQT9.Q752 A75.Q8.63.AK9643 QJT92.JT74.754.8"]
+[OptimumScore "EW 400"]
+[DoubleDummyTricks "38363383639587a9587a"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  8
+N  H  3
+N  D  6
+N  C  3
+N NT  3
+E  S  5
+E  H  8
+E  D  7
+E  C 10
+E NT  9
+S  S  8
+S  H  3
+S  D  6
+S  C  3
+S NT  3
+W  S  5
+W  H  8
+W  D  7
+W  C 10
+W NT  9
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1101 4H    S 12
+104  1106 5H    S 12
+105  1108 4H    S 11
+106  1110 4H    S 12
+107  1103 4H    S 12
+108  1105 4H    S 10
+109  1107 4H    S  9
+110  1109 4H    S 11
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "3"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "S"]
+[Vulnerable "EW"]
+[Deal "S:A83.JT8.AQ87.K76 T2.Q932.JT64.QT2 KQ95.AK64.32.A85 J764.75.K95.J943"]
+[OptimumScore "NS 460"]
+[DoubleDummyTricks "bbbbabbbba2222222222"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S 11
+N  H 11
+N  D 11
+N  C 10
+N NT 11
+E  S  2
+E  H  2
+E  D  2
+E  C  2
+E NT  2
+S  S 11
+S  H 11
+S  D 11
+S  C 10
+S NT 11
+W  S  2
+W  H  2
+W  D  2
+W  C  2
+W NT  2
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1101 2D    N  8
+104  1106 2D    N  8
+105  1108 3D    N  7
+106  1110 2D    N  9
+107  1103 2D    N  8
+108  1105 2D    N  8
+109  1107 2S    E  9
+110  1109 3NT   S  9
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "4"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "W"]
+[Vulnerable "All"]
+[Deal "W:QJ.QJT8.A742.J86 T952.AK76.83.QT9 8643.9.QJT6.K753 AK7.5432.K95.A42"]
+[OptimumScore "NS 600"]
+[DoubleDummyTricks "88867999674447644476"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  8
+N  H  8
+N  D  6
+N  C  7
+N NT  8
+E  S  4
+E  H  4
+E  D  7
+E  C  6
+E NT  4
+S  S  9
+S  H  9
+S  D  6
+S  C  7
+S NT  9
+W  S  4
+W  H  4
+W  D  7
+W  C  6
+W NT  4
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1110 4S    W 12
+102  1102 4S    W 12
+105  1107 6S    W 12
+106  1109 5H    E 11
+107  1101 6S    W 11
+108  1104 5S    W 12
+109  1106 6S    W 12
+110  1108 4S    W 12
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "5"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "N"]
+[Vulnerable "NS"]
+[Deal "N:J32.Q7.AQ72.T862 KQ74.KJ65.95.Q95 965.9832.JT.K743 AT8.AT4.K8643.AJ"]
+[OptimumScore "EW 430"]
+[DoubleDummyTricks "3233533335aaa98aaaa8"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  2
+N  H  3
+N  D  3
+N  C  5
+N NT  3
+E  S 10
+E  H 10
+E  D  9
+E  C  8
+E NT 10
+S  S  3
+S  H  3
+S  D  3
+S  C  5
+S NT  3
+W  S 10
+W  H 10
+W  D 10
+W  C  8
+W NT 10
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1110 1NT   E  9
+102  1102 2S    S  8
+105  1107 2H    N  6
+106  1109 3H*   E  5
+107  1101 2S    S  6
+108  1104 3NT   N  8
+109  1106 2C    W  6
+110  1108 2S    S  7
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "6"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "E"]
+[Vulnerable "EW"]
+[Deal "E:KJ76.T3.AQT43.J7 42.QJ984.J9852.8 985.A7.K76.AK642 AQT3.K652..QT953"]
+[OptimumScore "NS -100"]
+[DoubleDummyTricks "45845448458849888498"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  5
+N  H  8
+N  D  4
+N  C  5
+N NT  4
+E  S  8
+E  H  4
+E  D  9
+E  C  8
+E NT  8
+S  S  4
+S  H  8
+S  D  4
+S  C  5
+S NT  4
+W  S  8
+W  H  4
+W  D  9
+W  C  8
+W NT  8
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1110 3H    N  7
+102  1102 2C    W  9
+105  1107 2C    W 10
+106  1109 2H    N  6
+107  1101 1NT   S  6
+108  1104 3C    W 11
+109  1106 1NT   S  6
+110  1108 1NT   S  6
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "7"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "S"]
+[Vulnerable "All"]
+[Deal "S:AQJ8542.J2.A4.QJ 73.98654.K63.964 K6.AQT73.J987.AT T9.K.QT52.K87532"]
+[OptimumScore "NS 2220"]
+[DoubleDummyTricks "dda96dda860014600146"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S 13
+N  H 10
+N  D  9
+N  C  6
+N NT 13
+E  S  0
+E  H  1
+E  D  4
+E  C  6
+E NT  0
+S  S 13
+S  H 10
+S  D  8
+S  C  6
+S NT 13
+W  S  0
+W  H  1
+W  D  4
+W  C  6
+W NT  0
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1109 3NT   E  9
+102  1101 2H    W  8
+103  1103 3NT   W  9
+106  1108 3NT   W  9
+107  1110 1NT   E  8
+108  1102 3NT   W 10
+109  1105 2D    W  8
+110  1107 3NT   W 10
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "8"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "W"]
+[Vulnerable "None"]
+[Deal "W:A973.J4.K76.K765 J65.AK932.J95.32 QT4.Q8.AT83.QT98 K82.T765.Q42.AJ4"]
+[OptimumScore "NS -100"]
+[DoubleDummyTricks "75865758656857868578"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  5
+N  H  8
+N  D  6
+N  C  5
+N NT  7
+E  S  8
+E  H  5
+E  D  7
+E  C  8
+E NT  6
+S  S  5
+S  H  8
+S  D  6
+S  C  5
+S NT  7
+W  S  8
+W  H  5
+W  D  7
+W  C  8
+W NT  6
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1109 2S    S  6
+102  1101 3C    W  9
+103  1103 2S    N  7
+106  1108 4C    E  9
+107  1110 4C    W 10
+108  1102 3H    E 11
+109  1105 2H    E  7
+110  1107 3C    E 10
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "9"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "N"]
+[Vulnerable "EW"]
+[Deal "N:65.Q2.J93.AKJT96 KJ3.85.AKT542.54 QT942.963.Q86.87 A87.AKJT74.7.Q32"]
+[OptimumScore "EW 630"]
+[DoubleDummyTricks "340363403678a96a8a97"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  4
+N  H  0
+N  D  3
+N  C  6
+N NT  3
+E  S  8
+E  H 10
+E  D  9
+E  C  6
+E NT  7
+S  S  4
+S  H  0
+S  D  3
+S  C  6
+S NT  3
+W  S  8
+W  H 10
+W  D  9
+W  C  7
+W NT 10
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1109 3NT   N  7
+102  1101 2NT   S  8
+103  1103 2NT   S  7
+106  1108 1NT   N  8
+107  1110 2H    E  4
+108  1102 6NT   N 10
+109  1105 2H    N  8
+110  1107 3NT   S  8
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "10"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "E"]
+[Vulnerable "All"]
+[Deal "E:QJ53.92.832.A542 962.KQ.KQ965.KJ8 K8.AJ864.A4.QT76 AT74.T753.JT7.93"]
+[OptimumScore "EW 110"]
+[DoubleDummyTricks "66574665746785967859"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  6
+N  H  5
+N  D  7
+N  C  4
+N NT  6
+E  S  7
+E  H  8
+E  D  5
+E  C  9
+E NT  6
+S  S  6
+S  H  5
+S  D  7
+S  C  4
+S NT  6
+W  S  7
+W  H  8
+W  D  5
+W  C  9
+W NT  6
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1108 4S    E  9
+102  1110 3S*   E  9
+103  1102 4C    N 11
+104  1104 4S*   E  9
+107  1109 3D    N 12
+108  1101 4C    N 10
+109  1103 4S    E  9
+110  1106 5D    S  9
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "11"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "S"]
+[Vulnerable "None"]
+[Deal "S:AQ96.AK986.T.K74 JT75.3.K753.8653 432.QT5.A8.AQJT2 K8.J742.QJ9642.9"]
+[OptimumScore "NS 1520"]
+[DoubleDummyTricks "dbd5ddbd5d0208002080"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S 11
+N  H 13
+N  D  5
+N  C 13
+N NT 13
+E  S  2
+E  H  0
+E  D  8
+E  C  0
+E NT  0
+S  S 11
+S  H 13
+S  D  5
+S  C 13
+S NT 13
+W  S  2
+W  H  0
+W  D  8
+W  C  0
+W NT  0
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1108 1NT   N  9
+102  1110 2H    S  9
+103  1102 2H    S  9
+104  1104 3H    S  8
+107  1109 2H    S  9
+108  1101 4H    S  8
+109  1103 1NT   N  7
+110  1106 2H    S  9
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "12"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "W"]
+[Vulnerable "NS"]
+[Deal "W:Q6.J7.AKQ9875.97 J432.KT95..AKJ84 KT985.Q63.J32.T5 A7.A842.T64.Q632"]
+[OptimumScore "NS 650"]
+[DoubleDummyTricks "68b5b68b5b5528255282"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  8
+N  H 11
+N  D  5
+N  C 11
+N NT  6
+E  S  5
+E  H  2
+E  D  8
+E  C  2
+E NT  5
+S  S  8
+S  H 11
+S  D  5
+S  C 11
+S NT  6
+W  S  5
+W  H  2
+W  D  8
+W  C  2
+W NT  5
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1108 4H    E  9
+102  1110 3S    E  5
+103  1102 2S    E  6
+104  1104 4H    E 10
+107  1109 3H    W  9
+108  1101 4H    E  9
+109  1103 4H    E 10
+110  1106 4H    E  8
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "13"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "N"]
+[Vulnerable "All"]
+[Deal "N:K93.KJ93.AJ2.K42 842.AQT76.T763.3 T65.2.9854.AJT85 AQJ7.854.KQ.Q976"]
+[OptimumScore "EW 140"]
+[DoubleDummyTricks "55467554677896678976"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  5
+N  H  4
+N  D  6
+N  C  7
+N NT  5
+E  S  8
+E  H  9
+E  D  6
+E  C  6
+E NT  7
+S  S  5
+S  H  4
+S  D  6
+S  C  7
+S NT  5
+W  S  8
+W  H  9
+W  D  7
+W  C  6
+W NT  7
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1107 4S    W 10
+102  1109 2H    W  9
+103  1101 4S    E 10
+104  1103 4S    E 10
+105  1105 3S    E 10
+108  1110 3S    E 10
+109  1102 3S    E 10
+110  1104 3S    E  9
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "14"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "E"]
+[Vulnerable "None"]
+[Deal "E:QJT9643.JT.KJ7.8 K75.AK85.Q95.J72 A.7642.T43.AQ964 82.Q93.A862.KT53"]
+[OptimumScore "NS 430"]
+[DoubleDummyTricks "a5778a57783835438354"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  5
+N  H  7
+N  D  7
+N  C  8
+N NT 10
+E  S  8
+E  H  3
+E  D  5
+E  C  4
+E NT  3
+S  S  5
+S  H  7
+S  D  7
+S  C  8
+S NT 10
+W  S  8
+W  H  3
+W  D  5
+W  C  4
+W NT  3
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1107 3D    E 11
+102  1109 4S    W 10
+103  1101 3D    E 10
+104  1103 4H    S  8
+105  1105 2D    E 11
+108  1110 4D    E 11
+109  1102 3S    W  9
+110  1104 5D    E 11
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "15"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "S"]
+[Vulnerable "NS"]
+[Deal "S:AKJ763.8.K874.A6 94.Q52.AJ95.KQ98 QT82.K943.T632.3 5.AJT76.Q.JT7542"]
+[OptimumScore "EW 400"]
+[DoubleDummyTricks "793827928263a4b63a4b"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  9
+N  H  3
+N  D  8
+N  C  2
+N NT  7
+E  S  3
+E  H 10
+E  D  4
+E  C 11
+E NT  6
+S  S  9
+S  H  2
+S  D  8
+S  C  2
+S NT  7
+W  S  3
+W  H 10
+W  D  4
+W  C 11
+W NT  6
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1107 3NT   N 11
+102  1109 6C    S 11
+103  1101 3NT   N 12
+104  1103 3NT   N 10
+105  1105 3C    N 11
+108  1110 6NT   N 10
+109  1102 3NT   N 10
+110  1104 5C    S 12
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "16"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "W"]
+[Vulnerable "EW"]
+[Deal "W:A98.J65.Q762.KQJ KJT762.AQ9.AK.T9 54.82.JT94.A8742 Q3.KT743.853.653"]
+[OptimumScore "NS 420"]
+[DoubleDummyTricks "7aa557aa556338763387"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S 10
+N  H 10
+N  D  5
+N  C  5
+N NT  7
+E  S  3
+E  H  3
+E  D  8
+E  C  7
+E NT  6
+S  S 10
+S  H 10
+S  D  5
+S  C  5
+S NT  7
+W  S  3
+W  H  3
+W  D  8
+W  C  7
+W NT  6
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1105 4H    E 11
+102  1108 4H    E 10
+103  1110 4H    E 10
+104  1102 4H    W 10
+105  1104 4H    E 12
+106  1106 4S*   S  8
+109  1101 2H    E 10
+110  1103 4H    E 11
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "17"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "N"]
+[Vulnerable "None"]
+[Deal "N:Q.Q72.AKT52.J952 AKT97.A95.43.K83 J654.84.9876.AQ7 832.KJT63.QJ.T64"]
+[OptimumScore "EW -100"]
+[DoubleDummyTricks "85598655985784557845"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  5
+N  H  5
+N  D  9
+N  C  8
+N NT  8
+E  S  7
+E  H  8
+E  D  4
+E  C  5
+E NT  5
+S  S  5
+S  H  5
+S  D  9
+S  C  8
+S NT  6
+W  S  7
+W  H  8
+W  D  4
+W  C  5
+W NT  5
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1105 3S    W  6
+102  1108 3C    E  9
+103  1110 2D    S  9
+104  1102 3NT   N  9
+105  1104 3D    S  9
+106  1106 3D    N  9
+109  1101 2C    W 10
+110  1103 3D    S  9
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "18"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "E"]
+[Vulnerable "NS"]
+[Deal "E:63.KQ9863.A2.865 QT82.J4.T4.KJT43 KJ954.T52.965.A7 A7.A7.KQJ873.Q92"]
+[OptimumScore "EW 140"]
+[DoubleDummyTricks "66489664896793367933"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  6
+N  H  4
+N  D  8
+N  C  9
+N NT  6
+E  S  7
+E  H  9
+E  D  3
+E  C  3
+E NT  6
+S  S  6
+S  H  4
+S  D  8
+S  C  9
+S NT  6
+W  S  7
+W  H  9
+W  D  3
+W  C  3
+W NT  6
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1105 4D    W  9
+102  1108 3S    N  9
+103  1110 3H    E  8
+104  1102 3H    E  9
+105  1104 4H    E  8
+106  1106 3S    S  8
+109  1101 2H    E  9
+110  1103 3S    N  8
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "19"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "S"]
+[Vulnerable "EW"]
+[Deal "S:QJ.KQT6543..Q954 K7642.A9.QJ93.K6 AT9.872.KT4.AT72 853.J.A87652.J83"]
+[OptimumScore "NS 450"]
+[DoubleDummyTricks "75b5a75b5a3728337283"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  5
+N  H 11
+N  D  5
+N  C 10
+N NT  7
+E  S  7
+E  H  2
+E  D  8
+E  C  3
+E NT  3
+S  S  5
+S  H 11
+S  D  5
+S  C 10
+S NT  7
+W  S  7
+W  H  2
+W  D  8
+W  C  3
+W NT  3
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1104 3NT   N 10
+102  1106 1NT   S  7
+103  1109 2D    S  6
+104  1101 3C    E  6
+105  1103 2H    S  5
+106  1105 2D    S 10
+107  1107 3C    E  8
+110  1102 3D    S  8
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "20"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "W"]
+[Vulnerable "All"]
+[Deal "W:T96.Q6.K64.Q8653 52.KJT8.Q9875.AK AJ83.A75.AJ2.JT4 KQ74.9432.T3.972"]
+[OptimumScore "NS 140"]
+[DoubleDummyTricks "56975569756746867468"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  6
+N  H  9
+N  D  7
+N  C  5
+N NT  5
+E  S  7
+E  H  4
+E  D  6
+E  C  8
+E NT  6
+S  S  6
+S  H  9
+S  D  7
+S  C  5
+S NT  5
+W  S  7
+W  H  4
+W  D  6
+W  C  8
+W NT  6
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1104 3NT   S 10
+102  1106 3NT   N 10
+103  1109 3NT   N 10
+104  1101 3NT   N 10
+105  1103 3NT   N  8
+106  1105 3NT   N 12
+107  1107 3NT   N 10
+110  1102 3NT   S  9
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "21"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "N"]
+[Vulnerable "NS"]
+[Deal "N:87.KT9762.87.J53 J953.A.JT5.T9764 AK642..AKQ6.KQ82 QT.QJ8543.9432.A"]
+[OptimumScore "NS 620"]
+[DoubleDummyTricks "9a8aa9a8aa4343243432"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S 10
+N  H  8
+N  D 10
+N  C 10
+N NT  9
+E  S  3
+E  H  4
+E  D  3
+E  C  2
+E NT  4
+S  S 10
+S  H  8
+S  D 10
+S  C 10
+S NT  9
+W  S  3
+W  H  4
+W  D  3
+W  C  2
+W NT  4
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1104 4H    E 10
+102  1106 2H    E 10
+103  1109 4H    E 12
+104  1101 4H    E  9
+105  1103 2H    E 10
+106  1105 3H    E 12
+107  1107 4H    E 11
+110  1102 4H    E 11
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "22"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "E"]
+[Vulnerable "EW"]
+[Deal "E:876.74.83.AQ9843 4.AKJ86.T72.JT76 AKQ5.QT9.AK65.52 JT932.532.QJ94.K"]
+[OptimumScore "EW 120"]
+[DoubleDummyTricks "54654546548867988679"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  4
+N  H  6
+N  D  5
+N  C  4
+N NT  5
+E  S  8
+E  H  6
+E  D  7
+E  C  9
+E NT  8
+S  S  4
+S  H  6
+S  D  5
+S  C  4
+S NT  5
+W  S  8
+W  H  6
+W  D  7
+W  C  9
+W NT  8
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1103 3S    N  8
+102  1105 1H    E  8
+103  1107 3S    N  9
+104  1110 1H    E  9
+105  1102 3S    N  8
+106  1104 3H    E  8
+107  1106 3S    S  8
+108  1108 3S    N  8
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "23"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "S"]
+[Vulnerable "All"]
+[Deal "S:A.K9.A8763.KJ432 KJ87.T4.KT9.T865 52.Q632.Q542.AQ9 QT9643.AJ875.J.7"]
+[OptimumScore "EW -500"]
+[DoubleDummyTricks "747bb747bb3962239622"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  4
+N  H  7
+N  D 11
+N  C 11
+N NT  7
+E  S  9
+E  H  6
+E  D  2
+E  C  2
+E NT  3
+S  S  4
+S  H  7
+S  D 11
+S  C 11
+S NT  7
+W  S  9
+W  H  6
+W  D  2
+W  C  2
+W NT  3
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1103 2S    E  8
+102  1105 2H    W  8
+103  1107 2S    E  6
+104  1110 1NT   E  5
+105  1102 2S    E  8
+106  1104 2S    E  7
+107  1106 2S    E  9
+108  1108 2S    E  9
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "24"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "W"]
+[Vulnerable "None"]
+[Deal "W:A94.74.5.AKJ8532 K8.JT953.J963.QT Q3.AK2.AK8742.74 JT7652.Q86.QT.96"]
+[OptimumScore "EW 1440"]
+[DoubleDummyTricks "0452004520c98adc98bd"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  4
+N  H  5
+N  D  2
+N  C  0
+N NT  0
+E  S  9
+E  H  8
+E  D 10
+E  C 13
+E NT 12
+S  S  4
+S  H  5
+S  D  2
+S  C  0
+S NT  0
+W  S  9
+W  H  8
+W  D 11
+W  C 13
+W NT 12
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+101  1103 3NT   S  9
+102  1105 1NT   S  8
+103  1107 3NT   N  9
+104  1110 3NT   N  9
+105  1102 3NT   N  7
+106  1104 3NT   N  8
+107  1106 3NT   N  8
+108  1108 4H    N  8
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "25"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "N"]
+[Vulnerable "EW"]
+[Deal "N:98.JT.AJ83.KQ987 753.A4.K96542.53 AKQT62.KQ965.Q.T J4.8732.T7.AJ642"]
+[OptimumScore "NS 450"]
+[DoubleDummyTricks "abb79abb792226422264"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S 11
+N  H 11
+N  D  7
+N  C  9
+N NT 10
+E  S  2
+E  H  2
+E  D  6
+E  C  4
+E NT  2
+S  S 11
+S  H 11
+S  D  7
+S  C  9
+S NT 10
+W  S  2
+W  H  2
+W  D  6
+W  C  4
+W NT  2
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+102  1104 4S    W 11
+103  1106 3NT   E 10
+104  1108 5D    E 10
+105  1101 5S    W 11
+106  1103 3NT   E 10
+107  1105 4S    W 11
+108  1107 3NT   E 10
+109  1109 6D    E 10
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "26"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "E"]
+[Vulnerable "All"]
+[Deal "E:K75.K54.T754.Q75 J643.97.A3.K8632 Q9.Q63.J9862.JT9 AT82.AJT82.KQ.A4"]
+[OptimumScore "NS 650"]
+[DoubleDummyTricks "9ba7a9ba7a2225332363"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S 11
+N  H 10
+N  D  7
+N  C 10
+N NT  9
+E  S  2
+E  H  2
+E  D  5
+E  C  3
+E NT  2
+S  S 11
+S  H 10
+S  D  7
+S  C 10
+S NT  9
+W  S  2
+W  H  3
+W  D  6
+W  C  3
+W NT  3
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+102  1104 4H    S  9
+103  1106 3H    S  7
+104  1108 3H    S  8
+105  1101 4H    S  7
+106  1103 4H    S  8
+107  1105 2H    S  9
+108  1107 4C    W 11
+109  1109 3H    S  7
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "27"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "S"]
+[Vulnerable "None"]
+[Deal "S:K2.T.AKQ8542.A94 AJ5.K83.J3.QT863 Q8743.A74.T6.KJ5 T96.QJ9652.97.72"]
+[OptimumScore "NS 920"]
+[DoubleDummyTricks "ba6c9ba6c91371413714"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S 10
+N  H  6
+N  D 12
+N  C  9
+N NT 11
+E  S  3
+E  H  7
+E  D  1
+E  C  4
+E NT  1
+S  S 10
+S  H  6
+S  D 12
+S  C  9
+S NT 11
+W  S  3
+W  H  7
+W  D  1
+W  C  4
+W NT  1
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+102  1104 2NT   E  9
+103  1106 3NT   E  9
+104  1108 3NT   E 10
+105  1101 2NT   W  8
+106  1103 2NT   E  9
+107  1105 1NT   E 10
+108  1107 2NT   E  9
+109  1109 2S    W 11
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "28"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "W"]
+[Vulnerable "NS"]
+[Deal "W:53.AK93.98643.AJ 9872.5.75.T87654 QT6.T876.J2.K932 AKJ4.QJ42.AKQT.Q"]
+[OptimumScore "EW -500"]
+[DoubleDummyTricks "6a5686a5686386443754"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S 10
+N  H  5
+N  D  6
+N  C  8
+N NT  6
+E  S  3
+E  H  8
+E  D  6
+E  C  4
+E NT  6
+S  S 10
+S  H  5
+S  D  6
+S  C  8
+S NT  6
+W  S  3
+W  H  7
+W  D  5
+W  C  4
+W NT  4
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+103  1105 PASS  N  -
+104  1107 2S    E  8
+105  1109 2S    E  7
+106  1102 PASS  N  -
+107  1104 PASS  N  -
+108  1106 1NT   W  7
+109  1108 1NT   W  7
+110  1110 PASS  N  -
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "29"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "N"]
+[Vulnerable "All"]
+[Deal "N:AT7.AKJ6.AQ96.98 QJ85.Q.KJ.KQT763 63.T975432.T75.A K942.8.8432.J542"]
+[OptimumScore "NS 650"]
+[DoubleDummyTricks "a5bb4a5bb41811918119"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  5
+N  H 11
+N  D 11
+N  C  4
+N NT 10
+E  S  8
+E  H  1
+E  D  1
+E  C  9
+E NT  1
+S  S  5
+S  H 11
+S  D 11
+S  C  4
+S NT 10
+W  S  8
+W  H  1
+W  D  1
+W  C  9
+W NT  1
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+103  1105 6H    S 13
+104  1107 6NT   N 13
+105  1109 6H    S 13
+106  1102 6H    S 13
+107  1104 6H    S 13
+108  1106 4H    S 13
+109  1108 4H    S 13
+110  1110 6NT   N 13
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
+
+[Event "Wednesday Morning STaC Game"]
+[Site "Newton Bridge Club"]
+[Date "2016.01.20"]
+[Board "30"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "E"]
+[Vulnerable "None"]
+[Deal "E:AK32.QJ763.962.J T94.T98.AT8.A942 QJ8765.54.QJ4.K3 .AK2.K753.QT8765"]
+[OptimumScore "NS 400"]
+[DoubleDummyTricks "6568b6568b7864278642"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N  S  5
+N  H  6
+N  D  8
+N  C 11
+N NT  6
+E  S  8
+E  H  6
+E  D  4
+E  C  2
+E NT  7
+S  S  5
+S  H  6
+S  D  8
+S  C 11
+S NT  6
+W  S  8
+W  H  6
+W  D  4
+W  C  2
+W NT  7
+[ScoreTable "PairId_NS\4R;PairId_EW\4R;Contract\5L;Declarer\1R;Result\2R"]
+103  1105 3NT   S 10
+104  1107 3NT   S 10
+105  1109 3NT   S 10
+106  1102 3NT   S 10
+107  1104 3NT   S  9
+108  1106 3NT   S 10
+109  1108 3NT   S  8
+110  1110 3NT   S 10
+[Scoring "MP"]
+[Declarer ""]
+[Contract "?"]
+[Result "?"]
