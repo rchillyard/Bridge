@@ -9,7 +9,7 @@ val scalaTestVersion = "3.0.5"
 resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
 
 libraryDependencies ++= Seq(
-  "com.phasmid" %% "lascala" % "1.0.12-SNAPSHOT",
+  "com.phasmid" %% "lascala" % "1.0.11",
   "joda-time" % "joda-time" % "2.9.2",
   "org.scala-lang.modules" %% "scala-xml" % "1.0.5",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.5",

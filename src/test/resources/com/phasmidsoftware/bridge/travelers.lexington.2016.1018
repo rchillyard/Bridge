@@ -1,0 +1,94 @@
+Lexington: Oct 18th 2016.
+A DW.
+1 N Lincoln. Donna.
+2 N Lou. Karen.
+3 N Kathy. Bill.
+11 N Chris. Janet.
+12 N Peter. Ashley.
+13 N Jean M. Jane D.
+21 N Barbara. Cynthia.
+22 N Jean P. Frances.
+23 N Jane M. Betsy.
+24 N Colin. Margriet.
+1 E Pete. Sue.
+2 E Beth. Judy S.
+3 E Sally. Sara.
+11 E Sandy. Susan S.
+12 E Jane W. Marijke.
+13 E Clay/Terry. Barrie.
+21 E Ralph. Sandra.
+22 E Phyllis. Linda D.
+23 E Jennifer. Jim.
+24 E Gary. Marilyn.
+T 1
+21	21	-150
+22	24	-120
+1	1	-400
+2	3	-210
+3	1	50
+11	11	-400
+12	13	-460
+13	12	150
+23	23	-430
+24	22	-180
+.
+T 2
+23	23	110
+24	22	110
+1	1	50
+2	3	-420
+3	2	-140
+21	21 DNP
+22	24	120
+11	11	-200
+12	13	120
+13	12	140
+.
+T 3
+1	3	100
+2	2	100
+3	1	200
+21	24	-620
+22	22	-620
+23	21	100
+24	23	100
+11	11	200
+12	13	100
+13	12	100
+.
+T 4
+21	24	620
+22	22	680
+23	21	680
+24	23	620
+11	13	150
+12	12	660
+13	11	650
+1	3	650
+2	2	-100
+3	1	-100
+.
+T 5
+21	23	-100
+22	21	620
+24	24	620
+1	2	650
+2	1	620
+3	3	620
+11	12	-100
+12	11	620
+13	13	620
+23	22	170
+.
+T 6
+21	23	430
+22	21	430
+24	24	430
+1	2	430
+2	1	130
+3	3	430
+11	12	430
+12	11	170
+13	13	400
+23	22	110
+.
