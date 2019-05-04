@@ -1,4 +1,4 @@
-package com.phasmidsoftware.bridge
+package com.phasmidsoftware.bridge.director
 
 import com.phasmid.laScala.values.Rational
 import org.scalatest.{FlatSpec, Matchers}

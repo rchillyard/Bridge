@@ -1,4 +1,4 @@
-package com.phasmidsoftware.bridge
+package com.phasmidsoftware.bridge.director
 
 import scala.io.Source
 import scala.language.postfixOps
