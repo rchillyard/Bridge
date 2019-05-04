@@ -1,55 +1,64 @@
 package com.phasmidsoftware.bridge
 
+import java.io.PrintWriter
+
 import com.phasmid.laScala.fp.FP
 import com.phasmid.laScala.values.Rational
+import com.phasmidsoftware.output.Output
 
-import scala.io.Source
+import scala.io.{BufferedSource, Source}
 import scala.language.postfixOps
-import scala.util._
-import scala.util.parsing.combinator.JavaTokenParsers
+import scala.util.{Failure, Success, _}
 
 /**
   * Created by scalaprof on 4/12/16.
   */
 object Score extends App {
-  val us = true
-
-  def mpsAsString(r: Rational[Int], top: Int) = (r * top).toDouble.toString
-
-  def mpsAsPercentage(r: Rational[Int], boards: Int) = "%2.2f".format((r * 100 / boards).toDouble) + "%"
-
-  def readEvent(s: Source): Try[Event] = {
-    val p = new RecapParser
-    p.parseAll(p.event, s.mkString) match {
-      case p.Success(e: Event, _) => Success(e)
-      case p.Failure(f, x) => Failure(new Exception(s"parse failure: $f at $x"))
-      case p.Error(f, x) => Failure(new Exception(s"parse error: $f at $x"))
-    }
-  }
-
   if (args.length > 0) {
-    //    val et = readEvent(Source.fromFile("/Users/scalaprof/RealRobins-nest/bridge/travelers"))
-    val et = readEvent(Source.fromFile(args.head))
-    for (e <- et) {
-      println(e.title)
-      val results: Map[Preamble, Seq[Result]] = e.createResults
-      for ((k,rs) <- results) {
-        println(s"Section ${k.identifier}")
-        for (r <- rs) {
-          val top = r.top
-          val direction = if (r.isNS) "N/S" else "E/W"
-          println(s"Results for direction: $direction")
-          for (s <- r.card.toSeq.sortBy(_._2._1).reverse)
-            println(s"${s._1} : ${Score.mpsAsString(s._2._1, top)} : ${Score.mpsAsPercentage(s._2._1,s._2._2)} : ${k.getNames(r.isNS, s._1)}")
-        }
-      }
-      println("=====================================================")
-      println("=====================================================")
-      println(e)
+    val filename = args.head
+    doScore(Source.fromFile(filename)) match {
+      case Success(o) => o.close()
+      case Failure(x) => System.err.println(s"Score $filename threw an exception: $x")
     }
   }
-  else
-    System.err.println("Syntax: Score filename")
+  else System.err.println("Syntax: Score filename")
+
+  def mpsAsString(r: Rational[Int], top: Int) = "%2.2f".format((r * top) toDouble)
+
+  def mpsAsPercentage(r: Rational[Int], boards: Int): String =
+    if (boards > 0) "%2.2f".format((r * 100 / boards).toDouble) + "%"
+    else "infinity"
+
+  def doScoreResource(resource: String, output: Output = Output(new PrintWriter(System.out))): Try[Output] =
+    Option(getClass.getResourceAsStream(resource)) match {
+      case Some(s) => doScore(Source.fromInputStream(s), output)
+      case None => Failure(new Exception(s"doScoreResource: cannot open resource: $resource"))
+    }
+
+  def doScoreFromFile(filename: String, output: Output = Output(new PrintWriter(System.out))): Try[Output] = doScore(Source.fromFile(filename), output)
+
+  def doScore(source: BufferedSource, output: Output = Output(new PrintWriter(System.out))): Try[Output] = {
+
+    def getResultsForDirection(k: Preamble, r: Result, top: Int): Output = {
+      def resultDetails(s: (Int, (Rational[Int], Int))): Output = Output(s"${s._1} : ${Score.mpsAsString(s._2._1, top)} : ${Score.mpsAsPercentage(s._2._1, s._2._2)} : ${k.getNames(r.isNS, s._1)}").insertBreak
+
+      Output(r.cards.toSeq.sortBy(_._2._1).reverse)(resultDetails)
+    }
+
+    def getResults(k: Preamble, r: Result): Output = Output(s"Results for direction: ${if (r.isNS) "N/S" else "E/W"}").insertBreak :+ getResultsForDirection(k, r, r.top)
+
+    def eventResults(e: Event, k: Preamble, rs: Seq[Result]): Output = {
+      val z = for (r <- rs) yield getResults(k, r)
+      Output(s"Section ${k.identifier}").insertBreak ++ z :+
+        "=====================================================\n" :+
+        "=====================================================\n" :+
+        e
+    }
+
+    val ey = RecapParser.readEvent(source)
+
+    for (e <- ey) yield (output :+ e.title).insertBreak ++ (for ((k, rs) <- e.createResults) yield eventResults(e, k, rs))
+  }
 }
 
 case class Event(title: String, sections: Seq[Section]) {
@@ -68,7 +77,7 @@ case class Event(title: String, sections: Seq[Section]) {
 
 case class Section(preamble: Preamble, travelers: Seq[Traveler]) {
   if (travelers.isEmpty)
-    System.err.println("Warning: there are no travelers in this section")
+    System.err.println(s"Warning: there are no travelers in this section: $preamble")
 
   override def toString: String = {
     val result = StringBuilder.newBuilder
@@ -89,7 +98,7 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler]) {
   def calculateTop: Int = {
     val tops: Seq[Int] = for (t <- travelers) yield t.top
     val theTop = tops.distinct
-    if (theTop.size != 1) println(s"Warning: not all boards have been played the same number of times: $tops")
+    if (theTop.size != 1) System.err.println(s"Warning: not all boards have been played the same number of times: $tops")
     theTop.head
   }
 }
@@ -100,11 +109,11 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler]) {
   * @param identifier the section identifier (a single or double upper-case letter)
   * @param pairs a list of the pairs in this section
   */
-case class Preamble(identifier: String, pairs: Seq[Players]) {
+case class Preamble(identifier: String, maybeModifier: Option[String], pairs: Seq[Pair]) {
   if (pairs.isEmpty)
-    System.err.println("Warning: there are no players in this section")
+    System.err.println(s"Warning: there are no players in this section: $identifier")
 
-  def getNames(ns: Boolean, n: Int): String = pairs.filter { p => p.number == n } map { p => if (ns) p.names._1 else p.names._2 } head
+  def getNames(ns: Boolean, n: Int): String = pairs.filter { p => p.number == n } map { p => p.brief } head
 
   override def toString: String = {
     val result = StringBuilder.newBuilder
@@ -114,22 +123,29 @@ case class Preamble(identifier: String, pairs: Seq[Players]) {
   }
 }
 
-case class Players(number: Int, direction: String, names: (String,String)) {
-  override def toString = s"$number$direction: ${names._1} & ${names._2}"
+case class Pair(number: Int, direction: String, players: (Player, Player)) {
+  override def toString = s"$number$direction: $brief"
+
+  def brief = s"${players._1} & ${players._2}"
 }
 
-object Players {
-  def apply(n: String, d: String, a: String, b: String): Players = apply(n.toInt,d,(a,b))
+/**
+  * CONSIDER: splitting into first and last so that abbreviations can be used.
+  *
+  * @param name the name of the player
+  */
+case class Player(name: String) {
+  override def toString: String = name
 }
 
 /**
   * This is the complete results for a particular direction
   *
-  * @param isNS true if this result is for N/S; false if for E/W
-  * @param top  top on a board
-  * @param card a map of tuples containing total score and number of boards played, indexed by the pair number
+  * @param isNS  true if this result is for N/S; false if for E/W
+  * @param top   top on a board
+  * @param cards a map of tuples containing total score and number of boards played, indexed by the pair number
   */
-case class Result(isNS: Boolean, top: Int, card: Map[Int, (Rational[Int], Int)])
+case class Result(isNS: Boolean, top: Int, cards: Map[Int, (Rational[Int], Int)])
 
 /**
   * This is the matchpoint result for one encounter (of NS/EW/Board).
@@ -183,7 +199,7 @@ case class Traveler(board: Int, ps: Seq[Play]) {
 object Traveler {
   def apply(it: Try[Int], ps: Seq[Play]): Traveler = {
     val tt = for (i <- it) yield Traveler(i,ps)
-    tt.recover{case x => println(s"Exception: $x");Traveler(0,Seq())}.get
+    tt.recover { case x => System.err.println(s"Exception: $x"); Traveler(0, Seq()) }.get
   }
 }
 
@@ -218,7 +234,7 @@ case class Play(ns: Int, ew: Int, result: PlayResult) {
 object Play {
   def apply(ns: Try[Int], ew: Try[Int], result: PlayResult): Play = {
     val z = for (x <- ns; y <- ew) yield Play(x,y,result)
-    z.recover{case x => println(s"Exception: $x");Play(0,0,PlayResult.error("no match"))}.get
+    z.recover { case x => System.err.println(s"Exception: $x"); Play(0, 0, PlayResult.error("no match")) }.get
   }
 }
 
@@ -249,26 +265,4 @@ object PlayResult {
     PlayResult(z)
   }
   def error(s: String) = PlayResult(Left(s))
-}
-
-/**
-  * RecapParser will parse a String as either an event, section, preamble, pair, traveler, play or result.
-  */
-class RecapParser extends JavaTokenParsers {
-  // XXX event parser yields an Event and is a title followed by a list of sections
-  def event: Parser[Event] = sentence~rep(section) ^^ {case p~ss => Event(p,ss)}
-  // XXX section parser yields a Section and is a preamble followed by a list of travelers
-  def section: Parser[Section] = preamble~rep(traveler) ^^ {case p~ts => Section(p,ts)}
-  // XXX (section) preamble parser yields a Preamble (section letter together with pair names) and is a one or two letters followed by a list of pair results
-  def preamble: Parser[Preamble] = regex("""[A-Z]{1,2}""".r)~rep(pair) ^^ {case t~ps => Preamble(t,ps)}
-  // XXX pair parser yields a Players object and is a number followed by "N" or "E" followed by two full names, each terminated by a period
-  def pair: Parser[Players] = wholeNumber~("E"|"N")~sentence~sentence ^^ {case n~d~a~b => Players(n,d,a,b)}
-  // XXX traveler parser yields a Traveler object and must start with a "T" and end with a period. In between is a list of Play objects
-  def traveler: Parser[Traveler] = "T"~>wholeNumber~rep(play)<~""".""" ^^ {case b~r => Traveler(Try(b.toInt),r)}
-  // XXX play parser yields a Play object and must be two integer numbers followed by a result
-  def play: Parser[Play] = wholeNumber~wholeNumber~result ^^ { case n~e~r => Play(Try(n.toInt),Try(e.toInt),r) }
-  // XXX result parser yields a PlayResult object and must be either a number (a bridge score) or a string such as DNP or A[+-]
-  def result: Parser[PlayResult] = (wholeNumber | "DNP" | regex("""A[\-\+]?""".r) ) ^^ (s => PlayResult(s))
-  // XXX sentence parser recognized a String terminated by a period and yields that String
-  def sentence: Parser[String] = regex("""[^\.]+""".r)~""".""" ^^ {case s~ _ => s}
 }
