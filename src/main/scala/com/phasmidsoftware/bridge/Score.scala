@@ -8,7 +8,6 @@ import com.phasmidsoftware.output.Output
 
 import scala.io.{BufferedSource, Source}
 import scala.language.postfixOps
-import scala.util.parsing.combinator.JavaTokenParsers
 import scala.util.{Failure, Success, _}
 
 /**
@@ -43,7 +42,7 @@ object Score extends App {
     def getResultsForDirection(k: Preamble, r: Result, top: Int): Output = {
       def resultDetails(s: (Int, (Rational[Int], Int))): Output = Output(s"${s._1} : ${Score.mpsAsString(s._2._1, top)} : ${Score.mpsAsPercentage(s._2._1, s._2._2)} : ${k.getNames(r.isNS, s._1)}").insertBreak
 
-      Output(r.card.toSeq.sortBy(_._2._1).reverse)(resultDetails)
+      Output(r.cards.toSeq.sortBy(_._2._1).reverse)(resultDetails)
     }
 
     def getResults(k: Preamble, r: Result): Output = Output(s"Results for direction: ${if (r.isNS) "N/S" else "E/W"}").insertBreak :+ getResultsForDirection(k, r, r.top)
@@ -99,7 +98,7 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler]) {
   def calculateTop: Int = {
     val tops: Seq[Int] = for (t <- travelers) yield t.top
     val theTop = tops.distinct
-    if (theTop.size != 1) println(s"Warning: not all boards have been played the same number of times: $tops")
+    if (theTop.size != 1) System.err.println(s"Warning: not all boards have been played the same number of times: $tops")
     theTop.head
   }
 }
@@ -142,11 +141,11 @@ case class Player(name: String) {
 /**
   * This is the complete results for a particular direction
   *
-  * @param isNS true if this result is for N/S; false if for E/W
-  * @param top  top on a board
-  * @param card a map of tuples containing total score and number of boards played, indexed by the pair number
+  * @param isNS  true if this result is for N/S; false if for E/W
+  * @param top   top on a board
+  * @param cards a map of tuples containing total score and number of boards played, indexed by the pair number
   */
-case class Result(isNS: Boolean, top: Int, card: Map[Int, (Rational[Int], Int)])
+case class Result(isNS: Boolean, top: Int, cards: Map[Int, (Rational[Int], Int)])
 
 /**
   * This is the matchpoint result for one encounter (of NS/EW/Board).
@@ -200,7 +199,7 @@ case class Traveler(board: Int, ps: Seq[Play]) {
 object Traveler {
   def apply(it: Try[Int], ps: Seq[Play]): Traveler = {
     val tt = for (i <- it) yield Traveler(i,ps)
-    tt.recover{case x => println(s"Exception: $x");Traveler(0,Seq())}.get
+    tt.recover { case x => System.err.println(s"Exception: $x"); Traveler(0, Seq()) }.get
   }
 }
 
@@ -235,7 +234,7 @@ case class Play(ns: Int, ew: Int, result: PlayResult) {
 object Play {
   def apply(ns: Try[Int], ew: Try[Int], result: PlayResult): Play = {
     val z = for (x <- ns; y <- ew) yield Play(x,y,result)
-    z.recover{case x => println(s"Exception: $x");Play(0,0,PlayResult.error("no match"))}.get
+    z.recover { case x => System.err.println(s"Exception: $x"); Play(0, 0, PlayResult.error("no match")) }.get
   }
 }
 
@@ -266,78 +265,4 @@ object PlayResult {
     PlayResult(z)
   }
   def error(s: String) = PlayResult(Left(s))
-}
-
-/**
-  * RecapParser will parse a String as either an event, section, preamble, pair, traveler, play or result.
-  */
-class RecapParser extends JavaTokenParsers {
-  override def skipWhitespace: Boolean = false
-
-  // XXX event parser yields an Event and is a title followed by a list of sections
-  def event: Parser[Event] = (title <~ endOfLine) ~ rep(section) <~ opt(eoi) ^^ { case p ~ ss => Event(p, ss) }
-
-  // XXX section parser yields a Section and is a preamble followed by a list of travelers
-  def section: Parser[Section] = preamble ~ travelers ^^ { case p ~ ts => Section(p, ts) }
-
-  // XXX travelers, each terminated by a endOfLine
-  def travelers: Parser[List[Traveler]] = rep(traveler)
-
-  // XXX (section) preamble parser yields a Preamble and is one or two letters, endOfLine, followed by a list of pair results, each on its own line.
-  def preamble: Parser[Preamble] = (sectionIdentifier ~ opt(spacer ~> modifier) <~ endOfLine) ~ pairs ^^ { case t ~ wo ~ ps => Preamble(t, wo, ps) }
-
-  // XXX a modifier consisting of at least one capital letter
-  def modifier: Parser[String] =
-    """[A-Z]+""".r
-
-  // XXX list of pairs, each terminated by a endOfLine
-  def pairs: Parser[List[Pair]] = rep(pair <~ endOfLine)
-
-  // XXX pair parser yields a Players object and is a number followed by "N" or "E" followed by two full names, each terminated by a period
-  def pair: Parser[Pair] = (wholeNumber <~ spacer) ~ ("E" | "N") ~ playerPlayer ^^ { case n ~ d ~ p => Pair(n.toInt, d, p._1 -> p._2) }
-
-  // XXX pair parser yields a tuple of Player objects and is a string, possibly including space characters but not including & or endOfLine.
-  def playerPlayer: Parser[Player ~ Player] = (player <~"""&""") ~ player
-
-  // XXX player parser yields a Player object and is at least one character that is neither & nor a newline char
-  def player: Parser[Player] =
-    """\s*\w[^\r\n&]*""".r ^^ (s => Player(s.trim))
-
-  // XXX traveler parser yields a Traveler object and must start with a "T" and end with a blank line. In between is a list of Play objects
-  def traveler: Parser[Traveler] = opt(spacer) ~> "T" ~> spacer ~> (wholeNumber <~ endOfLine) ~ plays <~ endOfLine ^^ { case b ~ r => Traveler(Try(b.toInt), r) }
-
-  // XXX plays parser yields a list of Play objects where each play is terminated by a endOfLine.
-  def plays: Parser[List[Play]] = rep(play <~ endOfLine)
-
-  // XXX play parser yields a Play object and must be two integer numbers followed by a result
-  def play: Parser[Play] = (opt(spacer) ~> wholeNumber <~ spacer) ~ (wholeNumber <~ spacer) ~ result ^^ { case n ~ e ~ r => Play(Try(n.toInt), Try(e.toInt), r) }
-
-  // XXX result parser yields a PlayResult object and must be either a number (a bridge score) or a string such as DNP or A[+-]
-  def result: Parser[PlayResult] = (wholeNumber | "DNP" | regex("""A[\-\+]?""".r) | failure("result")) ^^ (s => PlayResult(s))
-
-  // XXX title parser yields a String and must be a String not including a endOfLine
-  def title: Parser[String] =
-    """[^\r\n]+""".r
-
-  def endOfLine: Parser[String] = s""" *$newline""".r | """ *\n""".r
-
-  private def spacer: Parser[String] = """ *""".r
-
-  private def sectionIdentifier: Parser[String] = """[A-Z]{1,2}""".r
-
-  private val newline = sys.props("line.separator")
-
-  private val eoi = """\z""".r // end of input
-}
-
-object RecapParser {
-  def readEvent(s: Source): Try[Event] = if (s != null) {
-    val p = new RecapParser
-    val string = s.mkString
-    p.parseAll(p.event, string) match {
-      case p.Success(e: Event, _) => scala.util.Success(e)
-      case p.Failure(f, x) => scala.util.Failure(new Exception(s"parse failure: $f at $x"))
-      case p.Error(f, x) => scala.util.Failure(new Exception(s"parse error: $f at $x"))
-    }
-  } else Failure(new Exception("source is null"))
 }
