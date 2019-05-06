@@ -49,10 +49,10 @@ object Score extends App {
 
 		def eventResults(e: Event, k: Preamble, rs: Seq[Result]): Output = {
 			val z = for (r <- rs) yield getResults(k, r)
-			Output(s"Section ${k.identifier}").insertBreak ++ z :+
+			(Output(s"Section ${k.identifier}").insertBreak ++ z :+
 				"=====================================================\n" :+
-				"=====================================================\n" :+
-				e
+				"=====================================================\n") ++
+				e.output(Output.empty)
 		}
 
 		val ey = RecapParser.readEvent(source)
@@ -65,26 +65,17 @@ case class Event(title: String, sections: Seq[Section]) {
 	if (sections.isEmpty)
 		System.err.println("Warning: there are no sections in this event")
 
-	override def toString: String = {
-		val result = StringBuilder.newBuilder
-		result.append(s"$title\n")
-		for (s <- sections) result.append(s"$s\n")
-		result.toString
-	}
+	def output(output: Output): Output = (output :+ title).insertBreak ++ Output.apply(sections)(s => s.output(Output.empty))
 
 	def createResults: Map[Preamble, Seq[Result]] = (for (s <- sections) yield s.preamble -> s.createResults).toMap
 }
 
 case class Section(preamble: Preamble, travelers: Seq[Traveler]) {
-	if (travelers.isEmpty)
-		System.err.println(s"Warning: there are no travelers in this section: $preamble")
 
-	override def toString: String = {
-		val result = StringBuilder.newBuilder
-		result.append(s"$preamble\n")
-		for (t <- travelers) result.append(s"$t\n")
-		result.toString
-	}
+	def output(output: Output): Output = travelers.foldLeft(output :+ s"$preamble\n")((o, t) => o ++ t.output(Output.empty))
+
+	override def toString: String =
+		super.toString
 
 	def createResults: Seq[Result] = {
 		val top = calculateTop
@@ -102,6 +93,15 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler]) {
 		val theTop = tops.distinct
 		if (theTop.size != 1) System.err.println(s"Warning: not all boards have been played the same number of times: $tops")
 		theTop.head
+	}
+}
+
+object Section {
+	def apply(preamble: Preamble, travelers: Seq[Traveler], pickups: Seq[Pickup]): Section = {
+		val travelerMap: Map[Int, Traveler] = (travelers map (t => t.board -> t)).toMap
+		val boardPlays: Seq[BoardPlay] = for (p <- pickups; b <- p.asBoardPlays) yield b
+		val tIm = boardPlays.foldLeft(travelerMap)((m, b) => b.addTo(m))
+		apply(preamble, tIm.values.toSeq)
 	}
 }
 
@@ -150,12 +150,12 @@ case class Player(name: String) {
 case class Result(isNS: Boolean, top: Int, cards: Map[Int, (Rational[Int], Int)])
 
 /**
-	* This is the matchpoint result for one encounter (of NS/EW/Board).
+	* This is the matchpoint result for one boardResult (of NS/EW/Board).
 	*
 	* @param ns     NS pair #
 	* @param ew     EW pair #
 	* @param result the table result
-	* @param mp     the matchpoints earned by ns for this encounter
+	* @param mp     the matchpoints earned by ns for this boardResult
 	* @param top    the maximum number of matchpoints possible
 	*/
 case class Matchpoints(ns: Int, ew: Int, result: PlayResult, mp: Option[Rational[Int]], top: Int) {
@@ -186,11 +186,11 @@ case class Traveler(board: Int, ps: Seq[Play]) {
 
 	def matchpointIt: Seq[Matchpoints] = for (p <- ps) yield Matchpoints(p.ns, p.ew, p.result, p.matchpoints(this), top)
 
-	override def toString: String = {
+	def output(output: Output): Output = {
 		val result = StringBuilder.newBuilder
 		result.append(s"Board: $board with ${ps.size} plays\n")
 		for (m <- matchpointIt) result.append(s"$m\n")
-		result.toString
+		output :+ result.toString
 	}
 
 	def matchpoint(x: Play): Option[Rational[Int]] = if (isPlayed) {
@@ -198,6 +198,14 @@ case class Traveler(board: Int, ps: Seq[Play]) {
 		Some(Rational.normalize(isIs._1.sum, isIs._2.sum))
 	}
 	else None
+
+	/**
+		* Method to add a Play into this Traveler.
+		*
+		* @param play the play to be added
+		* @return the new combined Traveler.
+		*/
+	def :+(play: Play): Traveler = Traveler(board, ps :+ play)
 }
 
 object Traveler {
@@ -208,6 +216,32 @@ object Traveler {
 }
 
 /**
+	* CONSIDER renaming this case class (and parser methods)
+	*
+	* @param board  the board number
+	* @param result the result
+	*/
+case class BoardResult(board: Int, result: PlayResult) {
+	override def toString: String = s"$board: $result"
+}
+
+case class Pickup(ns: Int, ew: Int, boards: Seq[BoardResult]) {
+	def asBoardPlays: Seq[BoardPlay] = for (e <- boards) yield BoardPlay(e.board, Play(ns, ew, e.result))
+
+	override def toString: String = s"Pickup: $ns vs $ew: ${boards.mkString(", ")}"
+}
+
+case class BoardPlay(board: Int, play: Play) {
+	def addTo(travelerMap: Map[Int, Traveler]): Map[Int, Traveler] = {
+		val entry = travelerMap.get(board)
+		val traveler = entry.getOrElse(Traveler(board, Nil))
+		travelerMap + (board -> (traveler :+ play))
+	}
+
+	override def toString: String = s"$board: $play"
+}
+
+/**
 	* This is a particular play of an (unspecified) board from an (unspecified) section.
 	*
 	* @param ns     NS pair number
@@ -215,7 +249,7 @@ object Traveler {
 	* @param result the table result
 	*/
 case class Play(ns: Int, ew: Int, result: PlayResult) {
-	override def toString = s"NS: $ns, EW: $ew, score: $result"
+	override def toString = s"$ns vs $ew: $result"
 
 	def compare(x: PlayResult): Option[Int] = result match {
 		case PlayResult(Right(y)) => x match {
@@ -225,15 +259,8 @@ case class Play(ns: Int, ew: Int, result: PlayResult) {
 		case _ => None
 	}
 
-	def matchpoints(t: Traveler): Option[Rational[Int]] = {
-		result match {
-			case PlayResult(Right(_)) => t.matchpoint(this)
-			case PlayResult(Left("A-")) => Some(Rational(2, 5))
-			case PlayResult(Left("A")) => Some(Rational(1, 2))
-			case PlayResult(Left("A+")) => Some(Rational(3, 5))
-			case _ => None // this accounts for the DNP case
-		}
-	}
+	def matchpoints(t: Traveler): Option[Rational[Int]] = result.matchpoints(t.matchpoint(this))
+
 }
 
 object Play {
@@ -255,6 +282,19 @@ object Play {
 	*
 	*/
 case class PlayResult(r: Either[String, Int]) {
+	/**
+		* Method to get the matchpoints for this PlayResult
+		*
+		* @param f call-by-name value of the matchpoints where the result is an an Int
+		* @return an optional Rational
+		*/
+	def matchpoints(f: => Option[Rational[Int]]): Option[Rational[Int]] = r match {
+		case Right(_) => f
+		case Left("A-") => Some(Rational(2, 5))
+		case Left("A") => Some(Rational(1, 2))
+		case Left("A+") => Some(Rational(3, 5))
+		case _ => None // this accounts for the DNP case
+	}
 	override def toString: String = r match {
 		case Left(x) => x
 		case Right(x) => x.toString

@@ -149,6 +149,16 @@ class RecapParserSpec extends FlatSpec with Matchers {
 		r should matchPattern { case parser.Success(_, _) => }
 	}
 
+	behavior of "pickup"
+	it should "parse" in {
+		val parser = new RecapParser
+		val r = parser.parseAll(parser.pickup, "P 13 17\n1  130\n2  150\n\n")
+		r should matchPattern { case parser.Success(_, _) => }
+		val pickup: Pickup = r.get
+		pickup.ns shouldBe 13
+		pickup.ew shouldBe 17
+		pickup.boards.size shouldBe 2
+	}
 	behavior of "traveler"
 	it should "parse" in {
 		val parser = new RecapParser
