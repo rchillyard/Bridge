@@ -1,25 +1,77 @@
 package com.phasmidsoftware.bridge.cards
 
+import scala.collection.immutable
 import scala.language.implicitConversions
 
 /**
 	* This class models a playing card.
 	*
+	* CONSIDER removing the priority parameter because priority can be encoded into a sequence instead.
+	*
 	* @param suit the suit of the card (spades, hearts, diamonds, or clubs).
 	* @param rank the rank of the card (2 thru A).
 	*/
 case class Card(suit: Suit, rank: Rank) {
+
+	def promote: Card = Card(suit, rank)
+
 	override def toString: String = s"$suit$rank" // Bridge order (not Poker)
 }
 
 /**
+	* A sequence of cards.
+	* @param priority the number of higher-ranking cards in the suit
+	* @param cards the cards
+	*/
+case class Sequence(priority: Int, cards: Seq[Card]) {
+
+	def promote: Sequence = Sequence(priority-1, cards)
+
+	def ++(s: Sequence): Sequence = if (priority==s.priority) Sequence(priority, cards++s.cards) else throw CardException(s"cannot combine Sequences: $this and $s")
+}
+
+object Sequence {
+	implicit object SequenceOrdering extends Ordering[Sequence] {
+		override def compare(x: Sequence, y: Sequence): Int = x.priority - y.priority
+	}
+
+}
+/**
 	* This class models a holding in a suit.
 	*
-	* @param suit  the suit.
-	* @param ranks the ranks (expected to be in order).
+	* @param sequences the sequences (expected to be in order of rank).
+	*              @param suit the suit of this holding.
 	*/
-case class Holding(suit: Suit, ranks: Rank*) {
+case class Holding(sequences: Seq[Sequence], suit: Suit) {
+	require(isVoid || maybeSuit.get==suit)
+	def cards: Seq[Card] = for (s <- sequences; c <- s.cards) yield c
+	def isVoid: Boolean = sequences.isEmpty
+	private def maybeSuit: Option[Suit] = cards.headOption map (_.suit)
+	def ranks: Seq[Rank] = cards map (_.rank)
 	override def toString: String = s"$suit${Holding.ranksToString(ranks)}"
+}
+
+/**
+	* Companion object for Holding.
+	*/
+object Holding {
+
+	def apply(suit: Suit, ranks: Rank*): Holding = {
+		val cards = ranks map (rank => Card(suit, rank))
+		val cXs = for ((c,i) <- cards.zipWithIndex) yield i-c.rank.priority->c
+		val ss = for ((x,cXs) <- cXs.groupBy(_._1)) yield Sequence(cXs.head._2.rank.priority, for ((y,c) <- cXs) yield c)
+		apply(ss.toSeq.sorted, suit)
+	}
+
+	// TODO Rename as parseHolding
+	implicit def convertStringToHolding(s: String): Holding = create(Suit(s.head), Card.parser.parseRanks(s.tail))
+
+	implicit object RankOrdering extends Ordering[Rank] {
+		override def compare(x: Rank, y: Rank): Int = -x.priority + y.priority
+	}
+	def create(suit: Suit, ranks: Seq[Rank]): Holding = Holding(suit, ranks.sorted.reverse: _*)
+
+	def ranksToString(ranks: Seq[Rank]): String = if (ranks.nonEmpty) ranks.mkString("", "", "") else "-"
 }
 
 /**
@@ -33,8 +85,8 @@ case class Hand(holdings: Map[Suit, Holding]) {
 		implicit object SuitOrdering extends Ordering[Suit] {
 			override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
 		}
-		val values = holdings.values.toSeq.sortBy[Suit](h => h.suit).reverse
-		s"""${values.mkString("", " ", "")}"""
+		val keys = holdings.keys.toSeq.sorted.reverse
+		s"""${(for (k <- keys) yield s"${holdings(k)}").mkString("", " ", "")}"""
 	}
 
 }
@@ -54,6 +106,9 @@ trait Rank extends Priority {
 	val isHonor: Boolean
 }
 
+/**
+	* Trait defining the priority: the number of objects which precede this object in the ordering.
+	*/
 trait Priority {
 	def priority: Int
 }
@@ -230,18 +285,6 @@ case object Queen extends BaseRank(2, true)
 case object King extends BaseRank(1, true)
 
 case object Ace extends BaseRank(0, true)
-
-/**
-	* Companion object for Holding.
-	*/
-object Holding {
-
-	implicit def convertStringToHolding(s: String): Holding = create(Suit(s.head), Card.parser.parseRanks(s.tail))
-
-	def create(suit: Suit, ranks: Seq[Rank]): Holding = Holding(suit, ranks.sorted.reverse: _*)
-
-	def ranksToString(ranks: Seq[Rank]): String = if (ranks.nonEmpty) ranks.mkString("", "", "") else "-"
-}
 
 object Hand {
 	def apply(cs: Seq[Card]): Hand = Hand(for ((suit, cards) <- cs.groupBy(c => c.suit)) yield (suit, Holding(suit, (cards map (_.rank)).sorted.reverse: _*)))

@@ -1,9 +1,9 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmid.laScala.Shuffle
-import com.phasmidsoftware.output.Output
+import com.phasmidsoftware.output.{Output, Outputable}
 
-case class Deal(title: String, hs: Seq[Hand]) {
+case class Deal(title: String, hs: Seq[Hand]) extends Outputable {
 	private val Seq(n, e, s, w) = hs
 
 	def north: Hand = n

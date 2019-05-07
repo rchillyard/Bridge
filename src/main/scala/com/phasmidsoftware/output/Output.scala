@@ -367,3 +367,8 @@ case class WriterOutput(writer: Writer) extends BufferedCharSequenceOutput[Write
 }
 
 case class OutputException(w: String) extends Exception(w)
+
+trait Outputable {
+
+	def output(output: Output): Output
+}

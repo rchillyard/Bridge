@@ -4,7 +4,7 @@ import java.io.PrintWriter
 
 import com.phasmid.laScala.fp.FP
 import com.phasmid.laScala.values.Rational
-import com.phasmidsoftware.output.Output
+import com.phasmidsoftware.output.{Output, Outputable}
 
 import scala.io.{BufferedSource, Source}
 import scala.language.postfixOps
@@ -61,7 +61,7 @@ object Score extends App {
 	}
 }
 
-case class Event(title: String, sections: Seq[Section]) {
+case class Event(title: String, sections: Seq[Section]) extends Outputable {
 	if (sections.isEmpty)
 		System.err.println("Warning: there are no sections in this event")
 
@@ -70,12 +70,9 @@ case class Event(title: String, sections: Seq[Section]) {
 	def createResults: Map[Preamble, Seq[Result]] = (for (s <- sections) yield s.preamble -> s.createResults).toMap
 }
 
-case class Section(preamble: Preamble, travelers: Seq[Traveler]) {
+case class Section(preamble: Preamble, travelers: Seq[Traveler]) extends Outputable {
 
 	def output(output: Output): Output = travelers.foldLeft(output :+ s"$preamble\n")((o, t) => o ++ t.output(Output.empty))
-
-	override def toString: String =
-		super.toString
 
 	def createResults: Seq[Result] = {
 		val top = calculateTop
@@ -163,6 +160,7 @@ case class Matchpoints(ns: Int, ew: Int, result: PlayResult, mp: Option[Rational
 
 	def getMatchpoints(dir: Boolean): Iterable[Rational[Int]] = if (dir) mp else invert
 
+	// CONSIDER extending Outputtable and putting this logic into output method.
 	override def toString: String = mp match {
 		case Some(x) => s"NS: $ns, EW: $ew, score: $result, MP: ${Score.mpsAsString(x, top)}"
 		case _ => ""
@@ -178,7 +176,7 @@ case class Matchpoints(ns: Int, ew: Int, result: PlayResult, mp: Option[Rational
 	* @param board number
 	* @param ps    plays
 	*/
-case class Traveler(board: Int, ps: Seq[Play]) {
+case class Traveler(board: Int, ps: Seq[Play]) extends Outputable {
 	def isPlayed: Boolean = ps.nonEmpty
 
 	// Calculate the ideal top -- including any Average or DNP scores:

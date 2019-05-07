@@ -134,8 +134,13 @@ class CardSpec extends FlatSpec with Matchers {
 
 	behavior of "holding"
 
+	it should "create" in {
+		val holding = Holding.create(Spades, Seq(Ace, King, Ten, Nine, Seven, Five, Four))
+		holding.sequences.size shouldBe 4
+		holding.sequences.head shouldBe Sequence(0,Seq(Card("SA"),Card("SK")))
+	}
 	it should "form string" in {
-		Holding(Spades, "2", "A").toString shouldBe "S2A"
+		Holding(Spades, "2", "A").toString shouldBe "SA2"
 		Holding(Spades).toString shouldBe "S-"
 		import Rank._
 		Holding.create(Spades, Seq[Rank]("2", "A")).toString shouldBe "SA2"
