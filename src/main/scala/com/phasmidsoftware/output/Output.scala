@@ -1,6 +1,6 @@
 package com.phasmidsoftware.output
 
-import java.io.{Closeable, Writer}
+import java.io.{Closeable, Flushable, Writer}
 
 import scala.collection.mutable
 import scala.language.postfixOps
@@ -219,13 +219,13 @@ sealed trait BackedOutput[A <: Appendable with AutoCloseable] extends TypedOutpu
 	def persist(x: OutputType): Unit
 }
 
-sealed abstract class BufferedCharSequenceOutput[A <: Appendable with AutoCloseable](val appendable: A, val sb: mutable.StringBuilder = new StringBuilder) extends CharacterOutput with BufferedOutput with BackedOutput[A] {
+sealed abstract class BufferedCharSequenceOutput[A <: Appendable with AutoCloseable with Flushable](val appendable: A, val sb: mutable.StringBuilder = new StringBuilder) extends CharacterOutput with BufferedOutput with BackedOutput[A] {
 
 	/**
 		* This method is essentially non-functional in the JVM.
 		* It seemed like a good idea at the time!
 		*/
-	override def finalize(): Unit = close()
+	//	override def finalize(): Unit = close()
 
 	def isEmpty: Boolean = sb.isEmpty
 
@@ -264,13 +264,17 @@ sealed abstract class BufferedCharSequenceOutput[A <: Appendable with AutoClosea
 
 	def close(): Unit = {
 		flush
-		appendable.close()
+		if (isBacked)
+			appendable.flush()
+		// TODO understand why we fail with "Terminated" condition if we try to close the appendable (in the case of a PrintWriter).
 	}
 
 	def concatenate(output: Output): Output = output match {
-		case b: BufferedOutput => if (isBacked) backedConcatenate(b)
-		else concatenateOther(b)
-		case _ => throw OutputException(s"unsupported Output type: ${output.getClass}")
+		case b: BufferedOutput =>
+			if (isBacked) backedConcatenate(b)
+			else concatenateOther(b)
+		case _ =>
+			throw OutputException(s"unsupported Output type: ${output.getClass}")
 	}
 
 	private def backedConcatenate(output: BufferedOutput): Output = if (output.isBacked) {
@@ -337,7 +341,7 @@ object Output {
 	def apply[X](xs: Iterable[X])(f: X => Output): Output = reduce(xs)(_ :+ f(_))
 }
 
-case class NonOutput() extends Appendable with Closeable {
+case class NonOutput() extends Appendable with Closeable with Flushable {
 	def append(csq: CharSequence): Appendable = append(csq, 0, 0)
 
 	def append(csq: CharSequence, start: Int, end: Int): Appendable = throw OutputException("cannot append to NonOutput")
@@ -345,6 +349,8 @@ case class NonOutput() extends Appendable with Closeable {
 	def append(c: Char): Appendable = append(c.toString)
 
 	def close(): Unit = {}
+
+	override def flush(): Unit = throw OutputException("cannot flush NonOutput")
 }
 
 case class UnbackedOutput() extends BufferedCharSequenceOutput[NonOutput](NonOutput()) {
