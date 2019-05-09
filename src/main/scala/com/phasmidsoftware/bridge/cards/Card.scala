@@ -1,6 +1,7 @@
 package com.phasmidsoftware.bridge.cards
 
-import scala.collection.immutable
+import com.phasmidsoftware.output.{Output, Outputable}
+
 import scala.language.implicitConversions
 
 /**
@@ -12,43 +13,121 @@ import scala.language.implicitConversions
 	* @param rank the rank of the card (2 thru A).
 	*/
 case class Card(suit: Suit, rank: Rank) {
-
-	def promote: Card = Card(suit, rank)
+	def priority: Int = rank.priority
 
 	override def toString: String = s"$suit$rank" // Bridge order (not Poker)
 }
 
 /**
-	* A sequence of cards.
+	* A (non-empty) sequence of cards.
+	*
 	* @param priority the number of higher-ranking cards in the suit
-	* @param cards the cards
+	* @param cards    the cards
 	*/
 case class Sequence(priority: Int, cards: Seq[Card]) {
 
-	def promote: Sequence = Sequence(priority-1, cards)
+	require(cards.nonEmpty)
 
-	def ++(s: Sequence): Sequence = if (priority==s.priority) Sequence(priority, cards++s.cards) else throw CardException(s"cannot combine Sequences: $this and $s")
+	/**
+		* Method to truncate a Sequence (by playing a card: deemed to be the lowest card)
+		*
+		* @return an optional Sequence: Some(s) if s is a valid sequence, otherwise None if the sequence has been eliminated.
+		*/
+	def truncate: Option[Sequence] = {
+		val remainder = cards.init
+		if (remainder.nonEmpty) Some(Sequence(priority, remainder)) else None
+	}
+
+	def length: Int = cards.size
+
+	def head: Card = cards.head
+
+	def promote: Sequence = if (canPromote) Sequence(priority - 1, cards) else throw CardException(s"cannot promote priority $this")
+
+	/**
+		* Merge this Sequence into a sequence of Sequences (ss).
+		* If ss is empty or its last element cannot be combined with this, then we simply add this to ss.
+		* Otherwise, we take the other elements of ss and add a combined Sequence from the last element and this.
+		*
+		* @param ss a sequence of Sequences.
+		* @return a new sequence of Sequences.
+		*/
+	def merge(ss: Seq[Sequence]): Seq[Sequence] = if (ss.nonEmpty && ss.last.canCombine(this)) ss.init :+ (ss.last ++ this) else ss :+ this
+
+	def ++(s: Sequence): Sequence = if (canCombine(s)) Sequence(priority, cards ++ s.cards) else throw CardException(s"cannot combine Sequences: $this and $s")
+
+	override def toString: String = s"${cards.map(_.rank).mkString("")}[$priority]"
+
+	private def canPromote = priority > 0
+
+	private def canCombine(s: Sequence) = priority + length == s.priority
 }
 
 object Sequence {
+	/**
+		* Method to create a Sequence from a non-empty list of Cards.
+		*
+		* @param cs the list of Cards (must be non-empty).
+		* @return a new Sequence.
+		*/
+	def apply(cs: Seq[Card]): Sequence = apply(cs.head.priority, cs)
+
 	implicit object SequenceOrdering extends Ordering[Sequence] {
 		override def compare(x: Sequence, y: Sequence): Int = x.priority - y.priority
 	}
-
 }
 /**
 	* This class models a holding in a suit.
 	*
 	* @param sequences the sequences (expected to be in order of rank).
-	*              @param suit the suit of this holding.
+	* @param suit      the suit of this holding.
 	*/
-case class Holding(sequences: Seq[Sequence], suit: Suit) {
-	require(isVoid || maybeSuit.get==suit)
+case class Holding(sequences: Seq[Sequence], suit: Suit) extends Outputable {
+
+	require(isVoid || maybeSuit.get == suit)
+
+	def size: Int = sequences.size
+
 	def cards: Seq[Card] = for (s <- sequences; c <- s.cards) yield c
+
 	def isVoid: Boolean = sequences.isEmpty
+
+	def promote(priority: Int): Holding = {
+		def maybePromote(sequence: Sequence): Sequence = (sequence.priority - priority).signum match {
+			case -1 => sequence
+			case 1 => sequence.promote
+			case 0 => throw CardException(s"logic error cannot self-promote")
+		}
+
+		Holding((sequences map maybePromote).foldLeft[Seq[Sequence]](Nil)((ss, s) => s.merge(ss)), suit)
+	}
+
+	/**
+		* Method to remove (i.e. play) a card from this Holding.
+		*
+		* @param priority the sequence from which the card will be played.
+		* @return a new Holding with the sequence either truncated or eliminated entirely.
+		*/
+	def -(priority: Int): Holding = {
+		val sos: Seq[Option[Sequence]] = for (s <- sequences) yield if (s.priority == priority) s.truncate else Some(s)
+		Holding(sos.flatten, suit)
+	}
+
+	// TODO uncomment this
+	//	override def toString: String = s"$suit${Holding.ranksToString(cards map (_.rank))}"
+
+	override def toString: String = s"{$suit: ${sequences.mkString(", ")}}"
+
 	private def maybeSuit: Option[Suit] = cards.headOption map (_.suit)
-	def ranks: Seq[Rank] = cards map (_.rank)
-	override def toString: String = s"$suit${Holding.ranksToString(ranks)}"
+
+	/**
+		* NOTE: this is used temporarily because Output is messing up
+		*
+		* @return
+		*/
+	def neatOutput: String = s"$suit${Holding.ranksToString(cards map (_.rank))}"
+
+	def output(o: Output): Output = o :+ suit.toString :+ Holding.ranksToString(cards map (_.rank))
 }
 
 /**
@@ -58,18 +137,18 @@ object Holding {
 
 	def apply(suit: Suit, ranks: Rank*): Holding = {
 		val cards = ranks map (rank => Card(suit, rank))
-		val cXs = for ((c,i) <- cards.zipWithIndex) yield i-c.rank.priority->c
-		val ss = for ((x,cXs) <- cXs.groupBy(_._1)) yield Sequence(cXs.head._2.rank.priority, for ((y,c) <- cXs) yield c)
+		val cXsXm = (for ((c, i) <- cards.zipWithIndex) yield i - c.priority -> c).groupBy(_._1)
+		val ss = cXsXm.values map (cXs => Sequence(cXs.map(_._2)))
 		apply(ss.toSeq.sorted, suit)
 	}
 
-	// TODO Rename as parseHolding
-	implicit def convertStringToHolding(s: String): Holding = create(Suit(s.head), Card.parser.parseRanks(s.tail))
+	implicit def parseHolding(s: String): Holding = create(Card.parser.parseRanks(s.tail), Suit(s.head))
 
 	implicit object RankOrdering extends Ordering[Rank] {
 		override def compare(x: Rank, y: Rank): Int = -x.priority + y.priority
 	}
-	def create(suit: Suit, ranks: Seq[Rank]): Holding = Holding(suit, ranks.sorted.reverse: _*)
+
+	def create(ranks: Seq[Rank], suit: Suit) = Holding(suit, ranks.sorted.reverse: _*)
 
 	def ranksToString(ranks: Seq[Rank]): String = if (ranks.nonEmpty) ranks.mkString("", "", "") else "-"
 }
@@ -79,17 +158,92 @@ object Holding {
 	*
 	* @param holdings the four holdings (as a Map)
 	*/
-case class Hand(holdings: Map[Suit, Holding]) {
+case class Hand(holdings: Map[Suit, Holding]) extends Outputable {
+
+	/**
+		* Apply a sequence of CardPlay operations to this Hand.
+		*
+		* @param index     the zero-based index of this Hand within the deal.
+		* @param cardPlays the list of card plays
+		* @return a new Hand based on this Hand and all of the card plays.
+		*/
+	def play(index: Int, cardPlays: Seq[CardPlay]): Hand = cardPlays.foldLeft[Hand](this)((r, c) => {
+		val result = r.play(c, index)
+		//		println(s"index=$index, r=$r, c=$c: result=$result")
+		result
+	}
+	)
+
+
+	/**
+		* Create new Hand based on the play of a card.
+		*
+		* @param cardPlay the card play.
+		* @param index    the index with respect to Deal (zero-based)
+		* @return a new Hand
+		*/
+	def play(cardPlay: CardPlay, index: Int): Hand = {
+		val priority = cardPlay.priority
+		if (cardPlay.hand == index)
+			this - (cardPlay.suit, priority)
+		else
+			promote(cardPlay.suit, priority)
+	}
+
+	/**
+		* Method to get the count of the cards in this Hand.
+		*
+		* @return the sum of the cards in the holdings
+		*/
+	def cards: Int = holdings.values.map(_.cards.size).sum
+
+	/**
+		* Method to eliminate (play) a card from the given suit and sequence.
+		*
+		* @param suit     the suit.
+		* @param priority the priority of the sequence from which we take a card.
+		* @return a new Hand, with one less card.
+		*/
+	def -(suit: Suit, priority: Int): Hand =
+		Hand(holdings + (suit -> (holdings(suit) - priority)))
+
+	def promote(suit: Suit, priority: Int): Hand =
+		Hand(holdings + (suit -> holdings(suit).promote(priority)))
+
+
 	override def toString: String = {
 		// TODO figure out why we can't just import SuitOrdering from Suit
 		implicit object SuitOrdering extends Ordering[Suit] {
 			override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
 		}
 		val keys = holdings.keys.toSeq.sorted.reverse
-		s"""${(for (k <- keys) yield s"${holdings(k)}").mkString("", " ", "")}"""
+		s"""${(for (k <- keys) yield s"${holdings(k)}").mkString("", "\n", "")}"""
 	}
 
+	/**
+		* Temporary while Output is broken
+		*
+		* @return
+		*/
+	def neatOutput: String = {
+		// TODO figure out why we can't just import SuitOrdering from Suit
+		implicit object SuitOrdering extends Ordering[Suit] {
+			override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
+		}
+		val keys = holdings.keys.toSeq.sorted.reverse
+		(for (k <- keys) yield holdings(k).neatOutput).mkString("")
+	}
+
+	def output(output: Output): Output = {
+		// TODO figure out why we can't just import SuitOrdering from Suit
+		implicit object SuitOrdering extends Ordering[Suit] {
+			override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
+		}
+		val keys = holdings.keys.toSeq.sorted.reverse
+		output ++ (for (k <- keys) yield holdings(k).output(Output.empty))
+	}
 }
+
 
 /**
 	* Trait defining the properties of a suit
@@ -105,6 +259,7 @@ trait Suit {
 trait Rank extends Priority {
 	val isHonor: Boolean
 }
+
 
 /**
 	* Trait defining the priority: the number of objects which precede this object in the ordering.
@@ -204,7 +359,7 @@ object Rank {
 		* @param s the String.
 		* @return the Rank.
 		*/
-	implicit def convertStringToRank(s: String): Rank = apply(s)
+	implicit def parseRank(s: String): Rank = apply(s)
 
 	/**
 		* Defines an ordering of Ranks
@@ -290,7 +445,7 @@ object Hand {
 	def apply(cs: Seq[Card]): Hand = Hand(for ((suit, cards) <- cs.groupBy(c => c.suit)) yield (suit, Holding(suit, (cards map (_.rank)).sorted.reverse: _*)))
 
 	def from(ws: String*): Hand = {
-		val tuples = for (w <- ws; h = Holding.convertStringToHolding(w)) yield h.suit -> h
+		val tuples = for (w <- ws; h = Holding.parseHolding(w)) yield h.suit -> h
 		Hand(tuples.toMap)
 	}
 }

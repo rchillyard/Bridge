@@ -413,7 +413,8 @@ class ScoreSpec extends FlatSpec with Matchers {
 	behavior of "Score"
 	it should "read travelers.lexington.2017.0404 as a resource" in {
 		val writer = MockWriter(8192)
-		for (o <- Score.doScoreResource("travelers.lexington.2017.0404", Output(writer))) o.close()
+		val output = Output(writer)
+		for (o <- Score.doScoreResource("travelers.lexington.2017.0404", output)) o.close()
 		writer.spilled shouldBe 2329
 	}
 	it should "read travelers.lexington.2017.0404P as a resource (includes pickup slips)" in {

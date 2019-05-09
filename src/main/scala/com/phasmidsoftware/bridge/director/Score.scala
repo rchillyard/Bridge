@@ -42,10 +42,10 @@ object Score extends App {
 		def getResultsForDirection(k: Preamble, r: Result, top: Int): Output = {
 			def resultDetails(s: (Int, (Rational[Int], Int))): Output = Output(s"${s._1} : ${Score.mpsAsString(s._2._1, top)} : ${Score.mpsAsPercentage(s._2._1, s._2._2)} : ${k.getNames(r.isNS, s._1)}").insertBreak
 
-			Output(r.cards.toSeq.sortBy(_._2._1).reverse)(resultDetails)
+			Output.foldLeft(r.cards.toSeq.sortBy(_._2._1).reverse)(output)(_ ++ resultDetails(_))
 		}
 
-		def getResults(k: Preamble, r: Result): Output = Output(s"Results for direction: ${if (r.isNS) "N/S" else "E/W"}").insertBreak :+ getResultsForDirection(k, r, r.top)
+		def getResults(k: Preamble, r: Result): Output = Output(s"Results for direction: ${if (r.isNS) "N/S" else "E/W"}").insertBreak ++ getResultsForDirection(k, r, r.top)
 
 		def eventResults(e: Event, k: Preamble, rs: Seq[Result]): Output = {
 			val z = for (r <- rs) yield getResults(k, r)
@@ -160,7 +160,7 @@ case class Matchpoints(ns: Int, ew: Int, result: PlayResult, mp: Option[Rational
 
 	def getMatchpoints(dir: Boolean): Iterable[Rational[Int]] = if (dir) mp else invert
 
-	// CONSIDER extending Outputtable and putting this logic into output method.
+	// CONSIDER extending Outputable and putting this logic into output method.
 	override def toString: String = mp match {
 		case Some(x) => s"NS: $ns, EW: $ew, score: $result, MP: ${Score.mpsAsString(x, top)}"
 		case _ => ""

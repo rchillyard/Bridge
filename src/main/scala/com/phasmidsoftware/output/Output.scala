@@ -45,18 +45,24 @@ sealed trait Output extends AutoCloseable {
 	/**
 		* Concatenate each element of the iterator xs to this in turn.
 		*
-		* @param xs the iterator of Outputs.
+		* @param xs        the iterator of Outputs.
+		* @param separator an implicit separator
 		* @return this Output.
 		*/
 	def ++(xs: Iterator[Output]): Output
 
+	//	def ++(xs: Iterator[Output])(implicit separator: Output): Output
+
 	/**
 		* Concatenate each element of the iterable xs to this in turn.
 		*
-		* @param xs an iterable of Outputs.
+		* @param xs        an iterable of Outputs.
+		* @param separator an implicit separator
 		* @return this Output.
 		*/
 	def ++(xs: Iterable[Output]): Output = this ++ xs.iterator
+
+	//	def ++(xs: Iterable[Output])(implicit separator: Output): Output = this ++ xs.iterator
 }
 
 /**
@@ -100,9 +106,22 @@ sealed trait TypedOutput extends Output {
 		*/
 	def append(x: OutputType): Output
 
-	def :+(x: Any): Output = this append asOutputType(x)
+	def :+(x: Any): Output =
+		this append asOutputType(x)
 
 	def ++(xs: Iterator[Output]): Output = xs.foldLeft(unit(zero))(_ ++ _)
+
+	//	def ++(xs: Iterator[Output])(implicit separator: Output): Output = if (xs.hasNext) {
+	//		val first: Output = xs.next()
+	//		// TODO this almost works but what we really want is an immutable Output type, because, otherwise, the string in the separator can get consumed (if we use the "++" operator)
+	////		xs.foldLeft[Output](first)(_ :+ separator +:  _)
+	//
+	//		// TODO this is a kluge because we ignore the separator passed in
+	////		xs.foldLeft(first)(_ ++ Output(" ") ++ _)
+	//		xs.foldLeft(first)(_ ++ _)
+	//	}
+	//	else
+	//		unit(zero)
 }
 
 /**
@@ -129,6 +148,8 @@ sealed trait BufferedOutput extends TypedOutput {
 		* @return an OutputType
 		*/
 	def content: OutputType
+
+	def contentBrief: String
 
 	/**
 		* Method to clear the contents of the buffer and return its value.
@@ -264,6 +285,11 @@ sealed abstract class BufferedCharSequenceOutput[A <: Appendable with AutoClosea
 
 	def close(): Unit = {
 		flush
+		//		for (c <- concatenations) {
+		//			//				c.appendToBuffer(c.content)
+		//			appendToBuffer(c.clear.asInstanceOf[CharSequence]) // TODO fix this up
+		//			persist(content)
+		//		}
 		if (isBacked)
 			appendable.flush()
 		// TODO understand why we fail with "Terminated" condition if we try to close the appendable (in the case of a PrintWriter).
@@ -271,11 +297,15 @@ sealed abstract class BufferedCharSequenceOutput[A <: Appendable with AutoClosea
 
 	def concatenate(output: Output): Output = output match {
 		case b: BufferedOutput =>
+			//			println(s"concatenate: backed=${b.isBacked}, '${b.contentBrief}',  output: backed=${b.isBacked}, '${b.contentBrief}'")
+			//			println(s"concatenate: `${this}` with `$output`")
 			if (isBacked) backedConcatenate(b)
 			else concatenateOther(b)
 		case _ =>
 			throw OutputException(s"unsupported Output type: ${output.getClass}")
 	}
+
+	def contentBrief: String = content.toString.substring(0, Math.min(20, sb.length))
 
 	private def backedConcatenate(output: BufferedOutput): Output = if (output.isBacked) {
 		close()
@@ -289,6 +319,11 @@ sealed abstract class BufferedCharSequenceOutput[A <: Appendable with AutoClosea
 	else
 		transferContentFromBufferedOutput(output)
 
+	//	{
+	//		concatenations = concatenations :+ output
+	//		this
+	//	}
+
 
 	private def transferContentFromBufferedOutput(o: BufferedOutput): Output = {
 		appendToBuffer(o.clear.asInstanceOf[CharSequence]) // TODO fix this up
@@ -301,9 +336,13 @@ sealed abstract class BufferedCharSequenceOutput[A <: Appendable with AutoClosea
 		* Arbitrary value just to avoid using up a lot of memory unnecessarily.
 		*/
 	private val NeedToFlush = 4096
+
+	//	private var concatenations: Seq[BufferedOutput] = Nil
 }
 
 object Output {
+	implicit def separator: Output = apply(" ")
+
 	/**
 		* Method to construct an empty WriterOutput based on writer.
 		*
@@ -336,7 +375,9 @@ object Output {
 		*/
 	def apply(s: CharSequence): Output = empty :+ s
 
-	def reduce[X](xs: Iterable[X])(f: (Output, X) => Output): Output = xs.foldLeft(empty)(f)
+	def foldLeft[X](xs: Iterable[X])(o: Output)(f: (Output, X) => Output): Output = xs.foldLeft(o)(f)
+
+	def reduce[X](xs: Iterable[X])(f: (Output, X) => Output): Output = foldLeft(xs)(empty)(f)
 
 	def apply[X](xs: Iterable[X])(f: X => Output): Output = reduce(xs)(_ :+ f(_))
 }
@@ -363,7 +404,8 @@ case class UnbackedOutput() extends BufferedCharSequenceOutput[NonOutput](NonOut
 case class WriterOutput(writer: Writer) extends BufferedCharSequenceOutput[Writer](writer) {
 	def isBacked: Boolean = true
 
-	override def toString: String = s"WriterOutput: with writer: $writer and buffer: ${sb.mkString}"
+	override def toString: String =
+		s"WriterOutput: with writer: $writer and buffer: ${sb.mkString}"
 }
 
 case class OutputException(w: String) extends Exception(w)

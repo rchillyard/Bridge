@@ -3,8 +3,8 @@ package com.phasmidsoftware.bridge.cards
 import com.phasmid.laScala.Shuffle
 import com.phasmidsoftware.output.{Output, Outputable}
 
-case class Deal(title: String, hs: Seq[Hand]) extends Outputable {
-	private val Seq(n, e, s, w) = hs
+case class Deal(title: String, hands: Seq[Hand]) extends Outputable {
+	private val Seq(n, e, s, w) = hands
 
 	def north: Hand = n
 
@@ -14,7 +14,26 @@ case class Deal(title: String, hs: Seq[Hand]) extends Outputable {
 
 	def west: Hand = w
 
-	private def outputHand(name: String, hand: Hand): Output = Output(s"$name:\t$hand").insertBreak
+	/**
+		* Play a trick (made up of four card plays).
+		*
+		* @param cardPlays the card play from each of the four hands.
+		*/
+	def play(cardPlays: Seq[CardPlay]): Deal = {
+		require(cardPlays.size == 4)
+
+		Deal(title, for ((h, i) <- hands.zipWithIndex.toList) yield h.play(i, cardPlays))
+	}
+
+
+	def promote(hand: Hand, suit: Suit, priority: Int): Deal = Deal(title, hands map (h => if (h == hand) h else h.promote(suit, priority)))
+
+	override def toString: String = s"Deal $title\n${hands.mkString("\n")}"
+
+	private def outputHand(name: String, hand: Hand): Output =
+		(Output(s"$name:\t") :+ hand.neatOutput).insertBreak
+
+	//	Output(s"$name:\t")++hand.output(Output.empty).insertBreak
 
 	def output(output: Output): Output = (output :+ title).insertBreak ++ outputHand("North", n) ++ outputHand("East", e) ++ outputHand("South", s) ++ outputHand("West", w)
 }
@@ -28,3 +47,12 @@ object Deal {
 		fromCards(title, shuffler(newDeck))
 	}
 }
+
+/**
+	* The play of a card.
+	*
+	* @param hand     the index of this hand in the Deal.
+	* @param suit     rhe suit from which the card is to be played.
+	* @param priority the priority of the sequence from which the card is to be played.
+	*/
+case class CardPlay(hand: Int, suit: Suit, priority: Int)
