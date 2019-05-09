@@ -232,7 +232,7 @@ class CardSpec extends FlatSpec with Matchers {
 
 	it should "apply" in {
 		val map: Map[Suit, Holding] = Map(Spades -> Holding.parseHolding("SKQ3"), Hearts -> Holding.parseHolding("H7654"), Diamonds -> Holding.parseHolding("DQ104"), Clubs -> Holding.parseHolding("C842"))
-		val target = Hand(map)
+		val target = Hand(0, map)
 		val holdings = target.holdings
 		holdings.size shouldBe 4
 		holdings.head shouldBe Spades -> Holding.parseHolding("SKQ3")
@@ -241,7 +241,7 @@ class CardSpec extends FlatSpec with Matchers {
 
 	it should "promote" in {
 		val map: Map[Suit, Holding] = Map(Spades -> Holding.parseHolding("SKQ3"), Hearts -> Holding.parseHolding("H7654"), Diamonds -> Holding.parseHolding("DQ104"), Clubs -> Holding.parseHolding("C842"))
-		val target = Hand(map)
+		val target = Hand(0, map)
 		target.holdings.head._2.sequences.head.priority shouldBe 1
 		target.holdings.last._2.sequences.head.priority shouldBe 6
 		val promoted = target.promote(Spades, 0)
@@ -250,12 +250,10 @@ class CardSpec extends FlatSpec with Matchers {
 	}
 
 	it should "play" in {
-		val target = Hand(Map[Suit, Holding](Spades -> Holding.parseHolding("SKQ3"), Hearts -> Holding.parseHolding("H7654"), Diamonds -> Holding.parseHolding("DQ104"), Clubs -> Holding.parseHolding("C842")))
+		val target = Hand(0, Map[Suit, Holding](Spades -> Holding.parseHolding("SKQ3"), Hearts -> Holding.parseHolding("H7654"), Diamonds -> Holding.parseHolding("DQ104"), Clubs -> Holding.parseHolding("C842")))
 		target.cards shouldBe 13
-		//		println(target)
 		val index = 0
-		val result = target.play(CardPlay(index, Spades, 11), index)
-		//		println(result)
+		val result = target.play(CardPlay(index, Spades, 11))
 		result.cards shouldBe 12
 	}
 
@@ -266,18 +264,23 @@ class CardSpec extends FlatSpec with Matchers {
 		hands.size shouldBe 4
 		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
 		val trick = Seq(CardPlay(0, Spades, priority1S), CardPlay(1, Spades, priority2S), CardPlay(2, Spades, priority3S), CardPlay(3, Spades, priority4S))
-		val target = deal.south
-		val index = 2
-		target.cards shouldBe 13
-		val played: Hand = target.play(index, trick)
-		//			println(played)
-		played.cards shouldBe 12
+		val target0 = deal.north
+		target0.cards shouldBe 13
+		target0.play(trick).cards shouldBe 12
+		val target1 = deal.east
+		target1.cards shouldBe 13
+		target1.play(trick).cards shouldBe 12
+		val target2 = deal.south
+		target2.cards shouldBe 13
+		target2.play(trick).cards shouldBe 12
+		val target3 = deal.south
+		target3.cards shouldBe 13
+		target3.play(trick).cards shouldBe 12
 	}
 
-	// TODO reinstate me
-	ignore should "form string" in {
-		val target = Hand.from("SAT32", "CQT98", "D43", "HKJT")
-		target.toString shouldBe "SAT32 HKJT D43 CQT98"
+	it should "form string" in {
+		val target = Hand.from(0, "SAT32", "CQT98", "D43", "HKJT")
+		target.neatOutput shouldBe "SAT32 HKJT D43 CQT98"
 	}
 
 }

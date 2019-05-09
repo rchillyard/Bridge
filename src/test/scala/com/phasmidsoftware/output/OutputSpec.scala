@@ -201,7 +201,6 @@ case class MockWriter(n: Int = 4096, var isOpen: Boolean = true) extends Writer 
 	def spill(len: Int): String = {
 		val toSpill = math.min(length, length + len - n)
 		if (toSpill > 0) {
-			//			println(s"spill: toSpill=$toSpill, n=$n, length=$length, len=$len")
 			val result = chars.take(toSpill).mkString("")
 			if (toSpill + length <= n)
 				Array.copy(chars, toSpill, chars, 0, length)
@@ -209,7 +208,6 @@ case class MockWriter(n: Int = 4096, var isOpen: Boolean = true) extends Writer 
 				throw OutputException(s"logic error: buffer too small: $n but needs to be at least ${toSpill + length}")
 			spilled += toSpill
 			length -= toSpill
-			//			println(s"spilled: toSpill=$toSpill, length=$length")
 			result
 		}
 		else
@@ -219,7 +217,6 @@ case class MockWriter(n: Int = 4096, var isOpen: Boolean = true) extends Writer 
 	def write(cbuf: Array[Char], off: Int, len: Int): Unit =
 		if (isOpen) {
 			spillway = spill(len)
-			//			println(s"write: n=$n, length=$length, off=$off, len=$len")
 			if (len + length <= n) {
 			Array.copy(cbuf, off, chars, length, len)
 			length += len

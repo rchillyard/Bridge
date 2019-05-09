@@ -384,48 +384,48 @@ class ScoreSpec extends FlatSpec with Matchers {
 	}
 
 	// This file seems to be incorrect so maybe it's not a problem that this test doesn't succeed
-	ignore should "read travelers.lexington.2016.0503 as a resource" in {
-		val resource = "travelers.lexington.2016.0503"
-		val ey: Try[Event] = Option(getClass.getResourceAsStream(resource)) match {
-			case Some(s) => RecapParser.readEvent(Source.fromInputStream(s))
-			case None => Failure(new Exception(s"doScoreResource: cannot open resource: $resource"))
-		}
-		ey should matchPattern { case Success(Event(_, _)) => }
-		val event = ey.get
-		val results: Map[Preamble, Seq[Result]] = event.createResults
-		val rso: Option[Seq[Result]] = results.get(event.sections.head.preamble)
-		rso should matchPattern { case Some(_) => }
-		val resultsA: Seq[Result] = rso.get
-		resultsA.size shouldBe 2
-		val resultANS: Result = resultsA.head
-		resultANS.isNS shouldBe true
-		resultANS.top shouldBe 5
-		val cards: Map[Int, (Rational[Int], Int)] = resultANS.cards
-		cards.size shouldBe 14
-		val scores = (for (score <- cards.keys) yield cards(score)).toSeq
-		scores.size shouldBe 12
-		val total: Rational[Int] = (for ((r, _) <- cards.values) yield r).sum
-		total shouldBe Rational[Int](2).invert * cards.size * (resultANS.top + 1)
-		scores.size shouldBe 6
-		for ((_, (_, t)) <- cards) t shouldBe resultANS.top + 1
-	}
+	//	ignore should "read travelers.lexington.2016.0503 as a resource" in {
+	//		val resource = "travelers.lexington.2016.0503"
+	//		val ey: Try[Event] = Option(getClass.getResourceAsStream(resource)) match {
+	//			case Some(s) => RecapParser.readEvent(Source.fromInputStream(s))
+	//			case None => Failure(new Exception(s"doScoreResource: cannot open resource: $resource"))
+	//		}
+	//		ey should matchPattern { case Success(Event(_, _)) => }
+	//		val event = ey.get
+	//		val results: Map[Preamble, Seq[Result]] = event.createResults
+	//		val rso: Option[Seq[Result]] = results.get(event.sections.head.preamble)
+	//		rso should matchPattern { case Some(_) => }
+	//		val resultsA: Seq[Result] = rso.get
+	//		resultsA.size shouldBe 2
+	//		val resultANS: Result = resultsA.head
+	//		resultANS.isNS shouldBe true
+	//		resultANS.top shouldBe 5
+	//		val cards: Map[Int, (Rational[Int], Int)] = resultANS.cards
+	//		cards.size shouldBe 14
+	//		val scores = (for (score <- cards.keys) yield cards(score)).toSeq
+	//		scores.size shouldBe 12
+	//		val total: Rational[Int] = (for ((r, _) <- cards.values) yield r).sum
+	//		total shouldBe Rational[Int](2).invert * cards.size * (resultANS.top + 1)
+	//		scores.size shouldBe 6
+	//		for ((_, (_, t)) <- cards) t shouldBe resultANS.top + 1
+	//	}
 
 	behavior of "Score"
 	it should "read travelers.lexington.2017.0404 as a resource" in {
 		val writer = MockWriter(8192)
 		val output = Output(writer)
 		for (o <- Score.doScoreResource("travelers.lexington.2017.0404", output)) o.close()
-		writer.spilled shouldBe 2329
+		writer.spilled shouldBe 2330
 	}
 	it should "read travelers.lexington.2017.0404P as a resource (includes pickup slips)" in {
 		val writer = MockWriter(8192)
 		for (o <- Score.doScoreResource("travelers.lexington.2017.0404P", Output(writer))) o.close()
-		writer.spilled shouldBe 2329
+		writer.spilled shouldBe 2330
 	}
 	it should "read travelers.lexington.2017.0404 as a file" in {
 		val writer = MockWriter(8192)
 		for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/travelers.lexington.2017.0404", Output(writer))) o.close()
-		writer.spilled shouldBe 2329
+		writer.spilled shouldBe 2330
 	}
 }
 

@@ -45,8 +45,8 @@ sealed trait Output extends AutoCloseable {
 	/**
 		* Concatenate each element of the iterator xs to this in turn.
 		*
-		* @param xs        the iterator of Outputs.
-		* @param separator an implicit separator
+		* @param xs the iterator of Outputs.
+		*           //		* @param separator an implicit separator
 		* @return this Output.
 		*/
 	def ++(xs: Iterator[Output]): Output
@@ -56,8 +56,8 @@ sealed trait Output extends AutoCloseable {
 	/**
 		* Concatenate each element of the iterable xs to this in turn.
 		*
-		* @param xs        an iterable of Outputs.
-		* @param separator an implicit separator
+		* @param xs an iterable of Outputs.
+		*           //		* @param separator an implicit separator
 		* @return this Output.
 		*/
 	def ++(xs: Iterable[Output]): Output = this ++ xs.iterator
@@ -109,19 +109,22 @@ sealed trait TypedOutput extends Output {
 	def :+(x: Any): Output =
 		this append asOutputType(x)
 
-	def ++(xs: Iterator[Output]): Output = xs.foldLeft(unit(zero))(_ ++ _)
+	//	def ++(xs: Iterator[Output]): Output = xs.foldLeft(unit(zero))(_ ++ _)
 
-	//	def ++(xs: Iterator[Output])(implicit separator: Output): Output = if (xs.hasNext) {
-	//		val first: Output = xs.next()
-	//		// TODO this almost works but what we really want is an immutable Output type, because, otherwise, the string in the separator can get consumed (if we use the "++" operator)
-	////		xs.foldLeft[Output](first)(_ :+ separator +:  _)
-	//
-	//		// TODO this is a kluge because we ignore the separator passed in
-	////		xs.foldLeft(first)(_ ++ Output(" ") ++ _)
-	//		xs.foldLeft(first)(_ ++ _)
-	//	}
-	//	else
-	//		unit(zero)
+	def ++(xs: Iterator[Output]): Output = if (xs.hasNext) {
+		val first: Output = xs.next()
+
+		def combine(o1: Output, o2: Output): Output =
+			o1 :+ " " +: o2
+		// TODO this almost works but what we really want is an immutable Output type, because, otherwise, the string in the separator can get consumed (if we use the "++" operator)
+		//		xs.foldLeft[Output](first)(_ :+ separator +:  _)
+
+		// TODO this is a kluge because we ignore the separator passed in
+		//		xs.foldLeft(first)(_ ++ Output(" ") ++ _)
+		xs.foldLeft(unit(zero) ++ first)(combine)
+	}
+	else
+		unit(zero)
 }
 
 /**
@@ -297,8 +300,6 @@ sealed abstract class BufferedCharSequenceOutput[A <: Appendable with AutoClosea
 
 	def concatenate(output: Output): Output = output match {
 		case b: BufferedOutput =>
-			//			println(s"concatenate: backed=${b.isBacked}, '${b.contentBrief}',  output: backed=${b.isBacked}, '${b.contentBrief}'")
-			//			println(s"concatenate: `${this}` with `$output`")
 			if (isBacked) backedConcatenate(b)
 			else concatenateOther(b)
 		case _ =>

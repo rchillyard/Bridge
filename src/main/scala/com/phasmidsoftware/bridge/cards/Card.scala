@@ -96,7 +96,7 @@ case class Holding(sequences: Seq[Sequence], suit: Suit) extends Outputable {
 		def maybePromote(sequence: Sequence): Sequence = (sequence.priority - priority).signum match {
 			case -1 => sequence
 			case 1 => sequence.promote
-			case 0 => throw CardException(s"logic error cannot self-promote")
+			case 0 => throw CardException(s"Holding: logic error: $this cannot self-promote for priority $priority")
 		}
 
 		Holding((sequences map maybePromote).foldLeft[Seq[Sequence]](Nil)((ss, s) => s.merge(ss)), suit)
@@ -113,12 +113,7 @@ case class Holding(sequences: Seq[Sequence], suit: Suit) extends Outputable {
 		Holding(sos.flatten, suit)
 	}
 
-	// TODO uncomment this
-	//	override def toString: String = s"$suit${Holding.ranksToString(cards map (_.rank))}"
-
 	override def toString: String = s"{$suit: ${sequences.mkString(", ")}}"
-
-	private def maybeSuit: Option[Suit] = cards.headOption map (_.suit)
 
 	/**
 		* NOTE: this is used temporarily because Output is messing up
@@ -128,6 +123,8 @@ case class Holding(sequences: Seq[Sequence], suit: Suit) extends Outputable {
 	def neatOutput: String = s"$suit${Holding.ranksToString(cards map (_.rank))}"
 
 	def output(o: Output): Output = o :+ suit.toString :+ Holding.ranksToString(cards map (_.rank))
+
+	private def maybeSuit: Option[Suit] = cards.headOption map (_.suit)
 }
 
 /**
@@ -156,33 +153,30 @@ object Holding {
 /**
 	* This class models a bridge hand (four suits).
 	*
-	* @param holdings the four holdings (as a Map)
+	* @param index    the index of this hand within a Deal.
+	* @param holdings the four holdings (as a Map).
 	*/
-case class Hand(holdings: Map[Suit, Holding]) extends Outputable {
+case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable {
 
 	/**
 		* Apply a sequence of CardPlay operations to this Hand.
+		* Note that we have to sort the order of the card plays so that we aren't trying to promote sequences where a card has already been played.
 		*
-		* @param index     the zero-based index of this Hand within the deal.
+		* TODO: however, we need to realize that in actual play, the CardPlay objects happen one at a time and so cannot be ordered.
+		* This suggests that we need to delay the application of promotion until after a trick is quitted.
+		*
 		* @param cardPlays the list of card plays
 		* @return a new Hand based on this Hand and all of the card plays.
 		*/
-	def play(index: Int, cardPlays: Seq[CardPlay]): Hand = cardPlays.foldLeft[Hand](this)((r, c) => {
-		val result = r.play(c, index)
-		//		println(s"index=$index, r=$r, c=$c: result=$result")
-		result
-	}
-	)
-
+	def play(cardPlays: Seq[CardPlay]): Hand = cardPlays.sortWith(_.priority > _.priority).foldLeft[Hand](this)(_ play _)
 
 	/**
 		* Create new Hand based on the play of a card.
 		*
 		* @param cardPlay the card play.
-		* @param index    the index with respect to Deal (zero-based)
 		* @return a new Hand
 		*/
-	def play(cardPlay: CardPlay, index: Int): Hand = {
+	def play(cardPlay: CardPlay): Hand = {
 		val priority = cardPlay.priority
 		if (cardPlay.hand == index)
 			this - (cardPlay.suit, priority)
@@ -205,11 +199,10 @@ case class Hand(holdings: Map[Suit, Holding]) extends Outputable {
 		* @return a new Hand, with one less card.
 		*/
 	def -(suit: Suit, priority: Int): Hand =
-		Hand(holdings + (suit -> (holdings(suit) - priority)))
+		Hand(index, holdings + (suit -> (holdings(suit) - priority)))
 
 	def promote(suit: Suit, priority: Int): Hand =
-		Hand(holdings + (suit -> holdings(suit).promote(priority)))
-
+		Hand(index, holdings + (suit -> holdings(suit).promote(priority)))
 
 	override def toString: String = {
 		// TODO figure out why we can't just import SuitOrdering from Suit
@@ -231,7 +224,7 @@ case class Hand(holdings: Map[Suit, Holding]) extends Outputable {
 			override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
 		}
 		val keys = holdings.keys.toSeq.sorted.reverse
-		(for (k <- keys) yield holdings(k).neatOutput).mkString("")
+		(for (k <- keys) yield holdings(k).neatOutput).mkString(" ")
 	}
 
 	def output(output: Output): Output = {
@@ -442,11 +435,11 @@ case object King extends BaseRank(1, true)
 case object Ace extends BaseRank(0, true)
 
 object Hand {
-	def apply(cs: Seq[Card]): Hand = Hand(for ((suit, cards) <- cs.groupBy(c => c.suit)) yield (suit, Holding(suit, (cards map (_.rank)).sorted.reverse: _*)))
+	def apply(index: Int, cs: Seq[Card]): Hand = Hand(index, for ((suit, cards) <- cs.groupBy(c => c.suit)) yield (suit, Holding(suit, (cards map (_.rank)).sorted.reverse: _*)))
 
-	def from(ws: String*): Hand = {
+	def from(index: Int, ws: String*): Hand = {
 		val tuples = for (w <- ws; h = Holding.parseHolding(w)) yield h.suit -> h
-		Hand(tuples.toMap)
+		Hand(index, tuples.toMap)
 	}
 }
 
@@ -531,4 +524,12 @@ class RankParser extends JavaTokenParsers {
 	def holding: Parser[List[Rank]] = rep(rank) ^^ (_ map Rank.apply)
 
 	def rank: Parser[String] = """[2-9]""".r | """[AKQJT]""".r | "10" | failure("invalid rank")
+}
+
+object Log {
+	def log[X](message: String)(x: => X): X = {
+		lazy val xx = x
+		System.err.println(s"log: $message: $xx")
+		xx
+	}
 }

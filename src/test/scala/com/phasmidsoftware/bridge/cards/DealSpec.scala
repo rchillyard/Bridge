@@ -30,8 +30,7 @@ class DealSpec extends FlatSpec with Matchers {
 		target.east.holdings(Hearts) shouldBe Holding(Hearts, Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)
 	}
 
-	// TODO reinstate me
-	ignore should "output" in {
+	it should "output" in {
 		val target = Deal("test", 0L)
 		val writer = MockWriter()
 		val output = target.output(Output(writer))
@@ -43,13 +42,12 @@ class DealSpec extends FlatSpec with Matchers {
 	behavior of "play"
 	it should "play a trick made up of all lowest spades" in {
 		val target = Deal("test", 0L)
-		//		println(target)
+		target.cards shouldBe 52
 		val hands = target.hands
 		hands.size shouldBe 4
 		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
 		val trick = Seq(CardPlay(0, Spades, priority1S), CardPlay(1, Spades, priority2S), CardPlay(2, Spades, priority3S), CardPlay(3, Spades, priority4S))
-		//		println(trick)
 		val played: Deal = target.play(trick)
-		//		println(played)
+		played.cards shouldBe 48
 	}
 }

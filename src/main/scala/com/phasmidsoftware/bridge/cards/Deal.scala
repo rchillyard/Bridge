@@ -3,6 +3,8 @@ package com.phasmidsoftware.bridge.cards
 import com.phasmid.laScala.Shuffle
 import com.phasmidsoftware.output.{Output, Outputable}
 
+import scala.language.postfixOps
+
 case class Deal(title: String, hands: Seq[Hand]) extends Outputable {
 	private val Seq(n, e, s, w) = hands
 
@@ -22,9 +24,10 @@ case class Deal(title: String, hands: Seq[Hand]) extends Outputable {
 	def play(cardPlays: Seq[CardPlay]): Deal = {
 		require(cardPlays.size == 4)
 
-		Deal(title, for ((h, i) <- hands.zipWithIndex.toList) yield h.play(i, cardPlays))
+		Deal(title, hands map (_.play(cardPlays)))
 	}
 
+	def cards: Int = hands map (_.cards) sum
 
 	def promote(hand: Hand, suit: Suit, priority: Int): Deal = Deal(title, hands map (h => if (h == hand) h else h.promote(suit, priority)))
 
@@ -39,7 +42,7 @@ case class Deal(title: String, hands: Seq[Hand]) extends Outputable {
 }
 
 object Deal {
-	def fromCards(title: String, cs: Seq[Card]): Deal = apply(title, (for (cs: Seq[Card] <- cs.grouped(13)) yield Hand.apply(cs)).toSeq)
+	def fromCards(title: String, cs: Seq[Card]): Deal = apply(title, (for ((cs, index) <- cs.grouped(13).zipWithIndex) yield Hand(index, cs)).toSeq)
 
 	def apply(title: String, seed: Long = System.nanoTime()): Deal = {
 		val newDeck: Seq[Card] = for (s <- Seq(Spades, Hearts, Diamonds, Clubs); r <- Seq(Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)) yield Card(s, r)
