@@ -6,6 +6,8 @@ import com.phasmidsoftware.output.{Output, Outputable}
 import scala.language.postfixOps
 
 case class Deal(title: String, hands: Seq[Hand]) extends Outputable {
+	def quit: Deal = Deal(title, hands map (_.quit))
+
 	private val Seq(n, e, s, w) = hands
 
 	def north: Hand = n
@@ -36,8 +38,6 @@ case class Deal(title: String, hands: Seq[Hand]) extends Outputable {
 	private def outputHand(name: String, hand: Hand): Output =
 		(Output(s"$name:\t") :+ hand.neatOutput).insertBreak
 
-	//	Output(s"$name:\t")++hand.output(Output.empty).insertBreak
-
 	def output(output: Output): Output = (output :+ title).insertBreak ++ outputHand("North", n) ++ outputHand("East", e) ++ outputHand("South", s) ++ outputHand("West", w)
 }
 
@@ -54,8 +54,19 @@ object Deal {
 /**
 	* The play of a card.
 	*
+	* CONSIDER moving this to Card
+	*
 	* @param hand     the index of this hand in the Deal.
 	* @param suit     rhe suit from which the card is to be played.
 	* @param priority the priority of the sequence from which the card is to be played.
 	*/
-case class CardPlay(hand: Int, suit: Suit, priority: Int)
+case class CardPlay(hand: Int, suit: Suit, priority: Int) extends Ordered[CardPlay] {
+	/**
+		* @return true if the top card of the sequence indicated is at least a ten.
+		*/
+	def isHonor: Boolean = Sequence.isHonor(priority)
+
+	def compare(other: CardPlay): Int = Sequence.compare(priority, other.priority)
+
+	def beats(other: CardPlay): Boolean = compare(other) < 0
+}

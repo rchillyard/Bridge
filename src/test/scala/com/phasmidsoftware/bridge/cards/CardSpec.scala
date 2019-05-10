@@ -145,6 +145,9 @@ class CardSpec extends FlatSpec with Matchers {
 
 	behavior of "Sequence"
 
+	private val SAK = Sequence(Seq(Card("SA"), Card("SK")))
+	private val SJT = Sequence(Seq(Card("SJ"), Card("ST")))
+
 	it should "apply(Int,Seq[Card])" in {
 		val target = Sequence(0, Seq(Card("SA"), Card("SK")))
 		target.priority shouldBe 0
@@ -152,7 +155,7 @@ class CardSpec extends FlatSpec with Matchers {
 	}
 
 	it should "apply(Seq[Card])" in {
-		val target = Sequence(Seq(Card("SA"), Card("SK")))
+		val target = SAK
 		target.priority shouldBe 0
 		target.length shouldBe 2
 	}
@@ -194,7 +197,7 @@ class CardSpec extends FlatSpec with Matchers {
 	behavior of "Holding"
 
 	it should "apply" in {
-		val target = Holding.apply(Seq(Sequence(Seq(Card("SA"), Card("SK"))), Sequence(Seq(Card("S3"), Card("S2")))), Spades)
+		val target = Holding.apply(Seq(SAK, Sequence(Seq(Card("S3"), Card("S2")))), Spades)
 		target.sequences.size shouldBe 2
 		target.suit shouldBe Spades
 	}
@@ -213,8 +216,8 @@ class CardSpec extends FlatSpec with Matchers {
 	}
 
 	it should "promote (1)" in {
-		val target = Holding.apply(Seq(Sequence(Seq(Card("SA"), Card("SK"))), Sequence(Seq(Card("S3"), Card("S2")))), Spades)
-		val promoted = target.promote(5)
+		val target = Holding.apply(Seq(SAK, Sequence(Seq(Card("S3"), Card("S2")))), Spades)
+		val promoted = target.promote(5).quit
 		promoted.size shouldBe 2
 		promoted.cards.size shouldBe 4
 		promoted.sequences.head shouldBe Sequence(0, Seq(Card("SA"), Card("SK")))
@@ -222,11 +225,22 @@ class CardSpec extends FlatSpec with Matchers {
 	}
 
 	it should "promote (2)" in {
-		val target = Holding.apply(Seq(Sequence(Seq(Card("SA"), Card("SK"))), Sequence(Seq(Card("SJ"), Card("ST")))), Spades)
-		val promoted = target.promote(2)
+		val target = Holding.apply(Seq(SAK, SJT), Spades)
+		val promoted = target.promote(2).quit
 		promoted.size shouldBe 1
 		promoted.sequences.head shouldBe Sequence(0, Seq(Card("SA"), Card("SK"), Card("SJ"), Card("ST")))
 	}
+
+	it should "promote (4)" in {
+		val target = Holding.apply(Seq(SAK, SJT), Spades)
+		val promoted = target.promote(2)
+		promoted.promotions.size shouldBe 1
+		promoted.promotions shouldBe Seq(2)
+		val quitted = promoted.quit
+		quitted.size shouldBe 1
+		quitted.sequences.head shouldBe Sequence(0, Seq(Card("SA"), Card("SK"), Card("SJ"), Card("ST")))
+	}
+
 
 	behavior of "Hand"
 
@@ -244,7 +258,7 @@ class CardSpec extends FlatSpec with Matchers {
 		val target = Hand(0, map)
 		target.holdings.head._2.sequences.head.priority shouldBe 1
 		target.holdings.last._2.sequences.head.priority shouldBe 6
-		val promoted = target.promote(Spades, 0)
+		val promoted = target.promote(Spades, 0).quit
 		promoted.holdings.head._2.sequences.head.priority shouldBe 0
 		target.holdings.last._2.sequences.head.priority shouldBe 6
 	}

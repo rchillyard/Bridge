@@ -45,24 +45,22 @@ sealed trait Output extends AutoCloseable {
 	/**
 		* Concatenate each element of the iterator xs to this in turn.
 		*
-		* @param xs the iterator of Outputs.
-		*           //		* @param separator an implicit separator
+		* @param xs        the iterator of Outputs.
+		* @param separator an implicit separator
 		* @return this Output.
 		*/
-	def ++(xs: Iterator[Output]): Output
-
-	//	def ++(xs: Iterator[Output])(implicit separator: Output): Output
+	def ++(xs: Iterator[Output])(implicit separator: Output): Output
 
 	/**
 		* Concatenate each element of the iterable xs to this in turn.
 		*
-		* @param xs an iterable of Outputs.
-		*           //		* @param separator an implicit separator
+		* @param xs        an iterable of Outputs.
+		* @param separator an implicit separator
 		* @return this Output.
 		*/
-	def ++(xs: Iterable[Output]): Output = this ++ xs.iterator
+	//	def ++(xs: Iterable[Output]): Output = this ++ xs.iterator
 
-	//	def ++(xs: Iterable[Output])(implicit separator: Output): Output = this ++ xs.iterator
+	def ++(xs: Iterable[Output])(implicit separator: Output): Output = this ++ xs.iterator
 }
 
 /**
@@ -109,19 +107,9 @@ sealed trait TypedOutput extends Output {
 	def :+(x: Any): Output =
 		this append asOutputType(x)
 
-	//	def ++(xs: Iterator[Output]): Output = xs.foldLeft(unit(zero))(_ ++ _)
-
-	def ++(xs: Iterator[Output]): Output = if (xs.hasNext) {
+	def ++(xs: Iterator[Output])(implicit separator: Output): Output = if (xs.hasNext) {
 		val first: Output = xs.next()
-
-		def combine(o1: Output, o2: Output): Output =
-			o1 :+ " " +: o2
-		// TODO this almost works but what we really want is an immutable Output type, because, otherwise, the string in the separator can get consumed (if we use the "++" operator)
-		//		xs.foldLeft[Output](first)(_ :+ separator +:  _)
-
-		// TODO this is a kluge because we ignore the separator passed in
-		//		xs.foldLeft(first)(_ ++ Output(" ") ++ _)
-		xs.foldLeft(unit(zero) ++ first)(combine)
+		xs.foldLeft(unit(zero) ++ first)(_ ++ separator ++ _)
 	}
 	else
 		unit(zero)

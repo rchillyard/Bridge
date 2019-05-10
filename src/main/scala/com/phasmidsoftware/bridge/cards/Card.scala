@@ -3,6 +3,7 @@ package com.phasmidsoftware.bridge.cards
 import com.phasmidsoftware.output.{Output, Outputable}
 
 import scala.language.implicitConversions
+import scala.reflect.ClassTag
 
 /**
 	* This class models a playing card.
@@ -29,6 +30,11 @@ case class Sequence(priority: Int, cards: Seq[Card]) {
 	require(cards.nonEmpty)
 
 	/**
+		* @return true if the top card of the sequence indicated is at least a ten.
+		*/
+	def isHonor: Boolean = Sequence.isHonor(priority)
+
+	/**
 		* Method to truncate a Sequence (by playing a card: deemed to be the lowest card)
 		*
 		* @return an optional Sequence: Some(s) if s is a valid sequence, otherwise None if the sequence has been eliminated.
@@ -38,10 +44,20 @@ case class Sequence(priority: Int, cards: Seq[Card]) {
 		if (remainder.nonEmpty) Some(Sequence(priority, remainder)) else None
 	}
 
+	/**
+		* @return The number of cards in this Sequence.
+		*/
 	def length: Int = cards.size
 
+	/**
+		* @return the highest card of the sequence.
+		*/
 	def head: Card = cards.head
 
+	/**
+		* Method to promote this sequence by one.
+		* @return a new Sequence with the same cards but with a lower priority.
+		*/
 	def promote: Sequence = if (canPromote) Sequence(priority - 1, cards) else throw CardException(s"cannot promote priority $this")
 
 	/**
@@ -54,6 +70,11 @@ case class Sequence(priority: Int, cards: Seq[Card]) {
 		*/
 	def merge(ss: Seq[Sequence]): Seq[Sequence] = if (ss.nonEmpty && ss.last.canCombine(this)) ss.init :+ (ss.last ++ this) else ss :+ this
 
+	/**
+		* Not currently used?
+		* @param s the input Sequence
+		* @return the concatenation of this and s.
+		*/
 	def ++(s: Sequence): Sequence = if (canCombine(s)) Sequence(priority, cards ++ s.cards) else throw CardException(s"cannot combine Sequences: $this and $s")
 
 	override def toString: String = s"${cards.map(_.rank).mkString("")}[$priority]"
@@ -72,6 +93,27 @@ object Sequence {
 		*/
 	def apply(cs: Seq[Card]): Sequence = apply(cs.head.priority, cs)
 
+	/**
+		* @return true if the top card of the sequence with the given priority is at least a ten.
+		*/
+	def isHonor(priority: Int): Boolean = priority <= 4
+
+	/**
+		* Method to compare two priorities.
+		* @param p1 the first priority.
+		* @param p2 the second priority.
+		* @return -1, 0, or 1 according to whether p1 is less than, equal to, or greater than p2.
+		*/
+	def compare(p1: Int, p2: Int): Int = p1.compareTo(p2)
+
+	/**
+		* Method to determine if the priority of p1 is "higher" (less) than the priority of p2.
+		* @param p1 the first priority.
+		* @param p2 the second priority.
+		* @return true if p1 out ranks p2.
+		*/
+	def higher(p1: Int, p2: Int): Boolean = compare(p1, p2) < 0
+
 	implicit object SequenceOrdering extends Ordering[Sequence] {
 		override def compare(x: Sequence, y: Sequence): Int = x.priority - y.priority
 	}
@@ -79,28 +121,70 @@ object Sequence {
 /**
 	* This class models a holding in a suit.
 	*
-	* @param sequences the sequences (expected to be in order of rank).
-	* @param suit      the suit of this holding.
+	* @param sequences  the sequences (expected to be in order of rank).
+	* @param suit       the suit of this holding.
+	* @param promotions a list of promotions that should be applied on quitting a trick.
 	*/
-case class Holding(sequences: Seq[Sequence], suit: Suit) extends Outputable {
+case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = Nil) extends Outputable {
 
 	require(isVoid || maybeSuit.get == suit)
 
+	/**
+		* @return the number of sequences in this Holding
+		*/
 	def size: Int = sequences.size
 
+	/**
+		* @return the total number of cards in this Holding.
+		*/
 	def cards: Seq[Card] = for (s <- sequences; c <- s.cards) yield c
 
+	/**
+		* Method to choose plays according to the prior plays and the cards in this Holding.
+		* @param hand the index of the Hand containing this Holding.
+		* @param priorPlays the prior plays.
+		* @return a sequence of all possible plays, starting with the ones most suited to the appropriate strategy.
+		*/
+	def choosePlays(hand: Int, priorPlays: Seq[CardPlay]): Seq[CardPlay] = {
+		val strategy: Strategy =
+			priorPlays.size match {
+				case 0 => if (hasHonorSequence) LeadHigh else LeadLow
+				case 1 => if (priorPlays.head.isHonor || realSequences.nonEmpty) Cover else Duck
+				case 2 => if (priorPlays.head.isHonor || realSequences.nonEmpty) Cover else Duck
+				case 3 => WinIt
+				case x => throw CardException(s"too many prior plays: $x")
+			}
+		choosePlays(hand, strategy)
+	}
+
+	/**
+		* For now, we ignore strategy which is only used to ensure that we try the likely more successful card play first.
+		*
+		* @param hand     the index of this Hand (N, E, S, W)
+		* @param strategy the recommended strategy (currently ignored)
+		* @return a sequence of CardPlay objects
+		*/
+	def choosePlays(hand: Int, strategy: Strategy): Seq[CardPlay] = for (s <- sequences) yield CardPlay(hand, suit, s.priority)
+
+	/**
+		* @return true if this Holding is void.
+		*/
 	def isVoid: Boolean = sequences.isEmpty
 
-	def promote(priority: Int): Holding = {
-		def maybePromote(sequence: Sequence): Sequence = (sequence.priority - priority).signum match {
-			case -1 => sequence
-			case 1 => sequence.promote
-			case 0 => throw CardException(s"Holding: logic error: $this cannot self-promote for priority $priority")
-		}
+	/**
+		* Method to promote this holding if it ranks lower than the given priority.
+		* NOTE: this does not immediately change the priority of any sequences in this Holding--
+		* instead we use a lazy approach--adding to the list of pending promotions which will be enacted when quit is called.
+		* @param priority the priority.
+		* @return a new Holding with the promotion added to the pending list.
+		*/
+	def promote(priority: Int): Holding = Holding(sequences, suit, promotions :+ priority)
 
-		Holding((sequences map maybePromote).foldLeft[Seq[Sequence]](Nil)((ss, s) => s.merge(ss)), suit)
-	}
+	/**
+		* Method to enact the pending promotions on this Holding.
+		* @return a newly promoted Holding.
+		*/
+	def quit: Holding = doPromote
 
 	/**
 		* Method to remove (i.e. play) a card from this Holding.
@@ -110,7 +194,7 @@ case class Holding(sequences: Seq[Sequence], suit: Suit) extends Outputable {
 		*/
 	def -(priority: Int): Holding = {
 		val sos: Seq[Option[Sequence]] = for (s <- sequences) yield if (s.priority == priority) s.truncate else Some(s)
-		Holding(sos.flatten, suit)
+		Holding(sos.flatten, suit, promotions)
 	}
 
 	override def toString: String = s"{$suit: ${sequences.mkString(", ")}}"
@@ -124,6 +208,23 @@ case class Holding(sequences: Seq[Sequence], suit: Suit) extends Outputable {
 
 	def output(o: Output): Output = o :+ suit.toString :+ Holding.ranksToString(cards map (_.rank))
 
+	private def doPromote: Holding = {
+
+		def applyPromotions(sequence: Sequence): Sequence = {
+			val promotion = promotions.count(_ < sequence.priority)
+			Sequence(sequence.priority - promotion, sequence.cards)
+		}
+
+		val ss: Seq[Sequence] = sequences map applyPromotions
+		Holding(ss.foldLeft[Seq[Sequence]](Nil)((r, s) => s.merge(r)), suit, Nil)
+	}
+
+	private def hasHonorSequence: Boolean = realSequences exists (_.priority < 4)
+
+	private def realSequences = sequences filter (_.cards.lengthCompare(1) > 0)
+
+	private def canWin(priorPlays: Seq[CardPlay]): Boolean = if (priorPlays.nonEmpty && !isVoid) priorPlays.min.priority > sequences.head.priority else true
+
 	private def maybeSuit: Option[Suit] = cards.headOption map (_.suit)
 }
 
@@ -136,7 +237,7 @@ object Holding {
 		val cards = ranks map (rank => Card(suit, rank))
 		val cXsXm = (for ((c, i) <- cards.zipWithIndex) yield i - c.priority -> c).groupBy(_._1)
 		val ss = cXsXm.values map (cXs => Sequence(cXs.map(_._2)))
-		apply(ss.toSeq.sorted, suit)
+		apply(ss.toSeq.sorted, suit, Nil)
 	}
 
 	implicit def parseHolding(s: String): Holding = create(Card.parser.parseRanks(s.tail), Suit(s.head))
@@ -160,15 +261,11 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable {
 
 	/**
 		* Apply a sequence of CardPlay operations to this Hand.
-		* Note that we have to sort the order of the card plays so that we aren't trying to promote sequences where a card has already been played.
-		*
-		* TODO: however, we need to realize that in actual play, the CardPlay objects happen one at a time and so cannot be ordered.
-		* This suggests that we need to delay the application of promotion until after a trick is quitted.
 		*
 		* @param cardPlays the list of card plays
 		* @return a new Hand based on this Hand and all of the card plays.
 		*/
-	def play(cardPlays: Seq[CardPlay]): Hand = cardPlays.sortWith(_.priority > _.priority).foldLeft[Hand](this)(_ play _)
+	def play(cardPlays: Seq[CardPlay]): Hand = cardPlays.foldLeft[Hand](this)(_ play _)
 
 	/**
 		* Create new Hand based on the play of a card.
@@ -203,6 +300,8 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable {
 
 	def promote(suit: Suit, priority: Int): Hand =
 		Hand(index, holdings + (suit -> holdings(suit).promote(priority)))
+
+	def quit: Hand = Hand(index, for ((k, v) <- holdings) yield k -> v.quit)
 
 	override def toString: String = {
 		// TODO figure out why we can't just import SuitOrdering from Suit
@@ -492,6 +591,38 @@ object Card {
 	private[cards] val parser = new RankParser
 }
 
+trait Strategy {
+	/**
+		* @return true if we always play highest card if it will beat the existing cards.
+		*/
+	val winIfPossible: Boolean
+
+	/**
+		* @return true if we want to play from a sequence that is higher than any existing card.
+		*/
+	val split: Boolean
+
+	/**
+		* @return true if we want to play an intermediate card in the hope of winning.
+		*/
+	val finesse: Boolean
+}
+
+abstract class BaseStrategy(val winIfPossible: Boolean, val split: Boolean, val finesse: Boolean) extends Strategy
+
+case object LeadLow extends BaseStrategy(false, false, false)
+
+case object LeadHigh extends BaseStrategy(true, true, false)
+
+case object Cover extends BaseStrategy(false, true, true)
+
+case object WinIt extends BaseStrategy(true, false, false)
+
+case object Duck extends BaseStrategy(false, false, false)
+
+case object Finesse extends BaseStrategy(false, false, true)
+
+
 /**
 	* Exception defined for this module.
 	*
@@ -526,10 +657,19 @@ class RankParser extends JavaTokenParsers {
 	def rank: Parser[String] = """[2-9]""".r | """[AKQJT]""".r | "10" | failure("invalid rank")
 }
 
+case class Log(message: String) {
+	def ![X: ClassTag](x: => X): X = Log.log(message)(x)
+
+	//noinspection UnitMethodIsParameterless
+	def ! : Unit = Log.log(message)(())
+}
+
 object Log {
-	def log[X](message: String)(x: => X): X = {
+	def log[X: ClassTag](message: String)(x: => X): X = {
 		lazy val xx = x
-		System.err.println(s"log: $message: $xx")
+		val msg = s"log: $message" + (if (implicitly[ClassTag[X]].runtimeClass == classOf[Unit]) "" else
+			s": $xx")
+		System.err.println(msg)
 		xx
 	}
 }
