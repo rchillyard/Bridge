@@ -32,7 +32,7 @@ sealed trait Output extends AutoCloseable {
 		* @param x an Any
 		* @return an Output, not necessarily this.
 		*/
-	def +:(x: Any): Output = Output(x.toString) ++ this
+	def +:(x: Any): Output = this ++ Output(x.toString)
 
 	/**
 		* Concatenate this Output (first) and x (second).
@@ -107,12 +107,7 @@ sealed trait TypedOutput extends Output {
 	def :+(x: Any): Output =
 		this append asOutputType(x)
 
-	def ++(xs: Iterator[Output])(implicit separator: Output): Output = if (xs.hasNext) {
-		val first: Output = xs.next()
-		xs.foldLeft(unit(zero) ++ first)(_ ++ separator ++ _)
-	}
-	else
-		unit(zero)
+	def ++(xs: Iterator[Output])(implicit separator: Output): Output = xs.foldLeft[Output](this)(_ ++ separator ++ _)
 }
 
 /**
@@ -308,12 +303,6 @@ sealed abstract class BufferedCharSequenceOutput[A <: Appendable with AutoClosea
 	else
 		transferContentFromBufferedOutput(output)
 
-	//	{
-	//		concatenations = concatenations :+ output
-	//		this
-	//	}
-
-
 	private def transferContentFromBufferedOutput(o: BufferedOutput): Output = {
 		appendToBuffer(o.clear.asInstanceOf[CharSequence]) // TODO fix this up
 		maybeFlush
@@ -364,9 +353,9 @@ object Output {
 		*/
 	def apply(s: CharSequence): Output = empty :+ s
 
-	def foldLeft[X](xs: Iterable[X])(o: Output)(f: (Output, X) => Output): Output = xs.foldLeft(o)(f)
+	def foldLeft[X](xs: Iterable[X])(o: Output = empty)(f: (Output, X) => Output): Output = xs.foldLeft(o)(f)
 
-	def reduce[X](xs: Iterable[X])(f: (Output, X) => Output): Output = foldLeft(xs)(empty)(f)
+	def reduce[X](xs: Iterable[X])(f: (Output, X) => Output): Output = foldLeft(xs)()(f)
 
 	def apply[X](xs: Iterable[X])(f: X => Output): Output = reduce(xs)(_ :+ f(_))
 }

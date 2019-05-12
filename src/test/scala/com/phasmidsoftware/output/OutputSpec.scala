@@ -1,8 +1,12 @@
 package com.phasmidsoftware.output
 
-import java.io.{PrintWriter, Writer}
+import java.io.Writer
 
+import com.phasmid.laScala.values.Rational
+import com.phasmidsoftware.bridge.director.Score
 import org.scalatest.{FlatSpec, Matchers}
+
+import scala.util.Try
 
 class OutputSpec extends FlatSpec with Matchers {
 
@@ -101,8 +105,10 @@ class OutputSpec extends FlatSpec with Matchers {
 		val x1 = Output("x1")
 		val x2 = Output("x2")
 		val x3 = Output("x3")
-		val output = Output(new PrintWriter(System.out)) ++ x1 ++ x2 ++ x3
+		val writer = MockWriter()
+		val output = Output(writer) ++ x1 ++ x2 ++ x3
 		output.close()
+		writer.spillway shouldBe "x1x2x3"
 	}
 
 	it should "++(Iterator)" in {
@@ -185,6 +191,40 @@ class OutputSpec extends FlatSpec with Matchers {
 
 	it should "bufferAsOutputType" in {
 
+	}
+
+	it should "properly process complex expression" in {
+		val writer = MockWriter()
+		val output: Output = Output(writer)
+
+		def getResultsForDirection(preamble: (String, Option[String], Seq[(Int, String, String)]), r: (Boolean, Int, Map[Int, (Rational[Int], Int)]), top: Int): Output = {
+			def resultDetails(s: (Int, (Rational[Int], Int))): Output = Output(s"${s._1} : ${Score.mpsAsString(s._2._1, top)} : ${Score.mpsAsPercentage(s._2._1, s._2._2)} : Tweedledum & Tweedledee").insertBreak
+
+			Output.foldLeft(r._3.toSeq.sortBy(_._2._1).reverse)()(_ ++ resultDetails(_))
+		}
+
+		def getResults(k: (String, Option[String], Seq[(Int, String, String)]), r: (Boolean, Int, Map[Int, (Rational[Int], Int)])): Output = Output(s"Results for direction: ${if (r._1) "N/S" else "E/W"}").insertBreak ++ getResultsForDirection(k, r, r._2)
+
+		def eventResults(e: (String, Seq[String]), k: (String, Option[String], Seq[(Int, String, String)]), rs: Seq[(Boolean, Int, Map[Int, (Rational[Int], Int)])]): Output = {
+			val z = for (r <- rs) yield getResults(k, r)
+			(Output(s"${e._1}\nSection ${k._1}").insertBreak ++ z :+
+				"=====================================================\n" :+
+				"=====================================================\n") ++
+				Output(e._1)
+		}
+
+		val ey = Try(("test", Seq("1", "2")))
+
+		val zy: Try[Output] = for (e <- ey) yield {
+			val results = for ((k, rs) <- Seq(("test", None, Seq((1, "x", "y"))) -> Seq((true, 2, Map[Int, (Rational[Int], Int)]())))) yield eventResults(e, k, rs)
+			(output :+ "XXX").insertBreak ++ results
+		}
+
+		zy foreach {
+			_.close()
+		}
+		writer.spilled shouldBe 163
+		writer.spillway shouldBe "XXX\n test\nSection test\n Results for direction: N/S\n=====================================================\n=====================================================\ntest"
 	}
 }
 

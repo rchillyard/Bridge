@@ -3,7 +3,6 @@ package com.phasmidsoftware.bridge.cards
 import com.phasmidsoftware.output.{Output, Outputable}
 
 import scala.language.implicitConversions
-import scala.reflect.ClassTag
 
 /**
 	* This class models a playing card.
@@ -655,21 +654,4 @@ class RankParser extends JavaTokenParsers {
 	def holding: Parser[List[Rank]] = rep(rank) ^^ (_ map Rank.apply)
 
 	def rank: Parser[String] = """[2-9]""".r | """[AKQJT]""".r | "10" | failure("invalid rank")
-}
-
-case class Log(message: String) {
-	def ![X: ClassTag](x: => X): X = Log.log(message)(x)
-
-	//noinspection UnitMethodIsParameterless
-	def ! : Unit = Log.log(message)(())
-}
-
-object Log {
-	def log[X: ClassTag](message: String)(x: => X): X = {
-		lazy val xx = x
-		val msg = s"log: $message" + (if (implicitly[ClassTag[X]].runtimeClass == classOf[Unit]) "" else
-			s": $xx")
-		System.err.println(msg)
-		xx
-	}
 }

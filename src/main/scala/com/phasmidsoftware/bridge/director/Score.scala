@@ -42,7 +42,7 @@ object Score extends App {
 		def getResultsForDirection(k: Preamble, r: Result, top: Int): Output = {
 			def resultDetails(s: (Int, (Rational[Int], Int))): Output = Output(s"${s._1} : ${Score.mpsAsString(s._2._1, top)} : ${Score.mpsAsPercentage(s._2._1, s._2._2)} : ${k.getNames(r.isNS, s._1)}").insertBreak
 
-			Output.foldLeft(r.cards.toSeq.sortBy(_._2._1).reverse)(output)(_ ++ resultDetails(_))
+			Output.foldLeft(r.cards.toSeq.sortBy(_._2._1).reverse)()(_ ++ resultDetails(_))
 		}
 
 		def getResults(k: Preamble, r: Result): Output = Output(s"Results for direction: ${if (r.isNS) "N/S" else "E/W"}").insertBreak ++ getResultsForDirection(k, r, r.top)
@@ -105,8 +105,9 @@ object Section {
 /**
 	* This represents the "preamble" to a section of an event.
 	*
-	* @param identifier the section identifier (a single or double upper-case letter)
-	* @param pairs      a list of the pairs in this section
+	* @param identifier    the section identifier (a single or double upper-case letter)
+	* @param maybeModifier is an optional String denoting the type of movement (SW for single-winner, etc.)
+	* @param pairs         a list of the pairs in this section
 	*/
 case class Preamble(identifier: String, maybeModifier: Option[String], pairs: Seq[Pair]) {
 	if (pairs.isEmpty)
