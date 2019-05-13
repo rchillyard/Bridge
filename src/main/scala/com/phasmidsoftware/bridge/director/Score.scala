@@ -4,7 +4,7 @@ import java.io.PrintWriter
 
 import com.phasmid.laScala.fp.FP
 import com.phasmid.laScala.values.Rational
-import com.phasmidsoftware.output.{Output, Outputable}
+import com.phasmidsoftware.output.{Output, Outputable, Util}
 
 import scala.io.{BufferedSource, Source}
 import scala.language.postfixOps
@@ -47,9 +47,11 @@ object Score extends App {
 
 		def getResults(k: Preamble, r: Result): Output = Output(s"Results for direction: ${if (r.isNS) "N/S" else "E/W"}").insertBreak ++ getResultsForDirection(k, r, r.top)
 
+		implicit val separator: Output = Output.empty.insertBreak
+
 		def eventResults(e: Event, k: Preamble, rs: Seq[Result]): Output = {
 			val z = for (r <- rs) yield getResults(k, r)
-			(Output(s"Section ${k.identifier}").insertBreak ++ z :+
+			(Output(s"Section ${k.identifier}") ++ z :+
 				"=====================================================\n" :+
 				"=====================================================\n") ++
 				e.output(Output.empty)
@@ -72,7 +74,7 @@ case class Event(title: String, sections: Seq[Section]) extends Outputable {
 
 case class Section(preamble: Preamble, travelers: Seq[Traveler]) extends Outputable {
 
-	def output(output: Output): Output = travelers.foldLeft(output :+ s"$preamble\n")((o, t) => o ++ t.output(Output.empty))
+	def output(output: Output): Output = travelers.sorted.foldLeft(output :+ s"$preamble\n")((o, t) => o ++ t.output(Output.empty))
 
 	def createResults: Seq[Result] = {
 		val top = calculateTop
@@ -113,7 +115,10 @@ case class Preamble(identifier: String, maybeModifier: Option[String], pairs: Se
 	if (pairs.isEmpty)
 		System.err.println(s"Warning: there are no players in this section: $identifier")
 
-	def getNames(ns: Boolean, n: Int): String = pairs.filter { p => p.number == n } map { p => p.brief } head
+	def getNames(ns: Boolean, n: Int): String = {
+		val wt = Util.asTuple2(pairs.filter { p => p.number == n } map { p => p.brief })
+		if (ns) wt._1 else wt._2
+	}
 
 	override def toString: String = {
 		val result = StringBuilder.newBuilder
@@ -177,7 +182,7 @@ case class Matchpoints(ns: Int, ew: Int, result: PlayResult, mp: Option[Rational
 	* @param board number
 	* @param ps    plays
 	*/
-case class Traveler(board: Int, ps: Seq[Play]) extends Outputable {
+case class Traveler(board: Int, ps: Seq[Play]) extends Outputable with Ordered[Traveler] {
 	def isPlayed: Boolean = ps.nonEmpty
 
 	// Calculate the ideal top -- including any Average or DNP scores:
@@ -205,6 +210,8 @@ case class Traveler(board: Int, ps: Seq[Play]) extends Outputable {
 		* @return the new combined Traveler.
 		*/
 	def :+(play: Play): Traveler = Traveler(board, ps :+ play)
+
+	override def compare(that: Traveler): Int = board - that.board
 }
 
 object Traveler {

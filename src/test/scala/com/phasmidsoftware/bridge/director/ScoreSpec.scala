@@ -415,25 +415,27 @@ class ScoreSpec extends FlatSpec with Matchers {
 		val writer = MockWriter(8192)
 		val output = Output(writer)
 		for (o <- Score.doScoreResource("travelers.lexington.2017.0404", output)) o.close()
-		writer.spilled shouldBe 2331
+		writer.spilled shouldBe 2327
 	}
 	it should "read travelers.lexington.2017.0404P as a resource (includes pickup slips)" in {
 		val writer = MockWriter(8192)
 		for (o <- Score.doScoreResource("travelers.lexington.2017.0404P", Output(writer))) o.close()
-		writer.spilled shouldBe 2331
+		writer.spilled shouldBe 2327
 	}
 	it should "read travelers.lexington.2017.0404 as a file" in {
 		val writer = MockWriter(8192)
 		for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/travelers.lexington.2017.0404", Output(writer))) o.close()
-		writer.spilled shouldBe 2331
+		writer.spilled shouldBe 2327
 	}
 
-	ignore should "read keremshalom.2019.0509.txt as a file" in {
+	//noinspection SpellCheckingInspection
+	it should "read keremshalom.2019.0509.txt as a file" in {
 		val writer = MockWriter(8192)
+		//noinspection SpellCheckingInspection
 		for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/keremshalom.2019.0509.txt", Output(writer))) o.close()
-		println(writer.spillway)
-		writer.spillway shouldBe "Kerem Shalom Beginner Duplicate: May 9th 2019\nSection A\nResults for direction: N/S\n1 : 6.00 : 75.00% : Dan & Tenley\n3 : 5.67 : 56.67% : Chris & Kathy\n2 : 5.17 : 43.06% : Irene & Robin\n4 : 3.17 : 31.67% : Tom & Jane\nResults for direction: E/W\n4 : 6.83 : 68.33% : Ghilaine & Bill\n3 : 5.00 : 41.67% : Wendy & Ruth\n1 : 4.33 : 43.33% : Marian & Patty\n2 : 3.83 : 47.92% : JoAnn & Margaret\n=====================================================\n=====================================================\nKerem Shalom Beginner Duplicate: May 9th 2019\nA\n1N: Dan & Tenley\n1E: Marian & Patty\n2N: Irene & Robin\n2E: JoAnn & Margaret\n3N: Chris & Kathy\n3E: Wendy & Ruth\n4N: Tom & Jane\n4E: Ghilaine & Bill\n\nBoard: 1 with 4 plays\nNS: 1, EW: 1, score: 450, MP: 1.50\nNS: 2, EW: 3, score: 450, MP: 1.50\nNS: 4, EW: 4, score: 450, MP: 1.50\nNS: 3, EW: 2, score: 450, MP: 1.50\nBoard: 2 with 3 plays\nNS: 1, EW: 1, score: -980, MP: 1.00\nNS: 2, EW: 3, score: -1010, MP: 0.00\nNS: 3, EW: 2, score: -510, MP: 2.00\nBoard: 3 with 4 plays\nNS: 2, EW: 2, score: -650, MP: 1.00\nNS: 4, EW: 4, score: -650, MP: 1.00\nNS: 1, EW: 3, score: 50, MP: 3.00\nNS: 3, EW: 1, score: -650, MP: 1.00\nBoard: 4 with 3 plays\nNS: 2, EW: 2, score: -100, MP: 0.50\nNS: 4, EW: 4, score: -100, MP: 0.50\nNS: 1, EW: 3, score: 1430, MP: 2.00\nBoard: 5 with 3 plays\nNS: 3, EW: 3, score: 50, MP: 1.00\nNS: 2, EW: 1, score: 50, MP: 1.00\nNS: 4, EW: 4, score: 50, MP: 1.00\nBoard: 6 with 3 plays\nNS: 3, EW: 3, score: 450, MP: 1.00\nNS: 2, EW: 1, score: 480, MP: 2.00\nNS: 4, EW: 4, score: -50, MP: 0.00"
-		writer.spilled shouldBe 2355
+		//noinspection SpellCheckingInspection
+		writer.spillway shouldBe "Kerem Shalom Beginner Duplicate: May 9th 2019\nSection A\nResults for direction: N/S\n1 : 6.00 : 75.00% : Dan & Tenley\n3 : 5.67 : 56.67% : Chris & Kathy\n2 : 5.17 : 43.06% : Irene & Robin\n4 : 3.17 : 31.67% : Tom & Jane\nResults for direction: E/W\n4 : 6.83 : 68.33% : Ghilaine & Bill\n3 : 5.00 : 41.67% : Wendy & Ruth\n1 : 4.33 : 43.33% : Marian & Patty\n2 : 3.83 : 47.92% : JoAnn & Margaret\n=====================================================\n=====================================================\nKerem Shalom Beginner Duplicate: May 9th 2019\nA\n1N: Dan & Tenley\n1E: Marian & Patty\n2N: Irene & Robin\n2E: JoAnn & Margaret\n3N: Chris & Kathy\n3E: Wendy & Ruth\n4N: Tom & Jane\n4E: Ghilaine & Bill\n\nBoard: 1 with 4 plays\nNS: 1, EW: 1, score: 450, MP: 1.50\nNS: 2, EW: 3, score: 450, MP: 1.50\nNS: 4, EW: 4, score: 450, MP: 1.50\nNS: 3, EW: 2, score: 450, MP: 1.50\nBoard: 2 with 3 plays\nNS: 1, EW: 1, score: -980, MP: 1.00\nNS: 2, EW: 3, score: -1010, MP: 0.00\nNS: 3, EW: 2, score: -510, MP: 2.00\nBoard: 3 with 4 plays\nNS: 2, EW: 2, score: -650, MP: 1.00\nNS: 4, EW: 4, score: -650, MP: 1.00\nNS: 1, EW: 3, score: 50, MP: 3.00\nNS: 3, EW: 1, score: -650, MP: 1.00\nBoard: 4 with 3 plays\nNS: 2, EW: 2, score: -100, MP: 0.50\nNS: 4, EW: 4, score: -100, MP: 0.50\nNS: 1, EW: 3, score: 1430, MP: 2.00\nBoard: 5 with 3 plays\nNS: 3, EW: 3, score: 50, MP: 1.00\nNS: 2, EW: 1, score: 50, MP: 1.00\nNS: 4, EW: 4, score: 50, MP: 1.00\nBoard: 6 with 3 plays\nNS: 3, EW: 3, score: 450, MP: 1.00\nNS: 2, EW: 1, score: 480, MP: 2.00\nNS: 4, EW: 4, score: -50, MP: 0.00\n"
+		writer.spilled shouldBe 1523
 	}
 
 }
