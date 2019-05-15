@@ -58,9 +58,15 @@ sealed trait Output extends AutoCloseable {
 		* @param separator an implicit separator
 		* @return this Output.
 		*/
-	//	def ++(xs: Iterable[Output]): Output = this ++ xs.iterator
-
 	def ++(xs: Iterable[Output])(implicit separator: Output): Output = this ++ xs.iterator
+
+	/**
+		* Indent this Output so that the next insertBreak will use the updated indentation.
+		*
+		* @param c the indentation to be added.
+		* @return a new Output with the appropriate indentation.
+		*/
+	def indent(c: CharSequence): Output
 }
 
 /**
@@ -206,8 +212,6 @@ sealed trait BufferedOutput extends TypedOutput {
 sealed trait CharacterOutput extends TypedOutput {
 	type OutputType = CharSequence
 
-	def insertBreak: Output = append('\n'.toString)
-
 	def zero: OutputType = ""
 
 	def asOutputType(x: Any): CharSequence = x.toString
@@ -226,7 +230,7 @@ sealed trait BackedOutput[A <: Appendable with AutoCloseable] extends TypedOutpu
 	def persist(x: OutputType): Unit
 }
 
-sealed abstract class BufferedCharSequenceOutput[A <: Appendable with AutoCloseable with Flushable](val appendable: A, val sb: mutable.StringBuilder = new StringBuilder) extends CharacterOutput with BufferedOutput with BackedOutput[A] {
+sealed abstract class BufferedCharSequenceOutput[A <: Appendable with AutoCloseable with Flushable](val appendable: A, indentation: CharSequence, val sb: mutable.StringBuilder = new StringBuilder) extends CharacterOutput with BufferedOutput with BackedOutput[A] {
 
 	/**
 		* This method is essentially non-functional in the JVM.
@@ -235,6 +239,8 @@ sealed abstract class BufferedCharSequenceOutput[A <: Appendable with AutoClosea
 	//	override def finalize(): Unit = close()
 
 	def isEmpty: Boolean = sb.isEmpty
+
+	def insertBreak: Output = append(s"\n$indentation")
 
 	def content: CharSequence = sb.mkString
 
@@ -271,11 +277,6 @@ sealed abstract class BufferedCharSequenceOutput[A <: Appendable with AutoClosea
 
 	def close(): Unit = {
 		flush
-		//		for (c <- concatenations) {
-		//			//				c.appendToBuffer(c.content)
-		//			appendToBuffer(c.clear.asInstanceOf[CharSequence]) // TODO fix this up
-		//			persist(content)
-		//		}
 		if (isBacked)
 			appendable.flush()
 		// TODO understand why we fail with "Terminated" condition if we try to close the appendable (in the case of a PrintWriter).
@@ -315,14 +316,13 @@ sealed abstract class BufferedCharSequenceOutput[A <: Appendable with AutoClosea
 		*/
 	private val NeedToFlush = 4096
 
-	//	private var concatenations: Seq[BufferedOutput] = Nil
 }
 
 object Output {
 	implicit def separator: Output = apply(" ")
 
 	/**
-		* Method to construct an empty WriterOutput based on writer.
+		* Method to append an empty WriterOutput based on writer.
 		*
 		* @param writer the writer which will back the new Output.
 		* @return a new instance of Output.
@@ -330,7 +330,7 @@ object Output {
 	def apply(writer: Writer): Output = WriterOutput(writer)
 
 	/**
-		* Method to construct a new WriterOutput based on writer and the input s.
+		* Method to append a new WriterOutput based on writer and the input s.
 		*
 		* @param writer the writer which will back the new Output.
 		* @param s      the character sequence
@@ -339,14 +339,14 @@ object Output {
 	def apply(writer: Writer, s: CharSequence): Output = apply(writer) :+ s
 
 	/**
-		* Method to construct an empty UnbackedOutput
+		* Method to append an empty UnbackedOutput
 		*
 		* @return a new instance of UnbackedOutput.
 		*/
 	def empty: Output = UnbackedOutput()
 
 	/**
-		* Method to construct an UnbackedOutput based on the input s.
+		* Method to append an UnbackedOutput based on the input s.
 		*
 		* @param s the character sequence
 		* @return a new instance of UnbackedOutput.
@@ -372,18 +372,22 @@ case class NonOutput() extends Appendable with Closeable with Flushable {
 	override def flush(): Unit = throw OutputException("cannot flush NonOutput")
 }
 
-case class UnbackedOutput() extends BufferedCharSequenceOutput[NonOutput](NonOutput()) {
+case class UnbackedOutput(indentation: CharSequence = "", stringBuilder: mutable.StringBuilder = new StringBuilder) extends BufferedCharSequenceOutput[NonOutput](NonOutput(), indentation, stringBuilder) {
 
 	def isBacked: Boolean = false
 
 	override def toString: String = sb.mkString
+
+	override def indent(c: CharSequence): Output = UnbackedOutput(indentation.toString + c, sb)
 }
 
-case class WriterOutput(writer: Writer) extends BufferedCharSequenceOutput[Writer](writer) {
+case class WriterOutput(writer: Writer, indentation: CharSequence = "", stringBuilder: mutable.StringBuilder = new StringBuilder) extends BufferedCharSequenceOutput[Writer](writer, indentation, stringBuilder) {
 	def isBacked: Boolean = true
 
 	override def toString: String =
 		s"WriterOutput: with writer: $writer and buffer: ${sb.mkString}"
+
+	override def indent(c: CharSequence): Output = WriterOutput(writer, indentation.toString + c, sb)
 }
 
 case class OutputException(w: String) extends Exception(w)

@@ -126,6 +126,16 @@ object Sequence {
 	*/
 case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = Nil) extends Outputable {
 
+	/**
+		* TODO implement me.
+		*
+		* Determine the fourth best card.
+		*
+		* @return the fourth best card from this Holding.
+		*/
+	def fourthBest: CardPlay = ???
+
+
 	require(isVoid || maybeSuit.get == suit)
 
 	/**
@@ -134,27 +144,34 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 	def size: Int = sequences.size
 
 	/**
-		* @return the total number of cards in this Holding.
+		* @return the number of cards in this Holing (i.e. the suit length)
+		*/
+	def length: Int = sequences.map(_.length).sum
+
+	/**
+		* @return the all of the cards in this Holding.
 		*/
 	def cards: Seq[Card] = for (s <- sequences; c <- s.cards) yield c
 
 	/**
 		* Method to choose plays according to the prior plays and the cards in this Holding.
+		*
 		* @param hand the index of the Hand containing this Holding.
-		* @param priorPlays the prior plays.
+		* @param trick the current state of this trick (i.e. the prior plays).
 		* @return a sequence of all possible plays, starting with the ones most suited to the appropriate strategy.
 		*/
-	def choosePlays(hand: Int, priorPlays: Seq[CardPlay]): Seq[CardPlay] = {
+	def choosePlays(hand: Int, trick: Trick): Seq[CardPlay] = if (suit == trick.suit) {
 		val strategy: Strategy =
-			priorPlays.size match {
-				case 0 => if (hasHonorSequence) LeadHigh else LeadLow
-				case 1 => if (priorPlays.head.isHonor || realSequences.nonEmpty) Cover else Duck
-				case 2 => if (priorPlays.head.isHonor || realSequences.nonEmpty) Cover else Duck
+			trick.size match {
+				case 0 => if (hasHonorSequence) LeadHigh else FourthBest
+				case 1 => if (trick.isHonorLed || realSequences.nonEmpty) Cover else Duck
+				case 2 => Finesse
 				case 3 => WinIt
 				case x => throw CardException(s"too many prior plays: $x")
 			}
 		choosePlays(hand, strategy)
 	}
+	else throw CardException(s"Holding.choosePlays logic error: trick suit ${trick.suit} does not match this suit $suit")
 
 	/**
 		* For now, we ignore strategy which is only used to ensure that we try the likely more successful card play first.
@@ -259,18 +276,56 @@ object Holding {
 case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable {
 
 	/**
-		* Apply a sequence of CardPlay operations to this Hand.
-		*
-		* @param cardPlays the list of card plays
-		* @return a new Hand based on this Hand and all of the card plays.
+		* @return the index of the next hand in sequence around the table.
 		*/
-	def play(cardPlays: Seq[CardPlay]): Hand = cardPlays.foldLeft[Hand](this)(_ play _)
+	def next: Int = Hand.next(index)
 
 	/**
+		* CONSIDER: using strength of suit as a decider between equal lengths.
+		*
+		* @return the longest suit as a Holding. If there are two such suits, it is arbitrary which one will be chosen.
+		*/
+	def longestSuit: Holding = holdings.values.maxBy(_.length)
+
+	/**
+		* Apply a sequence of CardPlay operations to this Hand.
+		*
+		* @param trick the trick.
+		* @return a new Hand based on this Hand and all of the card plays.
+		*/
+	def play(trick: Trick): Hand = trick.plays.foldLeft[Hand](this)(_ play _)
+
+	/**
+		* Method to determine possible discard plays.
+		*
+		* @param trick the current state of the Trick.
+		* @return a sequence of card plays.
+		*/
+	def discard(trick: Trick): Seq[CardPlay] = {
+		for {
+			// first get the holdings from the other suits in order of length
+			h <- holdings.flatMap { case (k, v) => if (k != trick.suit) Some(v) else None }.toSeq.sortWith(_.length < _.length)
+			ps <- h.choosePlays(index, Duck)
+		} yield ps
+	}
+
+	/**
+		* Choose the plays for this Hand, based on the prior plays.
+		*
+		* @param trick the prior plays to the current trick.
+		* @return a Seq[CardPlay].
+		*/
+	def choosePlays(trick: Trick): Seq[CardPlay] = {
+		val holding = holdings(trick.suit)
+		if (holding.isVoid) discard(trick)
+		else holding.choosePlays(index, trick)
+	}
+
+		/**
 		* Create new Hand based on the play of a card.
 		*
 		* @param cardPlay the card play.
-		* @return a new Hand
+			* @return a new Hand.
 		*/
 	def play(cardPlay: CardPlay): Hand = {
 		val priority = cardPlay.priority
@@ -539,6 +594,10 @@ object Hand {
 		val tuples = for (w <- ws; h = Holding.parseHolding(w)) yield h.suit -> h
 		Hand(index, tuples.toMap)
 	}
+
+	def next(index: Int): Int = next(index, 1)
+
+	def next(index: Int, step: Int): Int = (index + step) % 4
 }
 
 /**
@@ -609,7 +668,7 @@ trait Strategy {
 
 abstract class BaseStrategy(val winIfPossible: Boolean, val split: Boolean, val finesse: Boolean) extends Strategy
 
-case object LeadLow extends BaseStrategy(false, false, false)
+case object FourthBest extends BaseStrategy(false, false, false)
 
 case object LeadHigh extends BaseStrategy(true, true, false)
 

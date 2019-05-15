@@ -46,11 +46,23 @@ class DealSpec extends FlatSpec with Matchers {
 		val hands = target.hands
 		hands.size shouldBe 4
 		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
-		val trick = Seq(CardPlay(0, Spades, priority1S), CardPlay(1, Spades, priority2S), CardPlay(2, Spades, priority3S), CardPlay(3, Spades, priority4S))
+		val trick = Trick.create(0, Spades, CardPlay(0, Spades, priority1S), CardPlay(1, Spades, priority2S), CardPlay(2, Spades, priority3S), CardPlay(3, Spades, priority4S))
 		val played: Deal = target.play(trick)
 		played.cards shouldBe 48
 		val quitted = played.quit
 		quitted.cards shouldBe 48
+	}
 
+	it should "play a trick according to strategy" in {
+		val target = Deal("test", 0L)
+		target.cards shouldBe 52
+		val hands = target.hands
+		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
+
+		val trick = Trick.create(0, Spades, CardPlay(0, Spades, priority1S), CardPlay(1, Spades, priority2S), CardPlay(2, Spades, priority3S), CardPlay(3, Spades, priority4S))
+		val played: Deal = target.play(trick)
+		played.cards shouldBe 48
+		val quitted = played.quit
+		quitted.cards shouldBe 48
 	}
 }

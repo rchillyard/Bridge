@@ -17,11 +17,17 @@ class OutputSpec extends FlatSpec with Matchers {
 		target.content shouldBe "\n"
 	}
 
+	it should "insertBreak after indent" in {
+		val output = Output.empty.indent("    ")
+		val target: BufferedOutput = output.insertBreak.asInstanceOf[BufferedOutput]
+		target.content shouldBe "\n    "
+	}
+
 	it should ":+" in {
 		val writer = MockWriter()
 		val output = Output(writer) :+ "x"
 		output match {
-			case w@WriterOutput(_) => w.sb.toString() shouldBe "x"
+			case w@WriterOutput(_, _, _) => w.sb.toString() shouldBe "x"
 			case _ => fail("bad")
 		}
 	}

@@ -9,7 +9,7 @@ import org.scalatest.{FlatSpec, Inside, Matchers}
 
 class HowellSpec extends FlatSpec with Matchers with Inside {
 	"modulo" should "work on 1-n, etc." in {
-		implicit val tables = 4
+		implicit val tables: Int = 4
 		val e = Encounter(1, 2, 3, 4)
 		e.modulo(-3) shouldBe 1
 		e.modulo(-2) shouldBe 2
@@ -18,7 +18,7 @@ class HowellSpec extends FlatSpec with Matchers with Inside {
 		e.modulo(0) shouldBe 4
 	}
 	"move" should "work on Encounter" in {
-		implicit val tables = 4
+		implicit val tables: Int = 4
 		val e = Encounter(1, 2, 3, 4)
 		val p = Position(Seq(Encounter(1, 3, 2, 1), Encounter(2, 1, 4, 2), Encounter(3, 4, 1, 3), Encounter(4, 2, 3, 4)))
 		val moves = director.Triple(-3, -2, -1)
@@ -27,7 +27,7 @@ class HowellSpec extends FlatSpec with Matchers with Inside {
 	}
 
 	"Howell" should "work with 4 tables" in {
-		implicit val tables = 4
+		implicit val tables: Int = 4
 		val howell = Howell(tables, director.Triple(Seq(-3), Seq(-2), Seq(-1)))
 		val start = Position(Seq(Encounter(1, 3, 2, 1), Encounter(2, 1, 4, 2), Encounter(3, 4, 1, 3), Encounter(4, 2, 3, 4)))
 		val positions = howell.positions(start)
@@ -38,7 +38,7 @@ class HowellSpec extends FlatSpec with Matchers with Inside {
 	}
 
 	it should "work with 7 tables" in {
-		implicit val tables = 7
+		implicit val tables: Int = 7
 		val howell = director.Howell(tables, director.Triple(Seq(-3), Seq(-2), Seq(-1)))
 		val start = Position(Seq(Encounter(1, 1, 1, 1), Encounter(2, 6, 5, 2), Encounter(3, 4, 2, 3), Encounter(4, 2, 6, 4), Encounter(5, 7, 3, 5), Encounter(6, 5, 7, 6), Encounter(7, 3, 4, 7)))
 		val positions = howell.positions(start)

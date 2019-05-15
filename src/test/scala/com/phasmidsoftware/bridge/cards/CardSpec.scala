@@ -277,7 +277,7 @@ class CardSpec extends FlatSpec with Matchers {
 		val hands = deal.hands
 		hands.size shouldBe 4
 		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
-		val trick = Seq(CardPlay(0, Spades, priority1S), CardPlay(1, Spades, priority2S), CardPlay(2, Spades, priority3S), CardPlay(3, Spades, priority4S))
+		val trick = Trick.create(0, Spades, CardPlay(0, Spades, priority1S), CardPlay(1, Spades, priority2S), CardPlay(2, Spades, priority3S), CardPlay(3, Spades, priority4S))
 		val target0 = deal.north
 		target0.cards shouldBe 13
 		target0.play(trick).cards shouldBe 12
