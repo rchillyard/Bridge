@@ -25,7 +25,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		result.last shouldBe CardPlay(0, Hearts, 10)
 		val writer = MockWriter()
 		target.output(Output(writer)).close()
-		writer.spilled shouldBe 11
+		writer.spilled shouldBe 8
 		println(writer.spillway)
 
 	}
@@ -34,7 +34,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		val target = Tree(Deal("test", 0L))
 		val writer = MockWriter()
 		target.output(Output(writer)).close()
-		writer.spilled shouldBe 11
+		writer.spilled shouldBe 8
 		println(writer.spillway)
 	}
 
@@ -48,7 +48,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		result.children.size shouldBe 2
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
-		writer.spilled shouldBe 64
+		writer.spilled shouldBe 116
 		println(writer.spillway)
 	}
 
@@ -61,7 +61,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		result.children.size shouldBe 2
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
-		writer.spilled shouldBe 64
+		writer.spilled shouldBe 588
 		println(writer.spillway)
 	}
 

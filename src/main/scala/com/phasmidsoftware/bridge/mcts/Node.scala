@@ -97,17 +97,52 @@ trait Node[T] extends Outputable {
 		*/
 	def append(node: Node[T], t: T): Node[T] = append(node, unit(t))
 
+	/**
+		* Method to append a node to the given node of this tree and to return the resulting tree.
+		*
+		* @param node      the node to which we append the appendee.
+		* @param appendees the node to be appended to the given node.
+		* @return a copy of this Node but with appendee appended to node.
+		*/
+	def append(node: Node[T], appendees: Seq[Node[T]]): Node[T] = replace(node, node ++ appendees)
+
+
 	//	def dfs[Z](z: Z)(g: (Z, T) => Z): Unit = {
 	//		val p = g(z, x)
 	//		children.foreach(_.dfs(p)(g))
 	//	}
 
-	//	def compare(that: Node[T, Y]): Int = implicitly[Ordering[Y]].compare(fitness, that.fitness)
+	/**
+		* Method to output this Node (and, recursively, all of its children).
+		*
+		* @param output the output to append to.
+		* @return a new instance of Output.
+		*/
+	def output(output: Output): Output = outputChildren(outputValue(output))
 
-	override def output(output: Output): Output = (t match {
+	/**
+		* Method to output the children of this Node (if any).
+		* This default method will, if there are children, indent the output and insert a break, then recursively invoke ouput on the children.
+		*
+		* @param output the Output to append to.
+		* @return a new instance of Output.
+		*/
+	def outputChildren(output: Output): Output = if (children.nonEmpty) {
+		val indentedOutput = output.indent("  ").insertBreak
+		indentedOutput ++ children.map(_.output(indentedOutput.copy))
+	} else output
+
+	/**
+		* Method to output the value of this Node.
+		* This default method will use Output if the value is itself Outputable, otherwise it will use toString.
+		*
+		* @param output the Output to append to.
+		* @return a new instance of Output.
+		*/
+	def outputValue(output: Output): Output = t match {
 		case o: Outputable => o.output(output)
 		case _ => output :+ t
-	}).indent("  ").insertBreak ++ children.map(_.output(Output.empty))
+	}
 }
 
 //object FP {

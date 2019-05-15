@@ -7,6 +7,14 @@ import scala.language.postfixOps
 
 /**
 	* Trait to define the behavior of an AutoCloseable that is a pseudo-monadic IO type for output.
+	*
+	* In general, when two Outputs are concatenated (using ++), we merge the content of the Output on the right into the Output on the left.
+	* That way, it makes sense that the Output on the left is backed by a write-store (such as a Writer).
+	* The concatenation logic tries its best to keep things in order and appropriately backed.
+	*
+	* NOTE: indentation also tends to be applied to the Output on the left.
+	* However, if new (unbacked) Outputs are created to be used for outputting indented values, then such Outputs should be explicitly indented also.
+	* A warning could be created if two Outputs are merged with different indents (but is currently commented out).
 	*/
 sealed trait Output extends AutoCloseable {
 	/**
@@ -67,6 +75,14 @@ sealed trait Output extends AutoCloseable {
 		* @return a new Output with the appropriate indentation.
 		*/
 	def indent(c: CharSequence): Output
+
+	/**
+		* Method to create a copy of this Output.
+		* Content (whether flushed or not) will never be copied, but the other parameters of this Output may or may not be copied, depending on the actual implementation.
+		*
+		* @return a new Output which is, essentially, similar to this but without any content.
+		*/
+	def copy: Output
 }
 
 /**
@@ -230,7 +246,16 @@ sealed trait BackedOutput[A <: Appendable with AutoCloseable] extends TypedOutpu
 	def persist(x: OutputType): Unit
 }
 
-sealed abstract class BufferedCharSequenceOutput[A <: Appendable with AutoCloseable with Flushable](val appendable: A, indentation: CharSequence, val sb: mutable.StringBuilder = new StringBuilder) extends CharacterOutput with BufferedOutput with BackedOutput[A] {
+/**
+	* Abstract class to combine the behaviors of CharacterOutput, BufferedOutput and BackedOutput.
+	*
+	* @param appendable  the persistent store of characters.
+	* @param indentation the indentation to be used after a newline.
+	*                    NOTE: this is a var because sometimes when we concatenate Outputs, we have to update this value.
+	* @param sb          the StringBuilder that we use as temporary storage of characters.
+	* @tparam A the underlying (appendable) type.
+	*/
+sealed abstract class BufferedCharSequenceOutput[A <: Appendable with AutoCloseable with Flushable](val appendable: A, var indentation: CharSequence, val sb: mutable.StringBuilder = new StringBuilder) extends CharacterOutput with BufferedOutput with BackedOutput[A] {
 
 	/**
 		* This method is essentially non-functional in the JVM.
@@ -284,6 +309,8 @@ sealed abstract class BufferedCharSequenceOutput[A <: Appendable with AutoClosea
 
 	def concatenate(output: Output): Output = output match {
 		case b: BufferedOutput =>
+			//			if (indentation != b.asInstanceOf[BufferedCharSequenceOutput[_]].indentation)
+			//				System.err.println(s"warning: concatenating with different indents")
 			if (isBacked) backedConcatenate(b)
 			else concatenateOther(b)
 		case _ =>
@@ -294,6 +321,9 @@ sealed abstract class BufferedCharSequenceOutput[A <: Appendable with AutoClosea
 
 	private def backedConcatenate(output: BufferedOutput): Output = if (output.isBacked) {
 		close()
+		val bufferedCharSequenceOutput = output.asInstanceOf[BufferedCharSequenceOutput[_]]
+		if (indentation.length > bufferedCharSequenceOutput.indentation.length)
+			bufferedCharSequenceOutput.indentation = indentation
 		output
 	}
 	else
@@ -339,7 +369,7 @@ object Output {
 	def apply(writer: Writer, s: CharSequence): Output = apply(writer) :+ s
 
 	/**
-		* Method to append an empty UnbackedOutput
+		* Method to create an empty UnbackedOutput
 		*
 		* @return a new instance of UnbackedOutput.
 		*/
@@ -372,27 +402,55 @@ case class NonOutput() extends Appendable with Closeable with Flushable {
 	override def flush(): Unit = throw OutputException("cannot flush NonOutput")
 }
 
-case class UnbackedOutput(indentation: CharSequence = "", stringBuilder: mutable.StringBuilder = new StringBuilder) extends BufferedCharSequenceOutput[NonOutput](NonOutput(), indentation, stringBuilder) {
+case class UnbackedOutput(initialIndentation: CharSequence = "", stringBuilder: mutable.StringBuilder = new StringBuilder) extends BufferedCharSequenceOutput[NonOutput](NonOutput(), initialIndentation, stringBuilder) {
 
 	def isBacked: Boolean = false
 
 	override def toString: String = sb.mkString
 
-	override def indent(c: CharSequence): Output = UnbackedOutput(indentation.toString + c, sb)
+	/**
+		* NOTE: see the notes about indentation in the scaladoc for Output
+		*
+		* @param c the indentation to be added.
+		* @return a new Output with the appropriate indentation.
+		*/
+	def indent(c: CharSequence): Output = UnbackedOutput(indentation.toString + c, sb)
+
+	/**
+		* Method to create a copy of this Output.
+		* Content (whether flushed or not) will never be copied, but the other parameters of this Output may or may not be copied, depending on the actual implementation.
+		*
+		* @return a new Output which is, essentially, similar to this but without any content.
+		*/
+	def copy: Output = UnbackedOutput(indentation)
 }
 
-case class WriterOutput(writer: Writer, indentation: CharSequence = "", stringBuilder: mutable.StringBuilder = new StringBuilder) extends BufferedCharSequenceOutput[Writer](writer, indentation, stringBuilder) {
+case class WriterOutput(writer: Writer, initialIndentation: CharSequence = "", stringBuilder: mutable.StringBuilder = new StringBuilder) extends BufferedCharSequenceOutput[Writer](writer, initialIndentation, stringBuilder) {
 	def isBacked: Boolean = true
 
 	override def toString: String =
 		s"WriterOutput: with writer: $writer and buffer: ${sb.mkString}"
 
-	override def indent(c: CharSequence): Output = WriterOutput(writer, indentation.toString + c, sb)
+	def indent(c: CharSequence): Output = WriterOutput(writer, indentation.toString + c, sb)
+
+	/**
+		* Method to create a copy of this Output but unbacked.
+		* Content (whether flushed or not) will never be copied, but the other parameters of this Output may or may not be copied, depending on the actual implementation.
+		*
+		* @return a new Output which is an UnbackedOutput, without any content.
+		*/
+	def copy: Output = UnbackedOutput(indentation)
 }
 
 case class OutputException(w: String) extends Exception(w)
 
 trait Outputable {
 
+	/**
+		* Method to output this object (and, recursively, all of its children).
+		*
+		* @param output the output to append to.
+		* @return a new instance of Output.
+		*/
 	def output(output: Output): Output
 }

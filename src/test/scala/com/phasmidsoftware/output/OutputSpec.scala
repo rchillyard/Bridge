@@ -19,8 +19,29 @@ class OutputSpec extends FlatSpec with Matchers {
 
 	it should "insertBreak after indent" in {
 		val output = Output.empty.indent("    ")
+		output.asInstanceOf[UnbackedOutput].indentation shouldBe "    "
 		val target: BufferedOutput = output.insertBreak.asInstanceOf[BufferedOutput]
 		target.content shouldBe "\n    "
+		target.asInstanceOf[UnbackedOutput].indentation shouldBe "    "
+	}
+
+	it should "indent" in {
+		val output = Output.empty.indent("    ")
+		output.asInstanceOf[UnbackedOutput].indentation shouldBe "    "
+		val result = output.indent("    ")
+		result.asInstanceOf[UnbackedOutput].indentation shouldBe "        "
+		val target: BufferedOutput = result.insertBreak.asInstanceOf[BufferedOutput]
+		target.asInstanceOf[UnbackedOutput].indentation shouldBe "        "
+		target.content shouldBe "\n        "
+	}
+
+	it should "indent with ++" in {
+		val writer1 = MockWriter()
+		val output1 = Output(writer1).indent("    ")
+		val writer2 = MockWriter()
+		val output2 = Output(writer2)
+		val result = output1 ++ output2
+		result.asInstanceOf[WriterOutput].indentation shouldBe "    "
 	}
 
 	it should ":+" in {

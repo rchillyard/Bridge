@@ -7,7 +7,7 @@ import scala.language.postfixOps
 
 case class TrickNode(trick: Trick, followers: Seq[TrickNode]) extends FitNode[Trick](trick, followers) {
 	/**
-		* Method to form a Node from a Trick.
+		* Method to form a Node from a Trick and from children.
 		*
 		* @param t   the given value of Trick.
 		* @param tns the nodes which will be the children of the result.
@@ -24,9 +24,9 @@ case class TrickNode(trick: Trick, followers: Seq[TrickNode]) extends FitNode[Tr
 	override def unit(t: Trick): TrickNode = super.unit(t).asInstanceOf[TrickNode]
 
 	/**
-		* Method to add the given tns to the children of this Node.
+		* Method to add the given trick nodes to the children of this Node.
 		*
-		* @param tns the tns to add as additional children.
+		* @param tns the trick nodes to add as additional children.
 		* @return a copy of this Node but with tns as additional children.
 		*/
 	override def ++(tns: Seq[Node[Trick]]): TrickNode = super.++(tns).asInstanceOf[TrickNode]
@@ -41,8 +41,6 @@ case class TrickNode(trick: Trick, followers: Seq[TrickNode]) extends FitNode[Tr
 
 	/**
 		* Method to add the given node to the children of this Node.
-		*
-		* CONSIDER: adding the node at the head of the list of children.
 		*
 		* @param node the node to add as a child.
 		* @return a copy of this Node but with node as an additional child.
@@ -98,16 +96,20 @@ case class Tree(deal: Deal, root: TrickNode) extends Outputable {
 		* @param levels is the limit of the number of cards for which to enumerate the plays (ideally should be 52).
 		* @return a TrickNode.
 		*/
-	def enumeratePlays(node: TrickNode, levels: Int): TrickNode = {
+	def enumeratePlays(node: TrickNode, levels: Int): TrickNode = if (levels > 0) {
 		val trick = node.t
 		val alternativeTricks: Seq[Trick] = trick.winner match {
 			case Some(winner) => enumerateLeads(winner)
 			case None => enumerateFollows(trick)
 		}
-		val result = node :+ alternativeTricks
+		val nodeWithAltTricks = node :+ alternativeTricks
+		println(nodeWithAltTricks)
 		// TODO figure this out
-		node.children.foldLeft(result)((r, n) => enumeratePlays(n.asInstanceOf[TrickNode], levels - 1)).asInstanceOf[TrickNode]
+		val result = nodeWithAltTricks.children.foldLeft(nodeWithAltTricks)((r, n) => r.append(n, enumeratePlays(n.asInstanceOf[TrickNode], levels - 1))).asInstanceOf[TrickNode]
+		println(result)
+		result
 	}
+	else node
 
 	private def enumerateLeads(winner: Int): Seq[Trick] =
 		for (p <- chooseLead(winner)) yield Trick(Seq(p), winner, p.suit)
