@@ -66,11 +66,10 @@ class TreeSpec extends FlatSpec with Matchers {
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
 		println(writer.spillway)
-		writer.spilled shouldBe 291
+		writer.spilled shouldBe 419
 	}
 
-	// FIXME this one does not work correctly
-	ignore should "enumeratePlays 3" in {
+	it should "enumeratePlays 3" in {
 		val deal = Deal("test", 0L)
 		val target = Tree(deal)
 		// Arbitrarily start play with North leading a spade.
@@ -79,9 +78,9 @@ class TreeSpec extends FlatSpec with Matchers {
 		to should matchPattern { case Some(_) => }
 		val result = to.get
 		result.children.size shouldBe 2
-		val writer = MockWriter()
+		val writer = MockWriter(8192)
 		result.output(Output(writer)).close()
 		println(writer.spillway)
-		writer.spilled shouldBe 291
+		writer.spilled shouldBe 2427
 	}
 }

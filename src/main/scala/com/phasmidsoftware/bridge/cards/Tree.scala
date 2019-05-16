@@ -111,7 +111,7 @@ case class Tree(deal: Deal, root: TrickNode) extends Outputable {
 		for (p <- chooseLead(winner)) yield Trick(Seq(p), winner, p.suit)
 
 	private def enumerateFollows(trick: Trick): Seq[Trick] =
-		for (p <- deal.hands(trick.next).choosePlays(trick)) yield Trick(Seq(p), trick.leader, p.suit)
+		for (p <- deal.hands(trick.next).choosePlays(trick)) yield trick :+ p
 
 	def output(output: Output): Output = root.output(output)
 }
