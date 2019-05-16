@@ -25,8 +25,8 @@ class TreeSpec extends FlatSpec with Matchers {
 		result.last shouldBe CardPlay(0, Hearts, 10)
 		val writer = MockWriter()
 		target.output(Output(writer)).close()
-		writer.spilled shouldBe 8
 		println(writer.spillway)
+		writer.spilled shouldBe 8
 
 	}
 
@@ -34,8 +34,8 @@ class TreeSpec extends FlatSpec with Matchers {
 		val target = Tree(Deal("test", 0L))
 		val writer = MockWriter()
 		target.output(Output(writer)).close()
-		writer.spilled shouldBe 8
 		println(writer.spillway)
+		writer.spilled shouldBe 8
 	}
 
 	it should "enumeratePlays 1" in {
@@ -44,12 +44,14 @@ class TreeSpec extends FlatSpec with Matchers {
 		val target = Tree(deal)
 		// Arbitrarily start play with North leading a spade.
 		val trick = Trick(Nil, 0, Spades)
-		val result: TrickNode = target.enumeratePlays(TrickNode(trick, Nil), 1)
+		val to: Option[TrickNode] = target.enumeratePlays(TrickNode(trick, Nil), 1)
+		to should matchPattern { case Some(_) => }
+		val result = to.get
 		result.children.size shouldBe 2
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
-		writer.spilled shouldBe 116
 		println(writer.spillway)
+		writer.spilled shouldBe 61
 	}
 
 	it should "enumeratePlays 2" in {
@@ -57,12 +59,29 @@ class TreeSpec extends FlatSpec with Matchers {
 		val target = Tree(deal)
 		// Arbitrarily start play with North leading a spade.
 		val trick = Trick(Nil, 0, Spades)
-		val result: TrickNode = target.enumeratePlays(TrickNode(trick, Nil), 2)
+		val to: Option[TrickNode] = target.enumeratePlays(TrickNode(trick, Nil), 2)
+		to should matchPattern { case Some(_) => }
+		val result = to.get
 		result.children.size shouldBe 2
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
-		writer.spilled shouldBe 588
 		println(writer.spillway)
+		writer.spilled shouldBe 291
 	}
 
+	// FIXME this one does not work correctly
+	ignore should "enumeratePlays 3" in {
+		val deal = Deal("test", 0L)
+		val target = Tree(deal)
+		// Arbitrarily start play with North leading a spade.
+		val trick = Trick(Nil, 0, Spades)
+		val to: Option[TrickNode] = target.enumeratePlays(TrickNode(trick, Nil), 3)
+		to should matchPattern { case Some(_) => }
+		val result = to.get
+		result.children.size shouldBe 2
+		val writer = MockWriter()
+		result.output(Output(writer)).close()
+		println(writer.spillway)
+		writer.spilled shouldBe 291
+	}
 }

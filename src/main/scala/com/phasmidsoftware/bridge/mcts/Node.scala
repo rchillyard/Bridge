@@ -71,6 +71,8 @@ trait Node[T] extends Outputable {
 	/**
 		* Method to replace a node of this tree with the given node and to return the resulting tree.
 		*
+		* TODO: watch out for the ordering of the children changing.
+		*
 		* @param x the node to be replace.
 		* @param y the node with which to replace the given node.
 		* @return a copy of this Node, but with node replaced by replacement.
@@ -78,6 +80,19 @@ trait Node[T] extends Outputable {
 	def replace(x: Node[T], y: Node[T]): Node[T] =
 		if (children contains x) unit(t, children.filterNot(_ == x) :+ y)
 		else unit(t, children map (n => n.replace(x, y)))
+
+	/**
+		* Method to replace a node of this tree optionally with the given node and to return the resulting tree.
+		*
+		* @param x   the node to be replace.
+		* @param tno the optional node with which to replace the given node.
+		* @return a copy of this Node, but with node replaced by replacement, assuming that tno exists; otherwise just return this.
+		*/
+	def replace(x: Node[T], tno: Option[Node[T]]): Node[T] =
+		tno match {
+			case Some(tn) => replace(x, tn)
+			case None => this
+		}
 
 	/**
 		* Method to append a node to the given node of this tree and to return the resulting tree.
@@ -104,7 +119,7 @@ trait Node[T] extends Outputable {
 		* @param appendees the node to be appended to the given node.
 		* @return a copy of this Node but with appendee appended to node.
 		*/
-	def append(node: Node[T], appendees: Seq[Node[T]]): Node[T] = replace(node, node ++ appendees)
+	def append(node: Node[T], appendees: Seq[Node[T]]): Node[T] = if (appendees.nonEmpty) replace(node, node ++ appendees) else this
 
 
 	//	def dfs[Z](z: Z)(g: (Z, T) => Z): Unit = {
@@ -122,14 +137,14 @@ trait Node[T] extends Outputable {
 
 	/**
 		* Method to output the children of this Node (if any).
-		* This default method will, if there are children, indent the output and insert a break, then recursively invoke ouput on the children.
+		* This default method will, if there are children, indent the output and insert a break, then recursively invoke output on the children.
 		*
 		* @param output the Output to append to.
 		* @return a new instance of Output.
 		*/
 	def outputChildren(output: Output): Output = if (children.nonEmpty) {
-		val indentedOutput = output.indent("  ").insertBreak
-		indentedOutput ++ children.map(_.output(indentedOutput.copy))
+		val indentedOutput = output.indent("  ")
+		indentedOutput ++ children.map(_.output(indentedOutput.copy.insertBreak))
 	} else output
 
 	/**

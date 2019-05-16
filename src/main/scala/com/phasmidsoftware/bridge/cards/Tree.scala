@@ -96,20 +96,16 @@ case class Tree(deal: Deal, root: TrickNode) extends Outputable {
 		* @param levels is the limit of the number of cards for which to enumerate the plays (ideally should be 52).
 		* @return a TrickNode.
 		*/
-	def enumeratePlays(node: TrickNode, levels: Int): TrickNode = if (levels > 0) {
+	def enumeratePlays(node: TrickNode, levels: Int): Option[TrickNode] = if (levels > 0) {
 		val trick = node.t
 		val alternativeTricks: Seq[Trick] = trick.winner match {
 			case Some(winner) => enumerateLeads(winner)
 			case None => enumerateFollows(trick)
 		}
 		val nodeWithAltTricks = node :+ alternativeTricks
-		println(nodeWithAltTricks)
-		// TODO figure this out
-		val result = nodeWithAltTricks.children.foldLeft(nodeWithAltTricks)((r, n) => r.append(n, enumeratePlays(n.asInstanceOf[TrickNode], levels - 1))).asInstanceOf[TrickNode]
-		println(result)
-		result
+		Some(nodeWithAltTricks.children.foldLeft(nodeWithAltTricks)((r, n) => r.replace(n, enumeratePlays(n.asInstanceOf[TrickNode], levels - 1))).asInstanceOf[TrickNode])
 	}
-	else node
+	else None
 
 	private def enumerateLeads(winner: Int): Seq[Trick] =
 		for (p <- chooseLead(winner)) yield Trick(Seq(p), winner, p.suit)
