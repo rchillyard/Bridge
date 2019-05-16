@@ -9,7 +9,7 @@ class TreeSpec extends FlatSpec with Matchers {
 
 	it should "apply" in {
 		val deal = Deal("test", 0L)
-		val root = TrickNode(Trick(Nil, 0, Spades), Nil)
+		val root = TrickNode(Trick(0, Nil, 0, Spades), Nil)
 		val target = Tree(deal, root)
 		target.deal shouldBe deal
 		target.root shouldBe root
@@ -20,13 +20,13 @@ class TreeSpec extends FlatSpec with Matchers {
 		val target = Tree(deal)
 		val result: Seq[CardPlay] = target.chooseLead(0)
 		result.size shouldBe 3
-		result.head shouldBe CardPlay(0, Hearts, 2)
-		result(1) shouldBe CardPlay(0, Hearts, 5)
-		result.last shouldBe CardPlay(0, Hearts, 10)
+		result.head shouldBe CardPlay(deal, 0, Hearts, 2)
+		result(1) shouldBe CardPlay(deal, 0, Hearts, 5)
+		result.last shouldBe CardPlay(deal, 0, Hearts, 10)
 		val writer = MockWriter()
 		target.output(Output(writer)).close()
 		println(writer.spillway)
-		writer.spilled shouldBe 8
+		writer.spilled shouldBe 3
 
 	}
 
@@ -35,7 +35,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		val writer = MockWriter()
 		target.output(Output(writer)).close()
 		println(writer.spillway)
-		writer.spilled shouldBe 8
+		writer.spilled shouldBe 3
 	}
 
 	it should "enumeratePlays 1" in {
@@ -43,7 +43,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		println(deal)
 		val target = Tree(deal)
 		// Arbitrarily start play with North leading a spade.
-		val trick = Trick(Nil, 0, Spades)
+		val trick = Trick(0, Nil, 0, Spades)
 		val to: Option[TrickNode] = target.enumeratePlays(TrickNode(trick, Nil), 1)
 		to should matchPattern { case Some(_) => }
 		val result = to.get
@@ -51,14 +51,14 @@ class TreeSpec extends FlatSpec with Matchers {
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
 		println(writer.spillway)
-		writer.spilled shouldBe 61
+		writer.spilled shouldBe 24
 	}
 
 	it should "enumeratePlays 2" in {
 		val deal = Deal("test", 0L)
 		val target = Tree(deal)
 		// Arbitrarily start play with North leading a spade.
-		val trick = Trick(Nil, 0, Spades)
+		val trick = Trick(0, Nil, 0, Spades)
 		val to: Option[TrickNode] = target.enumeratePlays(TrickNode(trick, Nil), 2)
 		to should matchPattern { case Some(_) => }
 		val result = to.get
@@ -66,14 +66,14 @@ class TreeSpec extends FlatSpec with Matchers {
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
 		println(writer.spillway)
-		writer.spilled shouldBe 419
+		writer.spilled shouldBe 122
 	}
 
 	it should "enumeratePlays 3" in {
 		val deal = Deal("test", 0L)
 		val target = Tree(deal)
 		// Arbitrarily start play with North leading a spade.
-		val trick = Trick(Nil, 0, Spades)
+		val trick = Trick(0, Nil, 0, Spades)
 		val to: Option[TrickNode] = target.enumeratePlays(TrickNode(trick, Nil), 3)
 		to should matchPattern { case Some(_) => }
 		val result = to.get
@@ -81,6 +81,6 @@ class TreeSpec extends FlatSpec with Matchers {
 		val writer = MockWriter(8192)
 		result.output(Output(writer)).close()
 		println(writer.spillway)
-		writer.spilled shouldBe 2427
+		writer.spilled shouldBe 578
 	}
 }

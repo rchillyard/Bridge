@@ -156,11 +156,12 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 	/**
 		* Method to choose plays according to the prior plays and the cards in this Holding.
 		*
-		* @param hand the index of the Hand containing this Holding.
+		* @param deal  the deal to which these plays will belong.
+		* @param hand  the index of the Hand containing this Holding.
 		* @param trick the current state of this trick (i.e. the prior plays).
 		* @return a sequence of all possible plays, starting with the ones most suited to the appropriate strategy.
 		*/
-	def choosePlays(hand: Int, trick: Trick): Seq[CardPlay] = if (suit == trick.suit) {
+	def choosePlays(deal: Deal, hand: Int, trick: Trick): Seq[CardPlay] = if (suit == trick.suit) {
 		val strategy: Strategy =
 			trick.size match {
 				case 0 => if (hasHonorSequence) LeadHigh else FourthBest
@@ -169,18 +170,19 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 				case 3 => WinIt
 				case x => throw CardException(s"too many prior plays: $x")
 			}
-		choosePlays(hand, strategy)
+		choosePlays(deal, hand, strategy)
 	}
 	else throw CardException(s"Holding.choosePlays logic error: trick suit ${trick.suit} does not match this suit $suit")
 
 	/**
 		* For now, we ignore strategy which is only used to ensure that we try the likely more successful card play first.
 		*
-		* @param hand     the index of this Hand (N, E, S, W)
-		* @param strategy the recommended strategy (currently ignored)
-		* @return a sequence of CardPlay objects
+		* @param deal     the deal to which these plays will belong.
+		* @param hand     the index of this Hand (N, E, S, W).
+		* @param strategy the recommended strategy (currently ignored).
+		* @return a sequence of CardPlay objects.
 		*/
-	def choosePlays(hand: Int, strategy: Strategy): Seq[CardPlay] = for (s <- sequences) yield CardPlay(hand, suit, s.priority)
+	def choosePlays(deal: Deal, hand: Int, strategy: Strategy): Seq[CardPlay] = for (s <- sequences) yield CardPlay(deal, hand, suit, s.priority)
 
 	/**
 		* @return true if this Holding is void.
@@ -262,6 +264,9 @@ object Holding {
 		override def compare(x: Rank, y: Rank): Int = -x.priority + y.priority
 	}
 
+	// TODO merge the two create methods
+	def create(suit: Suit, cards: Seq[Card]): Holding = apply(suit, (cards map (_.rank)).sorted.reverse: _*)
+
 	def create(ranks: Seq[Rank], suit: Suit) = Holding(suit, ranks.sorted.reverse: _*)
 
 	def ranksToString(ranks: Seq[Rank]): String = if (ranks.nonEmpty) ranks.mkString("", "", "") else "-"
@@ -270,10 +275,11 @@ object Holding {
 /**
 	* This class models a bridge hand (four suits).
 	*
-	* @param index    the index of this hand within a Deal.
+	* @param deal     the deal to which this Hand belongs.
+	* @param index    the index of this hand within the deal.
 	* @param holdings the four holdings (as a Map).
 	*/
-case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable {
+case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Outputable {
 
 	/**
 		* @return the index of the next hand in sequence around the table.
@@ -305,7 +311,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable {
 		for {
 			// first get the holdings from the other suits in order of length
 			h <- holdings.flatMap { case (k, v) => if (k != trick.suit) Some(v) else None }.toSeq.sortWith(_.length < _.length)
-			ps <- h.choosePlays(index, Duck)
+			ps <- h.choosePlays(deal, index, Duck)
 		} yield ps
 	}
 
@@ -318,7 +324,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable {
 	def choosePlays(trick: Trick): Seq[CardPlay] = {
 		val holding = holdings(trick.suit)
 		if (holding.isVoid) discard(trick)
-		else holding.choosePlays(index, trick)
+		else holding.choosePlays(deal, index, trick)
 	}
 
 		/**
@@ -350,12 +356,12 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable {
 		* @return a new Hand, with one less card.
 		*/
 	def -(suit: Suit, priority: Int): Hand =
-		Hand(index, holdings + (suit -> (holdings(suit) - priority)))
+		Hand(deal, index, holdings + (suit -> (holdings(suit) - priority)))
 
 	def promote(suit: Suit, priority: Int): Hand =
-		Hand(index, holdings + (suit -> holdings(suit).promote(priority)))
+		Hand(deal, index, holdings + (suit -> holdings(suit).promote(priority)))
 
-	def quit: Hand = Hand(index, for ((k, v) <- holdings) yield k -> v.quit)
+	def quit: Hand = Hand(deal, index, for ((k, v) <- holdings) yield k -> v.quit)
 
 	override def toString: String = {
 		// TODO figure out why we can't just import SuitOrdering from Suit
@@ -386,7 +392,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable {
 			override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
 		}
 		val keys = holdings.keys.toSeq.sorted.reverse
-		output ++ (for (k <- keys) yield holdings(k).output(Output.empty))
+		output ++ (for (k <- keys) yield holdings(k).output(output.copy))
 	}
 }
 
@@ -550,6 +556,8 @@ object Rank {
 		case _ => throw CardException(s"$s is not a rank")
 	}
 
+	def fromPriority(priority: Int): Rank = apply(14 - priority)
+
 	private val spotR = """(\d\d?)""".r
 	private val honorR = """([AKQJT])""".r
 }
@@ -588,11 +596,15 @@ case object King extends BaseRank(1, true)
 case object Ace extends BaseRank(0, true)
 
 object Hand {
-	def apply(index: Int, cs: Seq[Card]): Hand = Hand(index, for ((suit, cards) <- cs.groupBy(c => c.suit)) yield (suit, Holding(suit, (cards map (_.rank)).sorted.reverse: _*)))
 
-	def from(index: Int, ws: String*): Hand = {
+	def apply(deal: Deal, index: Int, cs: Seq[Card]): Hand = Hand(deal, index, createHoldings(cs))
+
+	def createHoldings(cs: Seq[Card]): Map[Suit, Holding] = for ((suit, cards) <- cs.groupBy(c => c.suit)) yield (suit, Holding.create(suit, cards))
+
+
+	def from(deal: Deal, index: Int, ws: String*): Hand = {
 		val tuples = for (w <- ws; h = Holding.parseHolding(w)) yield h.suit -> h
-		Hand(index, tuples.toMap)
+		Hand(deal, index, tuples.toMap)
 	}
 
 	def next(index: Int): Int = next(index, 1)

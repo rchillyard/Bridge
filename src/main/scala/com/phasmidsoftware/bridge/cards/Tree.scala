@@ -85,7 +85,7 @@ case class TrickNode(trick: Trick, followers: Seq[TrickNode]) extends FitNode[Tr
 
 case class Tree(deal: Deal, root: TrickNode) extends Outputable {
 
-	def chooseLead(leader: Int): Seq[CardPlay] = deal.hands(leader).longestSuit.choosePlays(leader, FourthBest)
+	def chooseLead(leader: Int): Seq[CardPlay] = deal.hands(leader).longestSuit.choosePlays(deal, leader, FourthBest)
 
 	/**
 		* Choose the plays for this Deal, based on the prior plays.
@@ -99,7 +99,7 @@ case class Tree(deal: Deal, root: TrickNode) extends Outputable {
 	def enumeratePlays(node: TrickNode, levels: Int): Option[TrickNode] = if (levels > 0) {
 		val trick = node.t
 		val alternativeTricks: Seq[Trick] = trick.winner match {
-			case Some(winner) => enumerateLeads(winner)
+			case Some(winner) => enumerateLeads(trick.index + 1, winner)
 			case None => enumerateFollows(trick)
 		}
 		val nodeWithAltTricks = node :+ alternativeTricks
@@ -107,8 +107,8 @@ case class Tree(deal: Deal, root: TrickNode) extends Outputable {
 	}
 	else None
 
-	private def enumerateLeads(winner: Int): Seq[Trick] =
-		for (p <- chooseLead(winner)) yield Trick(Seq(p), winner, p.suit)
+	private def enumerateLeads(index: Int, winner: Int) =
+		for (p <- chooseLead(winner)) yield Trick(index, Seq(p), winner, p.suit)
 
 	private def enumerateFollows(trick: Trick): Seq[Trick] =
 		for (p <- deal.hands(trick.next).choosePlays(trick)) yield trick :+ p
@@ -117,5 +117,5 @@ case class Tree(deal: Deal, root: TrickNode) extends Outputable {
 }
 
 object Tree {
-	def apply(deal: Deal): Tree = apply(deal, TrickNode(Trick(Nil, 0, Spades), Nil))
+	def apply(deal: Deal): Tree = apply(deal, TrickNode(Trick(0, Nil, 0, Spades), Nil))
 }

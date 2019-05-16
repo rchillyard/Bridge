@@ -39,6 +39,13 @@ class DealSpec extends FlatSpec with Matchers {
 		writer.spillway shouldBe "test\nNorth:\tS95 HQ9432 D64 CT652\nEast:\tSK742 HA7 DT93 CAQJ7\nSouth:\tSAJT86 HKT8 DK82 CK3\nWest:\tSQ3 HJ65 DAQJ75 C984\n"
 	}
 
+	it should "asCard" in {
+		val deal = Deal("test", 0L)
+		val cardPlay = CardPlay(deal, 0, Spades, 0)
+		cardPlay.asCard shouldBe Card(Spades, Ace)
+		cardPlay.asCard.toString shouldBe "SA"
+	}
+
 	behavior of "play"
 	it should "play a trick made up of all lowest spades" in {
 		val target = Deal("test", 0L)
@@ -46,7 +53,7 @@ class DealSpec extends FlatSpec with Matchers {
 		val hands = target.hands
 		hands.size shouldBe 4
 		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
-		val trick = Trick.create(0, Spades, CardPlay(0, Spades, priority1S), CardPlay(1, Spades, priority2S), CardPlay(2, Spades, priority3S), CardPlay(3, Spades, priority4S))
+		val trick = Trick.create(0, 0, Spades, CardPlay(target, 0, Spades, priority1S), CardPlay(target, 1, Spades, priority2S), CardPlay(target, 2, Spades, priority3S), CardPlay(target, 3, Spades, priority4S))
 		val played: Deal = target.play(trick)
 		played.cards shouldBe 48
 		val quitted = played.quit
@@ -59,7 +66,7 @@ class DealSpec extends FlatSpec with Matchers {
 		val hands = target.hands
 		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
 
-		val trick = Trick.create(0, Spades, CardPlay(0, Spades, priority1S), CardPlay(1, Spades, priority2S), CardPlay(2, Spades, priority3S), CardPlay(3, Spades, priority4S))
+		val trick = Trick.create(0, 0, Spades, CardPlay(target, 0, Spades, priority1S), CardPlay(target, 1, Spades, priority2S), CardPlay(target, 2, Spades, priority3S), CardPlay(target, 3, Spades, priority4S))
 		val played: Deal = target.play(trick)
 		played.cards shouldBe 48
 		val quitted = played.quit
