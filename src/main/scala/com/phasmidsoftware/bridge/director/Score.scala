@@ -63,18 +63,23 @@ object Score extends App {
 	}
 }
 
-case class Event(title: String, sections: Seq[Section]) extends Outputable {
+case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit] {
 	if (sections.isEmpty)
 		System.err.println("Warning: there are no sections in this event")
 
-	def output(output: Output): Output = (output :+ title).insertBreak ++ Output.apply(sections)(s => s.output(Output.empty))
-
 	def createResults: Map[Preamble, Seq[Result]] = (for (s <- sections) yield s.preamble -> s.createResults).toMap
+
+	/**
+		* Method to output this object (and, recursively, all of its children).
+		*
+		* @param output the output to append to.
+		* @param xo     an optional value of X, defaulting to None.
+		* @return a new instance of Output.
+		*/
+	def output(output: Output, xo: Option[Unit] = None): Output = (output :+ title).insertBreak ++ Output.apply(sections)(s => s.output(Output.empty))
 }
 
-case class Section(preamble: Preamble, travelers: Seq[Traveler]) extends Outputable {
-
-	def output(output: Output): Output = travelers.sorted.foldLeft(output :+ s"$preamble\n")((o, t) => o ++ t.output(Output.empty))
+case class Section(preamble: Preamble, travelers: Seq[Traveler]) extends Outputable[Unit] {
 
 	def createResults: Seq[Result] = {
 		val top = calculateTop
@@ -93,6 +98,16 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler]) extends Outputa
 		if (theTop.size != 1) System.err.println(s"Warning: not all boards have been played the same number of times: $tops")
 		theTop.head
 	}
+
+	/**
+		* Method to output this object (and, recursively, all of its children).
+		*
+		* @param output the output to append to.
+		* @param xo     an optional value of X, defaulting to None.
+		* @return a new instance of Output.
+		*/
+	def output(output: Output, xo: Option[Unit] = None): Output = travelers.sorted.foldLeft(output :+ s"$preamble\n")((o, t) => o ++ t.output(Output.empty))
+
 }
 
 object Section {
@@ -182,20 +197,13 @@ case class Matchpoints(ns: Int, ew: Int, result: PlayResult, mp: Option[Rational
 	* @param board number
 	* @param ps    plays
 	*/
-case class Traveler(board: Int, ps: Seq[Play]) extends Outputable with Ordered[Traveler] {
+case class Traveler(board: Int, ps: Seq[Play]) extends Outputable[Unit] with Ordered[Traveler] {
 	def isPlayed: Boolean = ps.nonEmpty
 
 	// Calculate the ideal top -- including any Average or DNP scores:
 	private[bridge] def top = ps.size - 1
 
 	def matchpointIt: Seq[Matchpoints] = for (p <- ps) yield Matchpoints(p.ns, p.ew, p.result, p.matchpoints(this), top)
-
-	def output(output: Output): Output = {
-		val result = StringBuilder.newBuilder
-		result.append(s"Board: $board with ${ps.size} plays\n")
-		for (m <- matchpointIt) result.append(s"$m\n")
-		output :+ result.toString
-	}
 
 	def matchpoint(x: Play): Option[Rational[Int]] = if (isPlayed) {
 		val isIs = (for (p <- ps; if p != x; io = p.compare(x.result); i <- io) yield (i, 2)) unzip;
@@ -212,6 +220,20 @@ case class Traveler(board: Int, ps: Seq[Play]) extends Outputable with Ordered[T
 	def :+(play: Play): Traveler = Traveler(board, ps :+ play)
 
 	override def compare(that: Traveler): Int = board - that.board
+
+	/**
+		* Method to output this object (and, recursively, all of its children).
+		*
+		* @param output the output to append to.
+		* @param xo     an optional value of X, defaulting to None.
+		* @return a new instance of Output.
+		*/
+	def output(output: Output, xo: Option[Unit] = None): Output = {
+		val result = StringBuilder.newBuilder
+		result.append(s"Board: $board with ${ps.size} plays\n")
+		for (m <- matchpointIt) result.append(s"$m\n")
+		output :+ result.toString
+	}
 }
 
 object Traveler {

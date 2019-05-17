@@ -110,10 +110,4 @@ class NodeSpec extends FlatSpec with Matchers {
 		MockNode.unapply(MockNode(1, Seq(MockNode(2)))) should matchPattern { case Some((1, Seq(MockNode(2, Nil)))) => }
 	}
 
-	//	it should "sequence" in {
-	//		Node.sequence(Seq(None)) shouldBe None
-	//		Node.sequence(Seq(Some(1), None)) shouldBe Some(1)
-	//		an[NodeException] should be thrownBy Node.sequence(Seq(Some(1), Some(2)))
-	//	}
-
 }

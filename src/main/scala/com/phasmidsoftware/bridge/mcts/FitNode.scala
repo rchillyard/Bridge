@@ -1,7 +1,5 @@
 package com.phasmidsoftware.bridge.mcts
 
-import com.phasmidsoftware.output.Outputable
-
 trait Fitness[X] {
 
 	/**
@@ -14,7 +12,7 @@ trait Fitness[X] {
 
 }
 
-abstract class FitNode[X: Fitness](val t: X, val children: Seq[Node[X]]) extends Node[X] with Ordered[FitNode[X]] with Outputable {
+abstract class FitNode[X: Fitness](val t: X, val children: Seq[Node[X]]) extends Node[X] with Ordered[FitNode[X]] {
 
 	//	def dfs[Z](z: Z)(g: (Z, X) => Z): Unit = {
 	//		val p = g(z, x)

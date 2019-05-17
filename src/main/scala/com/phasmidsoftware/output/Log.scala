@@ -37,9 +37,6 @@ case class Log(prefix: String, logFunc: String => Unit = Log.loggingFunction)(me
 		* @return the value of x.
 		*/
 	def |[X: ClassTag](x: => X): X = x
-
-	//noinspection UnitMethodIsParameterless
-	//	def ! : Unit = Log.log(message)(())
 }
 
 object Log {

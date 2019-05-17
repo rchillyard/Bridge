@@ -124,17 +124,7 @@ object Sequence {
 	* @param suit       the suit of this holding.
 	* @param promotions a list of promotions that should be applied on quitting a trick.
 	*/
-case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = Nil) extends Outputable {
-
-	/**
-		* TODO implement me.
-		*
-		* Determine the fourth best card.
-		*
-		* @return the fourth best card from this Holding.
-		*/
-	def fourthBest: CardPlay = ???
-
+case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = Nil) extends Outputable[Unit] {
 
 	require(isVoid || maybeSuit.get == suit)
 
@@ -147,6 +137,14 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 		* @return the number of cards in this Holing (i.e. the suit length)
 		*/
 	def length: Int = sequences.map(_.length).sum
+
+	/**
+		* Optionally yield a Sequence that matches the given priority.
+		*
+		* @param priority the priority to match
+		* @return an Option[Sequence]
+		*/
+	def sequence(priority: Int): Option[Sequence] = sequences.find(s => s.priority == priority)
 
 	/**
 		* @return the all of the cards in this Holding.
@@ -205,6 +203,15 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 	def quit: Holding = doPromote
 
 	/**
+		* TODO implement me.
+		*
+		* Determine the fourth best card.
+		*
+		* @return the fourth best card from this Holding.
+		*/
+	def fourthBest: CardPlay = ???
+
+	/**
 		* Method to remove (i.e. play) a card from this Holding.
 		*
 		* @param priority the sequence from which the card will be played.
@@ -224,8 +231,6 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 		*/
 	def neatOutput: String = s"$suit${Holding.ranksToString(cards map (_.rank))}"
 
-	def output(o: Output): Output = o :+ suit.toString :+ Holding.ranksToString(cards map (_.rank))
-
 	private def doPromote: Holding = {
 
 		def applyPromotions(sequence: Sequence): Sequence = {
@@ -244,6 +249,8 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 	private def canWin(priorPlays: Seq[CardPlay]): Boolean = if (priorPlays.nonEmpty && !isVoid) priorPlays.min.priority > sequences.head.priority else true
 
 	private def maybeSuit: Option[Suit] = cards.headOption map (_.suit)
+
+	def output(output: Output, xo: Option[Unit] = None): Output = output :+ suit.toString :+ Holding.ranksToString(cards map (_.rank))
 }
 
 /**
@@ -279,7 +286,7 @@ object Holding {
 	* @param index    the index of this hand within the deal.
 	* @param holdings the four holdings (as a Map).
 	*/
-case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Outputable {
+case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Outputable[Unit] {
 
 	/**
 		* @return the index of the next hand in sequence around the table.
@@ -361,6 +368,7 @@ case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Ou
 	def promote(suit: Suit, priority: Int): Hand =
 		Hand(deal, index, holdings + (suit -> holdings(suit).promote(priority)))
 
+	// NOTE: only used for testing
 	def quit: Hand = Hand(deal, index, for ((k, v) <- holdings) yield k -> v.quit)
 
 	override def toString: String = {
@@ -386,7 +394,14 @@ case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Ou
 		(for (k <- keys) yield holdings(k).neatOutput).mkString(" ")
 	}
 
-	def output(output: Output): Output = {
+	/**
+		* Method to output this object (and, recursively, all of its children).
+		*
+		* @param output the output to append to.
+		* @param xo     an optional value of X, defaulting to None.
+		* @return a new instance of Output.
+		*/
+	def output(output: Output, xo: Option[Unit]): Output = {
 		// TODO figure out why we can't just import SuitOrdering from Suit
 		implicit object SuitOrdering extends Ordering[Suit] {
 			override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority

@@ -444,13 +444,15 @@ case class WriterOutput(writer: Writer, initialIndentation: CharSequence = "", s
 
 case class OutputException(w: String) extends Exception(w)
 
-trait Outputable {
+trait Outputable[X] {
 
 	/**
 		* Method to output this object (and, recursively, all of its children).
 		*
 		* @param output the output to append to.
+		* @param xo     an optional value of X, defaulting to None.
 		* @return a new instance of Output.
 		*/
-	def output(output: Output): Output
+	def output(output: Output, xo: Option[X] = None): Output
 }
+

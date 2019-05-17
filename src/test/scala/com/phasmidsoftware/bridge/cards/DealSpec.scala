@@ -41,9 +41,10 @@ class DealSpec extends FlatSpec with Matchers {
 
 	it should "asCard" in {
 		val deal = Deal("test", 0L)
-		val cardPlay = CardPlay(deal, 0, Spades, 0)
-		cardPlay.asCard shouldBe Card(Spades, Ace)
-		cardPlay.asCard.toString shouldBe "SA"
+		val cardPlay = CardPlay(deal, 0, Spades, 5)
+		val card = cardPlay.asCard(deal)
+		card shouldBe Card(Spades, Nine)
+		card.toString shouldBe "S9"
 	}
 
 	behavior of "play"

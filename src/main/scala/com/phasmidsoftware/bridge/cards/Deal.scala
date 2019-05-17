@@ -1,16 +1,15 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmid.laScala.Shuffle
-import com.phasmidsoftware.bridge.mcts.Fitness
 import com.phasmidsoftware.output.{Output, Outputable}
 
 import scala.language.postfixOps
 
-case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends Outputable {
+case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends Outputable[Unit] {
 
 	def hands: Seq[Hand] = (for ((i, hs) <- holdings) yield Hand(this, i, hs)).toSeq
 
-	def quit: Deal = Deal(title, hands map (_.quit))
+	def quit: Deal = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.quit))
 
 	private val Seq(n, e, s, w) = hands
 
@@ -52,7 +51,7 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
 
 	private def outputHand(name: String, hand: Hand): Output = (Output(s"$name:\t") :+ hand.neatOutput).insertBreak
 
-	def output(output: Output): Output = (output :+ title).insertBreak ++ outputHand("North", n) ++ outputHand("East", e) ++ outputHand("South", s) ++ outputHand("West", w)
+	def output(output: Output, xo: Option[Unit]): Output = (output :+ title).insertBreak ++ outputHand("North", n) ++ outputHand("East", e) ++ outputHand("South", s) ++ outputHand("West", w)
 }
 
 object Deal {
@@ -81,28 +80,48 @@ object Deal {
 /**
 	* The play of a card.
 	*
-	* CONSIDER moving this to Card
+	* TODO take Deal out of here
 	*
 	* @param deal     the deal to which this play belongs.
 	* @param hand     the index of this hand in the deal.
 	* @param suit     rhe suit from which the card is to be played.
 	* @param priority the priority of the sequence from which the card is to be played.
 	*/
-case class CardPlay(deal: Deal, hand: Int, suit: Suit, priority: Int) extends Ordered[CardPlay] with Outputable {
+case class CardPlay(deal: Deal, hand: Int, suit: Suit, priority: Int) extends Ordered[CardPlay] with Outputable[Deal] {
 	/**
 		* @return true if the top card of the sequence indicated is at least a ten.
 		*/
 	def isHonor: Boolean = Sequence.isHonor(priority)
 
+	/**
+		* Comparison between this and other.
+		*
+		* @param other the other CardPlay.
+		* @return the usual less-than, equals, or greater-than.
+		*/
 	def compare(other: CardPlay): Int = Sequence.compare(priority, other.priority)
 
+	/**
+		* Method to determine whether this CardPlay beats the other CardPlay in whist-type game.
+		*
+		* @param other the other CardPlay.
+		* @return true if this beats other.
+		*/
 	def beats(other: CardPlay): Boolean = compare(other) < 0
 
-	def asCard: Card = Card(suit, Rank.fromPriority(priority))
+	/**
+		* Yield the actual card to be played for this CardPlay (we arbitrarily choose the top card of a sequence)
+		*
+		* @return an actual Card.
+		*/
+	def asCard(deal: Deal): Card = deal.hands(hand).holdings(suit).sequence(priority) match {
+		case Some(s) => s.head
+		case None => throw CardException(s"CardPlay $this cannot get actual card from deal $deal")
+	}
 
-	override def toString: String = s"Play: ${deal.title} $hand $suit $priority"
+	override def toString: String = s"Play: $hand $suit $priority"
 
-	def output(output: Output): Output = output :+ (Deal.name(hand) + ":" + asCard)
+	def output(output: Output, xo: Option[Deal]): Output = output :+ (Deal.name(hand) + ":" + asCard(xo.get))
 }
 
 /**
@@ -112,7 +131,7 @@ case class CardPlay(deal: Deal, hand: Int, suit: Suit, priority: Int) extends Or
 	* @param leader the index of the leader to the suit.
 	* @param suit   the suit led.
 	*/
-case class Trick(index: Int, plays: Seq[CardPlay], leader: Int, suit: Suit) extends Outputable {
+case class Trick(index: Int, plays: Seq[CardPlay], leader: Int, suit: Suit) extends Outputable[Deal] {
 	/**
 		* @return the index of the hand next to play in this trick.
 		*/
@@ -166,15 +185,10 @@ case class Trick(index: Int, plays: Seq[CardPlay], leader: Int, suit: Suit) exte
 
 	lazy val value: Option[Double] = winner map (x => if (x % 2 == 0) 1 else 0)
 
-	def output(output: Output): Output = (output :+ s"T$index ") :+ (if (plays.nonEmpty) plays.last.output(output.copy) else output.copy :+ "")
-
+	def output(output: Output, xo: Option[Deal] = None): Output = (output :+ s"T$index ") :+ (if (plays.nonEmpty) plays.last.output(output.copy, xo) else output.copy :+ "")
 }
 
 object Trick {
-
-	implicit object TrickFitness extends Fitness[Trick] {
-		override def fitness(x: Trick): Double = x.evaluate
-	}
 
 	def create(index: Int, leader: Int, suit: Suit, plays: CardPlay*) = apply(index, plays, leader, suit)
 

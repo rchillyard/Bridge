@@ -2,7 +2,7 @@ package com.phasmidsoftware.bridge.mcts
 
 import com.phasmidsoftware.output.{Output, Outputable}
 
-trait Node[T] extends Outputable {
+trait Node[T] extends Outputable[Unit] {
 	/**
 		* Method to yield the value of this Node.
 		*
@@ -128,12 +128,13 @@ trait Node[T] extends Outputable {
 	//	}
 
 	/**
-		* Method to output this Node (and, recursively, all of its children).
+		* Method to output this object (and, recursively, all of its children).
 		*
 		* @param output the output to append to.
+		* @param xo     an optional value of X, defaulting to None.
 		* @return a new instance of Output.
 		*/
-	def output(output: Output): Output = outputChildren(outputValue(output))
+	def output(output: Output, xo: Option[Unit] = None): Output = outputChildren(outputValue(output))
 
 	/**
 		* Method to output the children of this Node (if any).
@@ -155,47 +156,9 @@ trait Node[T] extends Outputable {
 		* @return a new instance of Output.
 		*/
 	def outputValue(output: Output): Output = t match {
-		case o: Outputable => o.output(output)
+		case o: Outputable[_] => o.output(output)
 		case _ => output :+ t
 	}
-}
-
-//object FP {
-//	/**
-//		* TODO unit test and replace in LaScala source.
-//		*
-//		* @param xos a sequence of Option[X] values
-//		* @tparam X the underlying type
-//		* @return a sequence of X values wrapped in Option
-//		*         NOTE: that the output collection type will be Seq, regardless of the input type
-//		*/
-//	def sequence[X](xos: Seq[Option[X]]): Option[Seq[X]] = (Option(Seq[X]()) /: xos) {
-//		(xso, xo) =>
-//			for (xs <- xso) yield xo match {
-//				case Some(x) => xs :+ x
-//				case None => xs
-//			}
-//	}
-//}
-
-object Node {
-	//	/**
-	//		* Method to take a Seq of Option of T and yield an Option of T.
-	//		*
-	//		* @param tos a Seq of Option of T.
-	//		* @tparam T the underlying type.
-	//		* @return an Option[T]
-	//		* @throws NodeException if there is more than one Some(t) in the input.
-	//		*/
-	//	def sequence[T](tos: Seq[Option[T]]): Option[T] = FP.sequence(tos) match {
-	//		case None => None
-	//		case Some(ns) => ns match {
-	//			case Nil => None
-	//				case n :: Nil => Some(n)
-	//				case _ => throw NodeException(s"Node.sequence: logic error")
-	//		}
-	//	}
-
 }
 
 case class NodeException(str: String) extends Exception(str)
