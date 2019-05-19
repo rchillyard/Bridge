@@ -14,7 +14,8 @@ libraryDependencies ++= Seq(
   "org.scala-lang.modules" %% "scala-xml" % "1.0.5",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.5",
   "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
-  "org.ccil.cowan.tagsoup" % "tagsoup" % "1.2.1"
+  "ch.qos.logback" % "logback-classic" % "1.2.3" % "runtime",
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
 )
 
 val sprayGroup = "io.spray"
