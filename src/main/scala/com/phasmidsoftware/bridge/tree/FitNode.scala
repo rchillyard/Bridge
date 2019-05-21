@@ -14,16 +14,10 @@ trait Fitness[X] {
 
 abstract class FitNode[X: Fitness](val t: X, val children: Seq[Node[X]]) extends Node[X] with Ordered[FitNode[X]] {
 
-	//	def dfs[Z](z: Z)(g: (Z, X) => Z): Unit = {
-	//		val p = g(z, x)
-	//		children.foreach(_.dfs(p)(g))
-	//	}
-
 	def compare(that: FitNode[X]): Int = {
 		val xf = implicitly[Fitness[X]]
 		implicitly[Ordering[Double]].compare(xf.fitness(t), xf.fitness(that.t))
 	}
-
 }
 
 object FitNode {

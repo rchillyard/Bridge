@@ -194,6 +194,11 @@ class CardSpec extends FlatSpec with Matchers {
 		target1 ++ target2.promote shouldBe Sequence(0, Seq(Card("SA"), Card("SQ")))
 	}
 
+	it should "evaluate" in {
+		SAK.evaluate shouldBe 2.0 +- 0.01
+		SJT.evaluate shouldBe 0.25 +- 0.01
+	}
+
 	behavior of "Holding"
 
 	it should "apply" in {
@@ -241,10 +246,15 @@ class CardSpec extends FlatSpec with Matchers {
 		quitted.sequences.head shouldBe Sequence(0, Seq(Card("SA"), Card("SK"), Card("SJ"), Card("ST")))
 	}
 
+	it should "evaluate" in {
+		Holding(Seq(SAK, Sequence(Seq(Card("S3"), Card("S2")))), Spades).evaluate shouldBe 2.0 +- 0.005
+		Holding(Seq(SAK, SJT), Spades).evaluate shouldBe 3.0 +- 0.1
+	}
 
 	behavior of "Hand"
 
 	it should "apply" in {
+		// TODO either use the deal or the given hand map. Not both!
 		val map: Map[Suit, Holding] = Map(Spades -> Holding.parseHolding("SKQ3"), Hearts -> Holding.parseHolding("H7654"), Diamonds -> Holding.parseHolding("DQ104"), Clubs -> Holding.parseHolding("C842"))
 		val deal = Deal("test", 0L)
 		val target = Hand(deal, 0, map)
@@ -299,6 +309,12 @@ class CardSpec extends FlatSpec with Matchers {
 		val deal = Deal("test", 0L)
 		val target = Hand.from(deal, 0, "SAT32", "CQT98", "D43", "HKJT")
 		target.neatOutput shouldBe "SAT32 HKJT D43 CQT98"
+	}
+
+	it should "evaluate" in {
+		val deal = Deal("test", 0L)
+		val target = Hand.from(deal, 0, "SAT32", "CQT98", "D43", "HKJT")
+		target.evaluate shouldBe 2.7529296875 +- 0.02
 	}
 
 	behavior of "State"

@@ -24,7 +24,7 @@ case class Card(suit: Suit, rank: Rank) {
 	* @param priority the number of higher-ranking cards in the suit
 	* @param cards    the cards
 	*/
-case class Sequence(priority: Int, cards: Seq[Card]) {
+case class Sequence(priority: Int, cards: Seq[Card]) extends Evaluatable {
 
 	require(cards.nonEmpty)
 
@@ -32,6 +32,11 @@ case class Sequence(priority: Int, cards: Seq[Card]) {
 		* @return true if the top card of the sequence indicated is at least a ten.
 		*/
 	def isHonor: Boolean = Sequence.isHonor(priority)
+
+	/**
+		* @return the length of this sequence times one-half to the power of priority.
+		*/
+	def evaluate: Double = cards.length * math.pow(0.5, priority)
 
 	/**
 		* Method to truncate a Sequence (by playing a card: deemed to be the lowest card)
@@ -134,7 +139,7 @@ trait Quittable[X] {
 	* @param suit       the suit of this holding.
 	* @param promotions a list of promotions that should be applied on quitting a trick.
 	*/
-case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = Nil) extends Outputable[Unit] with Quittable[Holding] {
+case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = Nil) extends Outputable[Unit] with Quittable[Holding] with Evaluatable {
 
 	require(isVoid || maybeSuit.get == suit)
 
@@ -160,6 +165,25 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 		* @return the all of the cards in this Holding.
 		*/
 	def cards: Seq[Card] = for (s <- sequences; c <- s.cards) yield c
+
+	/**
+		* NOTE: this is only very approximately correct and is used as a heuristic.
+		* In particular, a suit such as AKJT should evaluate as somewhere around 3.5.
+		*
+		* @return a sum of the evaluations of each sequence.
+		*/
+	def evaluate: Double = {
+		// TODO for now, I'm going to use iteration and var !!
+		var result = 0.0
+		var cards = 0
+		for (i <- sequences.indices) {
+			val sequence = sequences(i)
+			val x = sequence.evaluate
+			result += x * math.pow(2, cards)
+			cards += sequence.length
+		}
+		result
+	}
 
 	/**
 		* Method to choose plays according to the prior plays and the cards in this Holding.
@@ -296,7 +320,7 @@ object Holding {
 	* @param index    the index of this hand within the deal.
 	* @param holdings the four holdings (as a Map).
 	*/
-case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Outputable[Unit] with Quittable[Hand] with Playable[Hand] {
+case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Outputable[Unit] with Quittable[Hand] with Playable[Hand] with Evaluatable {
 
 	/**
 		* @return the index of the next hand in sequence around the table.
@@ -310,6 +334,10 @@ case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Ou
 		*/
 	def longestSuit: Holding = holdings.values.maxBy(_.length)
 
+	/**
+		* @return the sum of the evaluations for each suit.
+		*/
+	def evaluate: Double = holdings.values.map(_.evaluate).sum
 	/**
 		* Apply a sequence of CardPlay operations to this Hand.
 		*
@@ -760,4 +788,14 @@ trait Playable[X] {
 		* @return a new Playable.
 		*/
 	def play(cardPlay: CardPlay): X
+}
+
+trait Evaluatable {
+
+	/**
+		* Evaluate this Evaluatable object for its (heuristic) trick-taking capability.
+		*
+		* @return a Double
+		*/
+	def evaluate: Double
 }

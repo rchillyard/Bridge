@@ -71,6 +71,11 @@ class DealSpec extends FlatSpec with Matchers {
 		an[CardException] should be thrownBy play2.asCard
 	}
 
+	it should "evaluate" in {
+		val target = Deal("test", 0L)
+		target.evaluate shouldBe 6.28 +- 0.1
+	}
+
 	behavior of "playAll"
 	it should "playAll a trick made up of all lowest spades" in {
 		val target = Deal("test", 0L)

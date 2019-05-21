@@ -5,7 +5,7 @@ import com.phasmidsoftware.output.{Output, Outputable}
 
 import scala.language.postfixOps
 
-case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends Outputable[Unit] with Quittable[Deal] with Playable[Deal] {
+case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends Outputable[Unit] with Quittable[Deal] with Playable[Deal] with Evaluatable {
 
 	def hands: Seq[Hand] = (for ((i, hs) <- holdings) yield Hand(this, i, hs)).toSeq
 
@@ -38,7 +38,12 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
 
 	def handsInSequence(leader: Int): Seq[Hand] = for (i <- leader to leader + 3) yield hands(i % 4)
 
-	def evaluate(ts: Seq[Trick]): Double = ts.map(_.evaluate).sum
+	/**
+		* Evaluate the N and S hands heuristically.
+		*
+		* @return a number which corresponds to the trick-taking ability of the N/S hands.
+		*/
+	def evaluate: Double = hands.tail.sliding(1, 2).flatten.map(_.evaluate).sum
 
 	/**
 		* @return the number of cards remaining in this Deal.
