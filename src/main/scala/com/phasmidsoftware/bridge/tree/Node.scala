@@ -1,4 +1,4 @@
-package com.phasmidsoftware.bridge.mcts
+package com.phasmidsoftware.bridge.tree
 
 import com.phasmidsoftware.output.{Output, Outputable}
 

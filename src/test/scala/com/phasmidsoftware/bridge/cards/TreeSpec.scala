@@ -157,4 +157,15 @@ class TreeSpec extends FlatSpec with Matchers {
 		//		println(writer.spillway)
 		writer.spilled shouldBe 5334
 	}
+
+	it should "enumeratePlays 8" in {
+		val deal = Deal("test", 0L)
+		val target = Tree(deal)
+		// Arbitrarily start play with North leading a spade.
+		val trick = Trick(0, Nil, 0, Spades)
+		val to: Option[TreeNode] = target.enumeratePlays(TreeNode(State(deal, trick), Nil), 8)
+		to should matchPattern { case Some(_) => }
+		val result: TreeNode = to.get
+	}
+
 }

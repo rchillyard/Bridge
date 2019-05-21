@@ -1,6 +1,6 @@
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.bridge.mcts.{FitNode, Fitness, Node}
+import com.phasmidsoftware.bridge.tree.{FitNode, Fitness, Node}
 import com.phasmidsoftware.output.{Output, Outputable}
 
 import scala.language.postfixOps
