@@ -1,6 +1,6 @@
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.bridge.tree.{FitNode, Fitness, Node}
+import com.phasmidsoftware.bridge.tree.{FitNode, Fitness, Node, NodeException}
 import com.phasmidsoftware.output.{Output, Outputable}
 
 import scala.language.postfixOps
@@ -76,8 +76,6 @@ object State {
 	implicit object StateFitness extends Fitness[State] {
 		override def fitness(x: State): Double = x.trick.evaluate
 	}
-
-
 }
 
 case class Tree(root: TreeNode) extends Outputable[Unit] {
@@ -87,33 +85,13 @@ case class Tree(root: TreeNode) extends Outputable[Unit] {
 		*
 		* TODO make this tail-recursive.
 		*
-		* @param node   the node for which we wish to enumerate alternative plays.
-		* @param levels is the limit of the number of cards for which to enumerate the plays (ideally should be 52).
+		* @param levels the number of levels to enumerate.
 		* @return a TreeNode.
 		*/
-	def enumeratePlays(node: TreeNode, levels: Int): Option[TreeNode] = if (levels > 0) {
-		val state = node.t
-		val trick = state.trick
-		val deal = state.deal
-		val altStates = trick.winner match {
-			case Some(winner) => enumerateLeads(deal, trick.index + 1, winner)
-			case None => enumerateFollows(deal, state)
-		}
-		val nodeWithAltStates: Node[State] = node :+ altStates
-		Some(nodeWithAltStates.children.foldLeft(nodeWithAltStates)((r, n) => r.replace(n, enumeratePlays(n.asInstanceOf[TreeNode], levels - 1))).asInstanceOf[TreeNode])
+	def enumeratePlays(levels: Int = 52): TreeNode = Tree.enumeratePlays(root, levels) match {
+		case Some(n) => n
+		case None => throw NodeException(s"unable to enumerate 52 plays for tree headed by ${root.state}")
 	}
-	else None
-
-	def chooseLead(deal: Deal, leader: Int): Seq[CardPlay] = deal.hands(leader).longestSuit.choosePlays(deal, leader, FourthBest)
-
-	//	private
-	def enumerateLeads(deal: Deal, trickIndex: Int, leader: Int): Seq[State] =
-		Tree.makeStates(deal, for (p <- chooseLead(deal, leader)) yield Trick(trickIndex, Seq(p), leader, p.suit))
-
-	//	private
-	// TODO eliminate deal parameter
-	def enumerateFollows(deal: Deal, state: State): Seq[State] =
-		Tree.makeStates(deal, for (p <- deal.hands(state.trick.next).choosePlays(state.trick)) yield state.trick :+ p)
 
 	def output(output: Output, xo: Option[Unit] = None): Output = root.output(output)
 }
@@ -122,6 +100,41 @@ object Tree {
 	def apply(deal: Deal): Tree = apply(TreeNode(State(deal, Trick(0, Nil, 0, Spades)), Nil))
 
 	def makeStates(deal: Deal, tricks: Seq[Trick]): Seq[State] = tricks map (t => State.create(deal, t))
+
+	/**
+		* Choose the plays for this Deal, based on the prior plays.
+		*
+		* TODO make this tail-recursive.
+		*
+		* TODO generalize this and move it into Node, and/or FitNode.
+		*
+		* @param node   the node for which we wish to enumerate alternative plays.
+		* @param levels is the limit of the number of cards for which to enumerate the plays (ideally should be 52).
+		* @return a TreeNode.
+		*/
+	def enumeratePlays(node: TreeNode, levels: Int): Option[TreeNode] = if (levels > 0) {
+		val state = node.t
+		val trick = state.trick
+		val altStates = trick.winner match {
+			case Some(winner) => enumerateLeads(state.deal, trick.index + 1, winner)
+			case None => enumerateFollows(state)
+		}
+		val nodeWithAltStates: Node[State] = node :+ altStates
+		Some(nodeWithAltStates.children.foldLeft(nodeWithAltStates)((r, n) => r.replace(n, enumeratePlays(n.asInstanceOf[TreeNode], levels - 1))).asInstanceOf[TreeNode])
+	}
+	else None
+
+	//	private
+	def enumerateLeads(deal: Deal, trickIndex: Int, leader: Int): Seq[State] =
+		Tree.makeStates(deal, for (p <- chooseLead(deal, leader)) yield Trick(trickIndex, Seq(p), leader, p.suit))
+
+	//	private
+	def enumerateFollows(state: State): Seq[State] =
+		Tree.makeStates(state.deal, for (p <- state.deal.hands(state.trick.next).choosePlays(state.trick)) yield state.trick :+ p)
+
+	//	private
+	def chooseLead(deal: Deal, leader: Int): Seq[CardPlay] = deal.hands(leader).longestSuit.choosePlays(deal, leader, FourthBest)
+
 }
 
 /**

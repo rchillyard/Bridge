@@ -20,7 +20,7 @@ class TreeSpec extends FlatSpec with Matchers {
 	it should "chooseLead" in {
 		val deal = Deal("test", 0L)
 		val target = Tree(deal)
-		val result: Seq[CardPlay] = target.chooseLead(deal, 0)
+		val result: Seq[CardPlay] = Tree.chooseLead(deal, 0)
 		result.size shouldBe 3
 		result.head shouldBe CardPlay(deal, 0, Hearts, 2)
 		result(1) shouldBe CardPlay(deal, 0, Hearts, 5)
@@ -42,10 +42,9 @@ class TreeSpec extends FlatSpec with Matchers {
 
 	it should "enumerateLeads 1" in {
 		val deal = Deal("test", 0L)
-		val target = Tree(deal)
 		// Figure out all the possible leads from the North's longest and strongest suit.
 		// Bear in mind that we consider all cards from a "sequence" equivalent.
-		val ss: Seq[State] = target.enumerateLeads(deal, 0, 0)
+		val ss: Seq[State] = Tree.enumerateLeads(deal, 0, 0)
 		ss.size shouldBe 3
 		ss.head should matchPattern { case State(_, _) => }
 		ss.head.trick.toString shouldBe "T0 lead=0: H {Play: 0 HQ}"
@@ -56,13 +55,12 @@ class TreeSpec extends FlatSpec with Matchers {
 	it should "enumerateLeads 2" in {
 		val deal = Deal("test", 0L)
 		val hands = deal.hands
-		val target = Tree(deal)
 		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
 		val trick = Trick.create(0, 0, Spades, CardPlay(deal, 0, Spades, priority1S), CardPlay(deal, 1, Spades, priority2S), CardPlay(deal, 2, Spades, priority3S), CardPlay(deal, 3, Spades, priority4S))
 		val deal2 = deal.playAll(trick)
 		trick.winner match {
 			case Some(winner) =>
-				val ss: Seq[State] = target.enumerateLeads(deal2, 1, winner)
+				val ss: Seq[State] = Tree.enumerateLeads(deal2, 1, winner)
 				ss.size shouldBe 3
 				ss.head should matchPattern { case State(_, _) => }
 				ss.head.trick.toString shouldBe "T1 lead=2: S {Play: 2 SA}"
@@ -74,24 +72,16 @@ class TreeSpec extends FlatSpec with Matchers {
 	}
 
 	it should "enumerateFollows" in {
-		val deal = Deal("test", 0L)
-		val target = Tree(deal)
-		// Arbitrarily start play with North leading a spade.
-		val trick = Trick(0, Nil, 0, Spades)
-		val ss: Seq[State] = target.enumerateFollows(deal, State(deal, trick))
+		val target = Tree(Deal("test", 0L))
+		val ss = Tree.enumerateFollows(target.root.state)
 		ss.size shouldBe 2
 		ss.head.trick.toString shouldBe "T0 lead=0: S {Play: 0 S9}"
 		ss.last.trick.toString shouldBe "T0 lead=0: S {Play: 0 S5}"
 	}
 
 	it should "enumeratePlays 1" in {
-		val deal = Deal("test", 0L)
-		val target = Tree(deal)
-		// Arbitrarily start play with North leading a spade.
-		val trick = Trick(0, Nil, 0, Spades)
-		val to: Option[TreeNode] = target.enumeratePlays(TreeNode(State(deal, trick), Nil), 1)
-		to should matchPattern { case Some(_) => }
-		val result = to.get
+		val target = Tree(Deal("test", 0L))
+		val result = target.enumeratePlays(1)
 		result.children.size shouldBe 2
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
@@ -101,11 +91,7 @@ class TreeSpec extends FlatSpec with Matchers {
 	it should "enumeratePlays 2" in {
 		val deal = Deal("test", 0L)
 		val target = Tree(deal)
-		// Arbitrarily start play with North leading a spade.
-		val trick = Trick(0, Nil, 0, Spades)
-		val to: Option[TreeNode] = target.enumeratePlays(TreeNode(State(deal, trick), Nil), 2)
-		to should matchPattern { case Some(_) => }
-		val result = to.get
+		val result = target.enumeratePlays(2)
 		result.children.size shouldBe 2
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
@@ -116,11 +102,7 @@ class TreeSpec extends FlatSpec with Matchers {
 	it should "enumeratePlays 3" in {
 		val deal = Deal("test", 0L)
 		val target = Tree(deal)
-		// Arbitrarily start play with North leading a spade.
-		val trick = Trick(0, Nil, 0, Spades)
-		val to: Option[TreeNode] = target.enumeratePlays(TreeNode(State(deal, trick), Nil), 3)
-		to should matchPattern { case Some(_) => }
-		val result = to.get
+		val result = target.enumeratePlays(3)
 		result.children.size shouldBe 2
 		val writer = MockWriter(8192)
 		result.output(Output(writer)).close()
@@ -131,11 +113,7 @@ class TreeSpec extends FlatSpec with Matchers {
 	it should "enumeratePlays 4" in {
 		val deal = Deal("test", 0L)
 		val target = Tree(deal)
-		// Arbitrarily start play with North leading a spade.
-		val trick = Trick(0, Nil, 0, Spades)
-		val to: Option[TreeNode] = target.enumeratePlays(TreeNode(State(deal, trick), Nil), 4)
-		to should matchPattern { case Some(_) => }
-		val result = to.get
+		val result = target.enumeratePlays(4)
 		result.children.size shouldBe 2
 		val writer = MockWriter(8192)
 		result.output(Output(writer)).close()
@@ -146,11 +124,7 @@ class TreeSpec extends FlatSpec with Matchers {
 	it should "enumeratePlays 5" in {
 		val deal = Deal("test", 0L)
 		val target = Tree(deal)
-		// Arbitrarily start play with North leading a spade.
-		val trick = Trick(0, Nil, 0, Spades)
-		val to: Option[TreeNode] = target.enumeratePlays(TreeNode(State(deal, trick), Nil), 5)
-		to should matchPattern { case Some(_) => }
-		val result = to.get
+		val result = target.enumeratePlays(5)
 		result.children.size shouldBe 2
 		val writer = MockWriter(16384)
 		result.output(Output(writer)).close()
@@ -161,11 +135,8 @@ class TreeSpec extends FlatSpec with Matchers {
 	it should "enumeratePlays 8" in {
 		val deal = Deal("test", 0L)
 		val target = Tree(deal)
-		// Arbitrarily start play with North leading a spade.
-		val trick = Trick(0, Nil, 0, Spades)
-		val to: Option[TreeNode] = target.enumeratePlays(TreeNode(State(deal, trick), Nil), 8)
-		to should matchPattern { case Some(_) => }
-		val result: TreeNode = to.get
+		val result = target.enumeratePlays(8)
+		val states: Seq[State] = result.depthFirstTraverse
+		states.size shouldBe 3012
 	}
-
 }

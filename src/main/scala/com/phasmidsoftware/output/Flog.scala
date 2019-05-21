@@ -55,7 +55,7 @@ object Flog {
 			* @tparam X the type of x.
 			* @return the value of x.
 			*/
-		def !![X: ClassTag](x: => X): X = Flog.log(logFunc, message)(x)
+		def !![X](x: => X): X = Flog.log(logFunc, message)(x)
 
 		/**
 			* Method to simply return the value of x without any logging.
@@ -80,13 +80,9 @@ object Flog {
 
 	def getLogger[T: ClassTag]: LogFunction = LogFunction(LoggerFactory.getLogger(implicitly[ClassTag[T]].runtimeClass).info)
 
-	def log[X: ClassTag](logFunc: LogFunction, message: => String)(x: => X): X = {
+	def log[X](logFunc: LogFunction, message: => String)(x: => X): X = {
 		lazy val xx = x
-		if (enabled) {
-			val msg = s"log: $message" + (if (implicitly[ClassTag[X]].runtimeClass == classOf[Unit]) "" else
-				s": $xx")
-			logFunc(msg)
-		}
+		if (enabled) logFunc(s"log: $message: $xx")
 		xx
 	}
 }

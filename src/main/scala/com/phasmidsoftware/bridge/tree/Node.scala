@@ -121,11 +121,19 @@ trait Node[T] extends Outputable[Unit] {
 		*/
 	def append(node: Node[T], appendees: Seq[Node[T]]): Node[T] = if (appendees.nonEmpty) replace(node, node ++ appendees) else this
 
+	/**
+		* Method to perform depth-first-search on this Node.
+		*
+		* @param z an initial (zero) value of Z.
+		* @param g a function to combine a Z and a T into a Z.
+		* @tparam Z the underlying type of
+		*/
+	def dfs[Z](z: Z)(g: (Z, T) => Z): Z = children.foldLeft(g(z, t))((r, tn) => tn.dfs(r)(g))
 
-	//	def dfs[Z](z: Z)(g: (Z, T) => Z): Unit = {
-	//		val p = g(z, x)
-	//		children.foreach(_.dfs(p)(g))
-	//	}
+	/**
+		* Method to traverse this Node, returning a list of T values in depth-first order.
+		*/
+	def depthFirstTraverse: List[T] = dfs(List[T]())((z, t) => t +: z)
 
 	/**
 		* Method to output this object (and, recursively, all of its children).

@@ -110,4 +110,30 @@ class NodeSpec extends FlatSpec with Matchers {
 		MockNode.unapply(MockNode(1, Seq(MockNode(2)))) should matchPattern { case Some((1, Seq(MockNode(2, Nil)))) => }
 	}
 
+	behavior of "dfs"
+	it should "work for sum" in {
+		val three = MockNode(3)
+		val two = MockNode(2, Seq(three))
+		val target = MockNode(1, Seq(two))
+		val result = target.dfs(0)(_ + _)
+		result shouldBe 6
+	}
+
+	it should "work for list" in {
+		val three = MockNode(3)
+		val two = MockNode(2, Seq(three))
+		val target = MockNode(1, Seq(two))
+		val result = target.dfs(List[Int]())((z, t) => t +: z)
+		result shouldBe List(3, 2, 1)
+	}
+
+	behavior of "depthFirstTraverse"
+	it should "work" in {
+		val three = MockNode(3)
+		val two = MockNode(2, Seq(three))
+		val target = MockNode(1, Seq(two))
+		val result = target.depthFirstTraverse
+		result shouldBe List(3, 2, 1)
+	}
+
 }
