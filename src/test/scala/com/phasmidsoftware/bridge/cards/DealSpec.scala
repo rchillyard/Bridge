@@ -42,35 +42,60 @@ class DealSpec extends FlatSpec with Matchers {
 	it should "asCard" in {
 		val deal = Deal("test", 0L)
 		val cardPlay = CardPlay(deal, 0, Spades, 5)
-		val card = cardPlay.asCard(deal)
+		val card = cardPlay.asCard
 		card shouldBe Card(Spades, Nine)
 		card.toString shouldBe "S9"
 	}
 
-	behavior of "play"
-	it should "play a trick made up of all lowest spades" in {
+	it should "asCard 2" in {
+		val deal1 = Deal("test", 0L)
+		val play1 = CardPlay(deal1, 0, Spades, 5)
+		val card1 = play1.asCard
+		card1 shouldBe Card(Spades, Nine)
+		card1.toString shouldBe "S9"
+		val deal2 = deal1.play(play1)
+		val play2 = CardPlay(deal2, 0, Spades, 9)
+		val card2 = play2.asCard
+		card2 shouldBe Card(Spades, Five)
+		card2.toString shouldBe "S5"
+	}
+
+	it should "asCard 3" in {
+		val deal1 = Deal("test", 0L)
+		val play1 = CardPlay(deal1, 0, Spades, 5)
+		val card1 = play1.asCard
+		card1 shouldBe Card(Spades, Nine)
+		card1.toString shouldBe "S9"
+		val deal2 = deal1.play(play1)
+		val play2 = CardPlay(deal2, 0, Spades, 5)
+		an[CardException] should be thrownBy play2.asCard
+	}
+
+	behavior of "playAll"
+	it should "playAll a trick made up of all lowest spades" in {
 		val target = Deal("test", 0L)
 		target.cards shouldBe 52
 		val hands = target.hands
 		hands.size shouldBe 4
 		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
 		val trick = Trick.create(0, 0, Spades, CardPlay(target, 0, Spades, priority1S), CardPlay(target, 1, Spades, priority2S), CardPlay(target, 2, Spades, priority3S), CardPlay(target, 3, Spades, priority4S))
-		val played: Deal = target.play(trick)
+		val played: Deal = target.playAll(trick)
 		played.cards shouldBe 48
 		val quitted = played.quit
 		quitted.cards shouldBe 48
 	}
 
-	it should "play a trick according to strategy" in {
+	it should "playAll a trick according to strategy" in {
 		val target = Deal("test", 0L)
 		target.cards shouldBe 52
 		val hands = target.hands
 		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
 
 		val trick = Trick.create(0, 0, Spades, CardPlay(target, 0, Spades, priority1S), CardPlay(target, 1, Spades, priority2S), CardPlay(target, 2, Spades, priority3S), CardPlay(target, 3, Spades, priority4S))
-		val played: Deal = target.play(trick)
+		val played: Deal = target.playAll(trick)
 		played.cards shouldBe 48
 		val quitted = played.quit
 		quitted.cards shouldBe 48
 	}
+
 }

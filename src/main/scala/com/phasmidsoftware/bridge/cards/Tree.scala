@@ -5,17 +5,78 @@ import com.phasmidsoftware.output.{Output, Outputable}
 
 import scala.language.postfixOps
 
-case class State(deal: Deal, trick: Trick) extends Outputable[Deal] {
-	override def toString: String = s"${deal.title} $trick"
+/**
+	* Case class State to represent a possible state of play in analysis of a Deal.
+	* The state must be consistent, which is to say that the deal is the result of playing all of the previous tricks AND
+	* the current (possibly partial) trick.
+	*
+	* CONSIDER eliminating trick from this State and then we can simply replace by Deal.
+	*
+	* @param deal  the Deal.
+	* @param trick the Trick.
+	*/
+case class State(deal: Deal, trick: Trick) extends Outputable[Unit] {
 
-	def output(output: Output, xo: Option[Deal] = None): Output = trick.output(output, Some(deal))
+	/**
+		* Initialization: just checking that this State is consistent.
+		*
+		* TODO remove this check.
+		*/
+	if (!isConsistent) System.err.println(s"state not consistent ${deal.cards}, $deal: $trick")
+
+	/**
+		* Method to get the next State in sequence.
+		*
+		* @param t the next Trick.
+		* @return a new consistent State based on deal and t.
+		*/
+	def next(t: Trick): State = State.create(deal, t)
+
+	/**
+		* @return true if the number of cards played according to the trick plus the number of cares remaining in the deal equals 52
+		*/
+	def isConsistent: Boolean = cardsPlayed + deal.cards == 52 // && validate
+
+	/**
+		* Method to validate this State.
+		*
+		* @return true if all the plays of the trick are validated
+		*/
+	def validate: Boolean = trick.plays.map(_.validate).forall(_ == true)
+
+	/**
+		* The total number of cards played according to
+		*
+		* @return
+		*/
+	def cardsPlayed: Int = trick.index * 4 + trick.size
+
+	override def toString: String = s"${deal.neatOutput} $trick"
+
+	def output(output: Output, xo: Option[Unit] = None): Output = trick.output(output, Some(deal))
 }
 
 object State {
 
+	/**
+		* Method to create an initial state based on a deal.
+		*
+		* TODO we need a better representation of a non-trick.
+		*
+		* @param deal the Deal of the new State.
+		* @return a new State based on the Deal without any tricks having been played.
+		*/
+	def apply(deal: Deal): State = apply(deal, Trick(0, Nil, 0, Spades))
+
+	def create(deal: Deal, trick: Trick): State = {
+		if (trick.isComplete) State(deal.play(trick.plays.last).quit, trick)
+		else State(deal.play(trick.plays.last), trick)
+	}
+
 	implicit object StateFitness extends Fitness[State] {
 		override def fitness(x: State): Double = x.trick.evaluate
 	}
+
 
 }
 
@@ -34,28 +95,33 @@ case class Tree(root: TreeNode) extends Outputable[Unit] {
 		val state = node.t
 		val trick = state.trick
 		val deal = state.deal
-		val alternativeTricks: Seq[Trick] = trick.winner match {
-			case Some(winner) => enumerateLeads(deal.quit, trick.index + 1, winner)
+		val altStates = trick.winner match {
+			case Some(winner) => enumerateLeads(deal, trick.index + 1, winner)
 			case None => enumerateFollows(deal, state)
 		}
-		val nodeWithAltStates = node :+ (alternativeTricks map (t => State(deal, t)))
+		val nodeWithAltStates: Node[State] = node :+ altStates
 		Some(nodeWithAltStates.children.foldLeft(nodeWithAltStates)((r, n) => r.replace(n, enumeratePlays(n.asInstanceOf[TreeNode], levels - 1))).asInstanceOf[TreeNode])
 	}
 	else None
 
 	def chooseLead(deal: Deal, leader: Int): Seq[CardPlay] = deal.hands(leader).longestSuit.choosePlays(deal, leader, FourthBest)
 
-	private def enumerateLeads(deal: Deal, index: Int, winner: Int): Seq[Trick] =
-		for (p <- chooseLead(deal, winner)) yield Trick(index, Seq(p), winner, p.suit)
+	//	private
+	def enumerateLeads(deal: Deal, trickIndex: Int, leader: Int): Seq[State] =
+		Tree.makeStates(deal, for (p <- chooseLead(deal, leader)) yield Trick(trickIndex, Seq(p), leader, p.suit))
 
-	private def enumerateFollows(deal: Deal, state: State) =
-		for (p <- deal.hands(state.trick.next).choosePlays(state.trick)) yield state.trick :+ p
+	//	private
+	// TODO eliminate deal parameter
+	def enumerateFollows(deal: Deal, state: State): Seq[State] =
+		Tree.makeStates(deal, for (p <- deal.hands(state.trick.next).choosePlays(state.trick)) yield state.trick :+ p)
 
 	def output(output: Output, xo: Option[Unit] = None): Output = root.output(output)
 }
 
 object Tree {
 	def apply(deal: Deal): Tree = apply(TreeNode(State(deal, Trick(0, Nil, 0, Spades)), Nil))
+
+	def makeStates(deal: Deal, tricks: Seq[Trick]): Seq[State] = tricks map (t => State.create(deal, t))
 }
 
 /**

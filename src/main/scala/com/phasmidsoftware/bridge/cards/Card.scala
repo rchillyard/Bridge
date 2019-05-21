@@ -117,6 +117,16 @@ object Sequence {
 		override def compare(x: Sequence, y: Sequence): Int = x.priority - y.priority
 	}
 }
+
+trait Quittable[X] {
+	/**
+		* Method to enact the pending promotions on this Holding.
+		*
+		* @return an eagerly promoted X.
+		*/
+	def quit: X
+}
+
 /**
 	* This class models a holding in a suit.
 	*
@@ -124,7 +134,7 @@ object Sequence {
 	* @param suit       the suit of this holding.
 	* @param promotions a list of promotions that should be applied on quitting a trick.
 	*/
-case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = Nil) extends Outputable[Unit] {
+case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = Nil) extends Outputable[Unit] with Quittable[Holding] {
 
 	require(isVoid || maybeSuit.get == suit)
 
@@ -141,8 +151,8 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 	/**
 		* Optionally yield a Sequence that matches the given priority.
 		*
-		* @param priority the priority to match
-		* @return an Option[Sequence]
+		* @param priority the priority to be matched.
+		* @return an Option[Sequence].
 		*/
 	def sequence(priority: Int): Option[Sequence] = sequences.find(s => s.priority == priority)
 
@@ -222,7 +232,7 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 		Holding(sos.flatten, suit, promotions)
 	}
 
-	override def toString: String = s"{$suit: ${sequences.mkString(", ")}}"
+	override def toString: String = s"{$suit: ${sequences.mkString(", ")}} " + (if (promotions.nonEmpty) promotions.mkString(", ") else "(clean)")
 
 	/**
 		* NOTE: this is used temporarily because Output is messing up
@@ -286,7 +296,7 @@ object Holding {
 	* @param index    the index of this hand within the deal.
 	* @param holdings the four holdings (as a Map).
 	*/
-case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Outputable[Unit] {
+case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Outputable[Unit] with Quittable[Hand] with Playable[Hand] {
 
 	/**
 		* @return the index of the next hand in sequence around the table.
@@ -306,7 +316,21 @@ case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Ou
 		* @param trick the trick.
 		* @return a new Hand based on this Hand and all of the card plays.
 		*/
-	def play(trick: Trick): Hand = trick.plays.foldLeft[Hand](this)(_ play _)
+	def playAll(trick: Trick): Hand = trick.plays.foldLeft[Hand](this)(_ play _)
+
+	/**
+		* Create new Hand based on the play of a card.
+		*
+		* @param cardPlay the card play.
+		* @return a new Hand.
+		*/
+	def play(cardPlay: CardPlay): Hand = {
+		val priority = cardPlay.priority
+		if (cardPlay.hand == index)
+			this - (cardPlay.suit, priority)
+		else
+			promote(cardPlay.suit, priority)
+	}
 
 	/**
 		* Method to determine possible discard plays.
@@ -332,20 +356,6 @@ case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Ou
 		val holding = holdings(trick.suit)
 		if (holding.isVoid) discard(trick)
 		else holding.choosePlays(deal, index, trick)
-	}
-
-		/**
-		* Create new Hand based on the play of a card.
-		*
-		* @param cardPlay the card play.
-			* @return a new Hand.
-		*/
-	def play(cardPlay: CardPlay): Hand = {
-		val priority = cardPlay.priority
-		if (cardPlay.hand == index)
-			this - (cardPlay.suit, priority)
-		else
-			promote(cardPlay.suit, priority)
 	}
 
 	/**
@@ -740,4 +750,14 @@ class RankParser extends JavaTokenParsers {
 	def holding: Parser[List[Rank]] = rep(rank) ^^ (_ map Rank.apply)
 
 	def rank: Parser[String] = """[2-9]""".r | """[AKQJT]""".r | "10" | failure("invalid rank")
+}
+
+trait Playable[X] {
+	/**
+		* Play a card from this Playable object.
+		*
+		* @param cardPlay the card play.
+		* @return a new Playable.
+		*/
+	def play(cardPlay: CardPlay): X
 }

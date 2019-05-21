@@ -209,10 +209,10 @@ class CardSpec extends FlatSpec with Matchers {
 	}
 
 	it should "form string" in {
-		Holding(Spades, "2", "A").toString shouldBe "{S: A[0], 2[12]}"
-		Holding(Spades).toString shouldBe "{S: }"
+		Holding(Spades, "2", "A").toString shouldBe "{S: A[0], 2[12]} (clean)"
+		Holding(Spades).toString shouldBe "{S: } (clean)"
 		import Rank._
-		Holding.create(Seq[Rank]("2", "A"), Spades).toString shouldBe "{S: A[0], 2[12]}"
+		Holding.create(Seq[Rank]("2", "A"), Spades).toString shouldBe "{S: A[0], 2[12]} (clean)"
 	}
 
 	it should "promote (1)" in {
@@ -255,6 +255,7 @@ class CardSpec extends FlatSpec with Matchers {
 	}
 
 	it should "promote" in {
+		// TODO either use the deal or the given hand map. Not both!
 		val map: Map[Suit, Holding] = Map(Spades -> Holding.parseHolding("SKQ3"), Hearts -> Holding.parseHolding("H7654"), Diamonds -> Holding.parseHolding("DQ104"), Clubs -> Holding.parseHolding("C842"))
 		val deal = Deal("test", 0L)
 		val target = Hand(deal, 0, map)
@@ -267,14 +268,13 @@ class CardSpec extends FlatSpec with Matchers {
 
 	it should "play" in {
 		val deal = Deal("test", 0L)
-		val target = Hand(deal, 0, Map[Suit, Holding](Spades -> Holding.parseHolding("SKQ3"), Hearts -> Holding.parseHolding("H7654"), Diamonds -> Holding.parseHolding("DQ104"), Clubs -> Holding.parseHolding("C842")))
+		val target = deal.hands.head
 		target.cards shouldBe 13
-		val index = 0
-		val result = target.play(CardPlay(deal, index, Spades, 11))
+		val result = target.play(CardPlay(deal, 0, Spades, 5))
 		result.cards shouldBe 12
 	}
 
-	it should "play CardPlays" in {
+	it should "playAll CardPlays" in {
 
 		val deal = Deal("test", 0L)
 		val hands = deal.hands
@@ -283,22 +283,47 @@ class CardSpec extends FlatSpec with Matchers {
 		val trick = Trick.create(0, 0, Spades, CardPlay(deal, 0, Spades, priority1S), CardPlay(deal, 1, Spades, priority2S), CardPlay(deal, 2, Spades, priority3S), CardPlay(deal, 3, Spades, priority4S))
 		val target0 = deal.north
 		target0.cards shouldBe 13
-		target0.play(trick).cards shouldBe 12
+		target0.playAll(trick).cards shouldBe 12
 		val target1 = deal.east
 		target1.cards shouldBe 13
-		target1.play(trick).cards shouldBe 12
+		target1.playAll(trick).cards shouldBe 12
 		val target2 = deal.south
 		target2.cards shouldBe 13
-		target2.play(trick).cards shouldBe 12
+		target2.playAll(trick).cards shouldBe 12
 		val target3 = deal.south
 		target3.cards shouldBe 13
-		target3.play(trick).cards shouldBe 12
+		target3.playAll(trick).cards shouldBe 12
 	}
 
 	it should "form string" in {
 		val deal = Deal("test", 0L)
 		val target = Hand.from(deal, 0, "SAT32", "CQT98", "D43", "HKJT")
 		target.neatOutput shouldBe "SAT32 HKJT D43 CQT98"
+	}
+
+	behavior of "State"
+	it should "create" in {
+		val deal = Deal("test", 0L)
+		val state0 = State(deal)
+		state0.deal.cards shouldBe 52
+		state0.isConsistent shouldBe true
+		val hands = deal.hands
+		val Seq(priority1S, priority2S, _, _) = hands map (_.holdings(Spades).sequences.last.priority)
+		val trick1 = Trick.create(0, 0, Spades, CardPlay(deal, 0, Spades, priority1S))
+		val state1 = state0.next(trick1)
+		state1.deal.cards shouldBe 51
+		state1.isConsistent shouldBe true
+		state1.trick.isComplete shouldBe false
+		state1.trick shouldBe trick1
+		state1.deal should not be deal
+		val trick2 = Trick.create(0, 0, Spades, CardPlay(deal, 0, Spades, priority1S), CardPlay(deal, 1, Spades, priority2S))
+		val state2 = state1.next(trick2)
+		state2.deal.cards shouldBe 50
+		state2.isConsistent shouldBe true
+		state2.trick.isComplete shouldBe false
+		state2.trick shouldBe trick2
+		state2.deal should not be deal
+
 	}
 
 }

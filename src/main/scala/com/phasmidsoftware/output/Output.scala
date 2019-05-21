@@ -454,5 +454,14 @@ trait Outputable[X] {
 		* @return a new instance of Output.
 		*/
 	def output(output: Output, xo: Option[X] = None): Output
+
+	/**
+		* Method to output a sequence of Outputable objects.
+		*
+		* @param output  the output to append to.
+		* @param outputs a sequence of Outputable objects.
+		* @return a new instance of Output.
+		*/
+	def output(output: Output, outputs: Seq[Outputable[X]]): Output = output ++ (outputs map (_.output(Output.empty)))
 }
 

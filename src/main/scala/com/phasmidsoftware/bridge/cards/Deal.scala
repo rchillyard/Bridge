@@ -5,7 +5,7 @@ import com.phasmidsoftware.output.{Output, Outputable}
 
 import scala.language.postfixOps
 
-case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends Outputable[Unit] {
+case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends Outputable[Unit] with Quittable[Deal] with Playable[Deal] {
 
 	def hands: Seq[Hand] = (for ((i, hs) <- holdings) yield Hand(this, i, hs)).toSeq
 
@@ -26,12 +26,23 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
 		*
 		* @param trick the card play from each of the four hands.
 		*/
-	def play(trick: Trick): Deal = Deal(title, hands map (_.play(trick)))
+	def playAll(trick: Trick): Deal = Deal(title, hands map (_.playAll(trick)))
+
+	/**
+		* Play a card from this Playable object.
+		*
+		* @param cardPlay the card play.
+		* @return a new Playable.
+		*/
+	def play(cardPlay: CardPlay): Deal = Deal(title, hands map (_.play(cardPlay)))
 
 	def handsInSequence(leader: Int): Seq[Hand] = for (i <- leader to leader + 3) yield hands(i % 4)
 
 	def evaluate(ts: Seq[Trick]): Double = ts.map(_.evaluate).sum
 
+	/**
+		* @return the number of cards remaining in this Deal.
+		*/
 	def cards: Int = hands map (_.cards) sum
 
 	/**
@@ -47,7 +58,9 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
 		*/
 	def promote(hand: Hand, suit: Suit, priority: Int): Deal = Deal(title, hands map (h => if (h == hand) h else h.promote(suit, priority)))
 
-	override def toString: String = s"Deal $title\n${hands.mkString("\n")}"
+	def neatOutput: String = s"Deal $title ($cards)\n${hands.map(_.neatOutput)}"
+
+	override def toString: String = s"Deal $title ($cards)\n${hands.mkString("\n")}"
 
 	private def outputHand(name: String, hand: Hand): Output = (Output(s"$name:\t") :+ hand.neatOutput).insertBreak
 
@@ -80,14 +93,17 @@ object Deal {
 /**
 	* The play of a card.
 	*
-	* TODO take Deal out of here
-	*
 	* @param deal     the deal to which this play belongs.
 	* @param hand     the index of this hand in the deal.
 	* @param suit     rhe suit from which the card is to be played.
 	* @param priority the priority of the sequence from which the card is to be played.
 	*/
 case class CardPlay(deal: Deal, hand: Int, suit: Suit, priority: Int) extends Ordered[CardPlay] with Outputable[Deal] {
+	/**
+		* @return true if this play can be validated. Basically, this means that no exception is thrown.
+		*/
+	def validate: Boolean = asCard.suit == suit
+
 	/**
 		* @return true if the top card of the sequence indicated is at least a ten.
 		*/
@@ -113,20 +129,24 @@ case class CardPlay(deal: Deal, hand: Int, suit: Suit, priority: Int) extends Or
 		* Yield the actual card to be played for this CardPlay (we arbitrarily choose the top card of a sequence)
 		*
 		* @return an actual Card.
+		* @throws CardException if this CardPlay cannot be made from the given deal.
 		*/
-	def asCard(deal: Deal): Card = deal.hands(hand).holdings(suit).sequence(priority) match {
+	def asCard: Card = deal.hands(hand).holdings(suit).sequence(priority) match {
 		case Some(s) => s.head
-		case None => throw CardException(s"CardPlay $this cannot get actual card from deal $deal")
+		case None => throw CardException(s"CardPlay (deal=${deal.title}, hand=$hand, suit=$suit, priority=$priority) cannot find actual card.")
 	}
 
-	override def toString: String = s"Play: $hand $suit $priority"
+	override def toString: String = s"Play: $hand $asCard"
 
-	def output(output: Output, xo: Option[Deal]): Output = output :+ (Deal.name(hand) + ":" + asCard(xo.get))
+	def output(output: Output, xo: Option[Deal]): Output = output :+ (Deal.name(hand) + ":" + asCard)
 }
 
 /**
 	* A set of 0 to 4 card plays which describe the state of the current trick.
 	*
+	* NOTE: we extend Outputable[Deal] because that gives the type of the second (optional) parameter to the output method.
+	*
+	* @param index  the position of this trick in sequence, starting with zero.
 	* @param plays  the sequence of plays (in sequence).
 	* @param leader the index of the leader to the suit.
 	* @param suit   the suit led.
@@ -176,11 +196,10 @@ case class Trick(index: Int, plays: Seq[CardPlay], leader: Int, suit: Suit) exte
 
 	def evaluate: Double = value.getOrElse(0.5)
 
-	override def toString: String = s"T$leader: $suit ${plays.mkString("{", ",", "}")}"
+	override def toString: String = s"T$index lead=$leader: $suit ${plays.mkString("{", ",", "}")}"
 
 	lazy val winner: Option[Int] =
-		if (isComplete)
-			Some(plays.maxBy(p => if (p.suit == suit) Ace.priority - p.priority else 0).hand)
+		if (isComplete) Some(plays.maxBy(p => if (p.suit == suit) Ace.priority - p.priority else 0).hand)
 		else None
 
 	lazy val value: Option[Double] = winner map (x => if (x % 2 == 0) 1 else 0)

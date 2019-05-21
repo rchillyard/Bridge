@@ -27,7 +27,7 @@ class FlogSpec extends FlatSpec with Matchers with BeforeAndAfterEach {
 
 		import Flog._
 		implicit val logFunc: LogFunction = LogFunction(sb.append)
-		FlogIt(getString)(logFunc) !! 1
+		Flogger(getString)(logFunc) !! 1
 		evaluated shouldBe true
 		sb.toString shouldBe "log: Hello: 1"
 	}
@@ -38,7 +38,7 @@ class FlogSpec extends FlatSpec with Matchers with BeforeAndAfterEach {
 		implicit val logFunc: LogFunction = LogFunction(_ => ())
 
 		import Flog._
-		FlogIt(getString)(logFunc) !! 1
+		Flogger(getString)(logFunc) !! 1
 		evaluated shouldBe true
 		sb.toString shouldBe ""
 	}
