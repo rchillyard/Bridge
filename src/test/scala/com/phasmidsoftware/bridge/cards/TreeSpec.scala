@@ -19,15 +19,16 @@ class TreeSpec extends FlatSpec with Matchers {
 
 	it should "chooseLead" in {
 		val deal = Deal("test", 0L)
-		val target = Tree(deal)
-		val result: Seq[CardPlay] = Tree.chooseLead(deal, 0)
+		val state = State(deal)
+		val target = Tree(state)
+		val result: Seq[CardPlay] = state.chooseLead(0)
 		result.size shouldBe 3
 		result.head shouldBe CardPlay(deal, 0, Hearts, 2)
 		result(1) shouldBe CardPlay(deal, 0, Hearts, 5)
 		result.last shouldBe CardPlay(deal, 0, Hearts, 10)
 		val writer = MockWriter()
 		target.output(Output(writer)).close()
-		//		println(writer.spillway)
+		println(writer.spillway)
 		writer.spilled shouldBe 9
 	}
 
@@ -41,9 +42,10 @@ class TreeSpec extends FlatSpec with Matchers {
 
 	it should "enumerateLeads 1" in {
 		val deal = Deal("test", 2L)
+		val state = State(deal)
 		// Figure out all the possible leads from the North's longest and strongest suit.
 		// Bear in mind that we consider all cards from a "sequence" equivalent.
-		val ss: Seq[State] = Tree.enumerateLeads(deal, 0, 0, Tricks.zero)
+		val ss: Seq[State] = state.enumerateLeads(0, 0)
 		ss.size shouldBe 4
 		ss.head should matchPattern { case State(_, _, _) => }
 		ss.head.trick.toString shouldBe "T0 lead=0: H {Play: 0 HK}"
@@ -60,7 +62,8 @@ class TreeSpec extends FlatSpec with Matchers {
 		val deal2 = deal.playAll(trick)
 		trick.winner match {
 			case Some(winner) =>
-				val ss: Seq[State] = Tree.enumerateLeads(deal2, 1, winner, Tricks.zero)
+				val state = State(deal2, trick, Tricks(0, 0).increment(trick))
+				val ss: Seq[State] = state.enumerateLeads(winner, trick.index + 1)
 				ss.size shouldBe 4
 				ss.head should matchPattern { case State(_, _, _) => }
 				ss.head.trick.toString shouldBe "T1 lead=0: H {Play: 0 HK}"
@@ -73,8 +76,9 @@ class TreeSpec extends FlatSpec with Matchers {
 	}
 
 	it should "enumerateFollows" in {
-		val target = Tree(Deal("test", 2L))
-		val ss = Tree.enumerateFollows(target.root.state)
+		val deal = Deal("test", 2L)
+		val state = State(deal)
+		val ss = state.enumerateFollows
 		ss.size shouldBe 2
 		ss.head.trick.toString shouldBe "T0 lead=0: S {Play: 0 SK}"
 		ss.last.trick.toString shouldBe "T0 lead=0: S {Play: 0 ST}"
@@ -82,7 +86,10 @@ class TreeSpec extends FlatSpec with Matchers {
 
 	it should "enumeratePlays 1" in {
 		val target = Tree(Deal("test", 2L))
-		val result = target.enumeratePlays(1)
+
+		def success(n: TreeNode): Boolean = false
+
+		val result = target.enumeratePlays(1)(success)
 		result.children.size shouldBe 2
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
@@ -94,7 +101,10 @@ class TreeSpec extends FlatSpec with Matchers {
 	it should "enumeratePlays 2" in {
 		val deal = Deal("test", 2L)
 		val target = Tree(deal)
-		val result = target.enumeratePlays(2)
+
+		def success(n: TreeNode): Boolean = false
+
+		val result = target.enumeratePlays(2)(success)
 		result.children.size shouldBe 2
 		result.depthFirstTraverse.size shouldBe 7
 		val writer = MockWriter()
@@ -106,7 +116,10 @@ class TreeSpec extends FlatSpec with Matchers {
 	it should "enumeratePlays 3" in {
 		val deal = Deal("test", 2L)
 		val target = Tree(deal)
-		val result = target.enumeratePlays(3)
+
+		def success(n: TreeNode): Boolean = false
+
+		val result = target.enumeratePlays(3)(success)
 		result.children.size shouldBe 2
 		result.depthFirstTraverse.size shouldBe 15
 		val writer = MockWriter(8192)
@@ -118,7 +131,10 @@ class TreeSpec extends FlatSpec with Matchers {
 	it should "enumeratePlays 4" in {
 		val deal = Deal("test", 2L)
 		val target = Tree(deal)
-		val result = target.enumeratePlays(4)
+
+		def success(n: TreeNode): Boolean = false
+
+		val result = target.enumeratePlays(4)(success)
 		result.children.size shouldBe 2
 		val writer = MockWriter(8192)
 		result.output(Output(writer)).close()
@@ -130,7 +146,10 @@ class TreeSpec extends FlatSpec with Matchers {
 	it should "enumeratePlays 5" in {
 		val deal = Deal("test", 2L)
 		val target = Tree(deal)
-		val result = target.enumeratePlays(5)
+
+		def success(n: TreeNode): Boolean = false
+
+		val result = target.enumeratePlays(5)(success)
 		result.children.size shouldBe 2
 		val writer = MockWriter(16384)
 		result.output(Output(writer)).close()
@@ -142,8 +161,23 @@ class TreeSpec extends FlatSpec with Matchers {
 	it should "enumeratePlays 8" in {
 		val deal = Deal("test", 2L)
 		val target = Tree(deal)
-		val result = target.enumeratePlays(8)
+
+		def success(n: TreeNode): Boolean = false
+
+		val result = target.enumeratePlays(8)(success)
 		val states: Seq[State] = result.depthFirstTraverse
 		states.size shouldBe 912
 	}
+
+	it should "enumeratePlays 9" in {
+		val deal = Deal("test", 2L)
+		val target = Tree(deal)
+
+		def success(n: TreeNode): Boolean = n.state.tricks.ns >= 3 || n.state.tricks.ew >= 2
+
+		val result = target.enumeratePlays(12)(success)
+		val states: Seq[State] = result.depthFirstTraverse
+		states.size shouldBe 25779
+	}
+
 }

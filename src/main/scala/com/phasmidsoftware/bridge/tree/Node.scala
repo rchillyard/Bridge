@@ -133,7 +133,7 @@ trait Node[T] extends Outputable[Unit] {
 	/**
 		* Method to traverse this Node, returning a list of T values in depth-first order.
 		*/
-	def depthFirstTraverse: List[T] = dfs(List[T]())((z, t) => t +: z)
+	lazy val depthFirstTraverse: List[T] = dfs(List[T]())((z, t) => t +: z)
 
 	/**
 		* Method to output this object (and, recursively, all of its children).

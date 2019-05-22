@@ -15,7 +15,7 @@ case class Tree(root: TreeNode) extends Outputable[Unit] {
 		* @param levels the number of levels to enumerate.
 		* @return a TreeNode.
 		*/
-	def enumeratePlays(levels: Int = 52): TreeNode = Tree.enumeratePlays(root, levels) match {
+	def enumeratePlays(levels: Int = 52)(f: TreeNode => Boolean): TreeNode = Tree.enumeratePlays(root, levels)(f) match {
 		case Some(n) => n
 		case None => throw NodeException(s"unable to enumerate 52 plays for tree headed by ${root.state}")
 	}
@@ -24,7 +24,9 @@ case class Tree(root: TreeNode) extends Outputable[Unit] {
 }
 
 object Tree {
-	def apply(deal: Deal): Tree = apply(TreeNode(State(deal, Trick(0, Nil, 0, Spades), Tricks.zero), Nil))
+	def apply(state: State): Tree = apply(TreeNode(state, Nil))
+
+	def apply(deal: Deal): Tree = apply(State(deal, Trick(0, Nil, 0, Spades), Tricks.zero))
 
 	def makeStates(d: Deal, tricks: Tricks, ts: Seq[Trick]): Seq[State] = ts.map(t => State.create(d, t, tricks)).filter(_.fitness > 6)
 
@@ -39,29 +41,15 @@ object Tree {
 		* @param levels is the limit of the number of cards for which to enumerate the plays (ideally should be 52).
 		* @return a TreeNode.
 		*/
-	def enumeratePlays(node: TreeNode, levels: Int): Option[TreeNode] = if (levels > 0) {
-		val state = node.t
-		val trick = state.trick
-		val altStates = trick.winner match {
-			case Some(winner) => enumerateLeads(state.deal, trick.index + 1, winner, state.tricks)
-			case None => enumerateFollows(state)
+	def enumeratePlays(node: TreeNode, levels: Int)(f: TreeNode => Boolean): Option[TreeNode] = if (levels > 0) {
+		if (f(node))
+			Some(node)
+		else {
+			val nodeWithAltStates: Node[State] = node :+ node.t.enumeratePlays
+			Some(nodeWithAltStates.children.foldLeft(nodeWithAltStates)((r, n) => r.replace(n, enumeratePlays(n.asInstanceOf[TreeNode], levels - 1)(f))).asInstanceOf[TreeNode])
 		}
-		val nodeWithAltStates: Node[State] = node :+ altStates
-		Some(nodeWithAltStates.children.foldLeft(nodeWithAltStates)((r, n) => r.replace(n, enumeratePlays(n.asInstanceOf[TreeNode], levels - 1))).asInstanceOf[TreeNode])
 	}
 	else None
-
-	//	private
-	def enumerateLeads(deal: Deal, trickIndex: Int, leader: Int, tricks: Tricks): Seq[State] =
-		Tree.makeStates(deal, tricks, for (p <- chooseLead(deal, leader)) yield Trick(trickIndex, Seq(p), leader, p.suit))
-
-	//	private
-	def enumerateFollows(state: State): Seq[State] =
-		Tree.makeStates(state.deal, state.tricks, for (p <- state.deal.hands(state.trick.next).choosePlays(state.trick)) yield state.trick :+ p)
-
-	//	private
-	def chooseLead(deal: Deal, leader: Int): Seq[CardPlay] = deal.hands(leader).longestSuit.choosePlays(deal, leader, FourthBest)
-
 }
 
 /**

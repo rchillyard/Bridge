@@ -9,7 +9,10 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
 
 	def hands: Seq[Hand] = (for ((i, hs) <- holdings) yield Hand(this, i, hs)).toSeq
 
-	def quit: Deal = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.quit))
+	/**
+		* @return an eagerly promoted Deal.
+		*/
+	def quit: Deal = _quit
 
 	private val Seq(n, e, s, w) = hands
 
@@ -43,12 +46,12 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
 		*
 		* @return a number which corresponds to the trick-taking ability of the N/S hands.
 		*/
-	def evaluate: Double = hands.sliding(1, 2).flatten.map(_.evaluate).sum
+	def evaluate: Double = _evaluate
 
 	/**
 		* @return the number of cards remaining in this Deal.
 		*/
-	def cards: Int = hands map (_.cards) sum
+	lazy val cards: Int = hands map (_.cards) sum
 
 	/**
 		* Promote the given Hand in the given suit, below the given priority and return a new Deal.
@@ -63,13 +66,17 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
 		*/
 	def promote(hand: Hand, suit: Suit, priority: Int): Deal = Deal(title, hands map (h => if (h == hand) h else h.promote(suit, priority)))
 
-	def neatOutput: String = s"Deal $title ($cards)\n${hands.map(_.neatOutput)}"
+	def output(output: Output, xo: Option[Unit]): Output = (output :+ title).insertBreak ++ outputHand("North", n) ++ outputHand("East", e) ++ outputHand("South", s) ++ outputHand("West", w)
+
+	lazy val neatOutput: String = s"Deal $title ($cards)\n${hands.map(_.neatOutput)}"
 
 	override def toString: String = s"Deal $title ($cards)\n${hands.mkString("\n")}"
 
+	private lazy val _quit = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.quit))
+
 	private def outputHand(name: String, hand: Hand): Output = (Output(s"$name:\t") :+ hand.neatOutput).insertBreak
 
-	def output(output: Output, xo: Option[Unit]): Output = (output :+ title).insertBreak ++ outputHand("North", n) ++ outputHand("East", e) ++ outputHand("South", s) ++ outputHand("West", w)
+	private lazy val _evaluate = hands.sliding(1, 2).flatten.map(_.evaluate).sum
 }
 
 object Deal {
@@ -92,7 +99,6 @@ object Deal {
 		* @return an appropriate name for the hand.
 		*/
 	def name(hand: Int): String = Seq("N", "E", "S", "W")(hand)
-
 }
 
 /**
@@ -107,12 +113,12 @@ case class CardPlay(deal: Deal, hand: Int, suit: Suit, priority: Int) extends Or
 	/**
 		* @return true if this play can be validated. Basically, this means that no exception is thrown.
 		*/
-	def validate: Boolean = asCard.suit == suit
+	lazy val validate: Boolean = asCard.suit == suit
 
 	/**
 		* @return true if the top card of the sequence indicated is at least a ten.
 		*/
-	def isHonor: Boolean = Sequence.isHonor(priority)
+	lazy val isHonor: Boolean = Sequence.isHonor(priority)
 
 	/**
 		* Comparison between this and other.
@@ -136,7 +142,7 @@ case class CardPlay(deal: Deal, hand: Int, suit: Suit, priority: Int) extends Or
 		* @return an actual Card.
 		* @throws CardException if this CardPlay cannot be made from the given deal.
 		*/
-	def asCard: Card = deal.hands(hand).holdings(suit).sequence(priority) match {
+	lazy val asCard: Card = deal.hands(hand).holdings(suit).sequence(priority) match {
 		case Some(s) => s.head
 		case None => throw CardException(s"CardPlay (deal=${deal.title}, hand=$hand, suit=$suit, priority=$priority) cannot find actual card.")
 	}
@@ -156,32 +162,32 @@ case class CardPlay(deal: Deal, hand: Int, suit: Suit, priority: Int) extends Or
 	* @param leader the index of the leader to the suit.
 	* @param suit   the suit led.
 	*/
-case class Trick(index: Int, plays: Seq[CardPlay], leader: Int, suit: Suit) extends Outputable[Deal] {
+case class Trick(index: Int, plays: Seq[CardPlay], leader: Int, suit: Suit) extends Outputable[Deal] with Evaluatable {
 	/**
 		* @return the index of the hand next to play in this trick.
 		*/
-	def next: Int = Hand.next(leader, size)
+	lazy val next: Int = Hand.next(leader, size)
 
 	/**
 		* @return the number of cards currently in this Trick.
 		*/
-	def size: Int = plays.size
+	lazy val size: Int = plays.size
 
 	/**
 		* @return true if this trick is complete (size == 4).
 		*/
-	def isComplete: Boolean = size == 4
+	lazy val isComplete: Boolean = size == 4
 
 	/**
 		* @return (optionally) the card play that was led to start the trick.
 		*/
-	def led: Option[CardPlay] = plays.headOption
+	lazy val led: Option[CardPlay] = plays.headOption
 
 	/**
 		* @return the most recent play of this Trick.
 		* @throws CardException if this Trick has no plays
 		*/
-	def last: CardPlay = if (plays.nonEmpty) plays.last else throw CardException(s"Trick: logic error: empty trick")
+	lazy val last: CardPlay = if (plays.nonEmpty) plays.last else throw CardException(s"Trick: logic error: empty trick")
 
 	/**
 		* Add to the current Trick.
@@ -194,12 +200,17 @@ case class Trick(index: Int, plays: Seq[CardPlay], leader: Int, suit: Suit) exte
 	/**
 		* @return true if the first card in this trick is an honor.
 		*/
-	def isHonorLed: Boolean = led match {
+	lazy val isHonorLed: Boolean = led match {
 		case Some(p) => p.isHonor
 		case None => false
 	}
 
-	def evaluate: Double = value.getOrElse(0.5)
+	/**
+		* Evaluate this Trick.
+		*
+		* @return a Double
+		*/
+	def evaluate: Double = _evaluate
 
 	override def toString: String = s"T$index lead=$leader: $suit ${plays.mkString("{", ",", "}")}"
 
@@ -210,6 +221,8 @@ case class Trick(index: Int, plays: Seq[CardPlay], leader: Int, suit: Suit) exte
 	lazy val value: Option[Double] = winner map (x => if (x % 2 == 0) 1 else 0)
 
 	def output(output: Output, xo: Option[Deal] = None): Output = (output :+ s"T$index ") :+ (if (plays.nonEmpty) plays.last.output(output.copy, xo) else output.copy :+ "")
+
+	private lazy val _evaluate = value.getOrElse(0.5)
 }
 
 object Trick {
