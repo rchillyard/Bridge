@@ -15,7 +15,7 @@ case class Tree(root: TreeNode) extends Outputable[Unit] {
 		* @param levels the number of levels to enumerate.
 		* @return a TreeNode.
 		*/
-	def enumeratePlays(levels: Int = 52)(f: TreeNode => Boolean): TreeNode = Tree.enumeratePlays(root, levels)(f) match {
+	def enumeratePlays(levels: Int = 52)(success: State => Boolean, failure: State => Boolean): TreeNode = Tree.enumeratePlays(root, levels)(success, failure) match {
 		case Some(n) => n
 		case None => throw NodeException(s"unable to enumerate 52 plays for tree headed by ${root.state}")
 	}
@@ -24,12 +24,11 @@ case class Tree(root: TreeNode) extends Outputable[Unit] {
 }
 
 object Tree {
-	def apply(state: State): Tree = apply(TreeNode(state, Nil))
+	def apply(state: State): Tree = apply(TreeNode(state, done = false, Nil))
 
 	def apply(deal: Deal): Tree = apply(State(deal, Trick(0, Nil, 0, Spades), Tricks.zero))
 
 	def makeStates(d: Deal, tricks: Tricks, ts: Seq[Trick]): Seq[State] = ts.map(t => State.create(d, t, tricks)).filter(_.fitness > 6)
-
 	/**
 		* Choose the plays for this Deal, based on the prior plays.
 		*
@@ -41,24 +40,39 @@ object Tree {
 		* @param levels is the limit of the number of cards for which to enumerate the plays (ideally should be 52).
 		* @return a TreeNode.
 		*/
-	def enumeratePlays(node: TreeNode, levels: Int)(f: TreeNode => Boolean): Option[TreeNode] = if (levels > 0) {
-		if (f(node))
-			Some(node)
+	def enumeratePlays(node: TreeNode, levels: Int)(success: State => Boolean, failure: State => Boolean): Option[TreeNode] = if (levels > 0) {
+		val state = node.t
+		if (success(state))
+			Some(node.makeTerminal.asInstanceOf[TreeNode])
+		else if (failure(state))
+			None
 		else {
-			val nodeWithAltStates: Node[State] = node :+ node.t.enumeratePlays
-			Some(nodeWithAltStates.children.foldLeft(nodeWithAltStates)((r, n) => r.replace(n, enumeratePlays(n.asInstanceOf[TreeNode], levels - 1)(f))).asInstanceOf[TreeNode])
+			val nodeWithAltStates: Node[State] = node :+ state.enumeratePlays
+			Some(nodeWithAltStates.children.foldLeft(nodeWithAltStates)((r, n) => combineNodes(levels, success, failure, r, n)).asInstanceOf[TreeNode])
 		}
 	}
 	else None
+
+	private def combineNodes(levels: Int, success: State => Boolean, failure: State => Boolean, r: Node[State], n: Node[State]) =
+		if (n.terminal) r.makeTerminal else r.replace(n, enumeratePlays(n.asInstanceOf[TreeNode], levels - 1)(success, failure))
+
+	//	if (r.terminal) r else r.replace(n, enumeratePlays(n.asInstanceOf[TreeNode], levels - 1)(success, failure))
 }
 
 /**
 	* This represents a Node in the deal analysis tree.
 	*
 	* @param state     a Trick/Deal combination: the trick is in general incomplete: each node represents a different play.
+	* @param done      true if this is a terminal Node (see definition of Node[X]).
 	* @param followers the children of this node, i.e. the nodes which will follow.
 	*/
-case class TreeNode(state: State, followers: Seq[TreeNode]) extends FitNode[State](state, followers) {
+case class TreeNode(state: State, done: Boolean, followers: Seq[TreeNode]) extends FitNode[State](state, done, followers) {
+	/**
+		* Make a new version of this Node which is terminal.
+		*
+		* @return a copy of this TreeNode but terminal.
+		*/
+	//	def makeTerminal: TreeNode = TreeNode(state, done = true, followers)
 
 	/**
 		* Method to form a Node from a State and from children.
@@ -67,7 +81,7 @@ case class TreeNode(state: State, followers: Seq[TreeNode]) extends FitNode[Stat
 		* @param tns the nodes which will be the children of the result.
 		* @return a new Node based on t and tns.
 		*/
-	def unit(t: State, tns: Seq[Node[State]]): TreeNode = TreeNode(t, tns.asInstanceOf[Seq[TreeNode]])
+	def unit(t: State, terminal: Boolean, tns: Seq[Node[State]]): TreeNode = TreeNode(t, done = false, tns.asInstanceOf[Seq[TreeNode]])
 
 	/**
 		* Method to form a Node from a State.

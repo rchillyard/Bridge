@@ -3,6 +3,7 @@ package com.phasmidsoftware.bridge.tree
 import com.phasmidsoftware.output.{Output, Outputable}
 
 trait Node[T] extends Outputable[Unit] {
+
 	/**
 		* Method to yield the value of this Node.
 		*
@@ -18,13 +19,46 @@ trait Node[T] extends Outputable[Unit] {
 	def children: Seq[Node[T]]
 
 	/**
+		* Method to mark a terminal Node.
+		* Once such a node is encountered, all further tree building must cease.
+		*
+		* @return true if this Node is terminal.
+		*/
+	def terminal: Boolean
+
+	/**
+		* Method to expand a branch of a tree, by taking this Node and replacing it with children nodes which are themselves recursively expanded.
+		* The algorithm operates in a depth-first-search manner.
+		*
+		* If successor(t) yields a Some(Nil), it simply means that this branch will not be further expanded, but other branches will continue as normal.
+		* If successor(t) yields None, we break out of the expansion and return this as is. However, some siblings, uncles and aunts of the success node will remain in this.
+		*
+		* @tparam U a super-type of T (or T, of course) for which there is evidence of Successors[U].
+		* @return an Option of Node[U]
+		*/
+	def expand[U >: T : Successors](levels: Int): Option[Node[U]] =
+		if (levels <= 0) None
+		else {
+			val node = this.asInstanceOf[Node[U]]
+
+			def replaceExpandedChild(r: Node[U], n: Node[U]): Node[U] = if (r.terminal) r else r.replace(n, n.expand(levels - 1))
+
+			implicitly[Successors[U]].successors(t) match {
+				case Some(us) =>
+					val z = node :+ us
+					Some(z.children.foldLeft(z)(replaceExpandedChild))
+				case None => Some(node.makeTerminal)
+			}
+		}
+
+	/**
 		* Method to form a Node from a T.
 		*
 		* @param t   the given value of T.
 		* @param tns the nodes which will be the children of the result.
 		* @return a new Node based on t and tns.
 		*/
-	def unit(t: T, tns: Seq[Node[T]]): Node[T]
+	def unit(t: T, terminal: Boolean, tns: Seq[Node[T]]): Node[T]
 
 	/**
 		* Method to form a Node from a T.
@@ -32,7 +66,9 @@ trait Node[T] extends Outputable[Unit] {
 		* @param t the given value of T.
 		* @return a new Node based on t, but with no children.
 		*/
-	def unit(t: T): Node[T] = unit(t, Nil)
+	def unit(t: T): Node[T] = unit(t, terminal = false, Nil)
+
+	def makeTerminal: Node[T] = unit(t, terminal = true, children)
 
 	/**
 		* Method to add the given tns to the children of this Node.
@@ -40,7 +76,7 @@ trait Node[T] extends Outputable[Unit] {
 		* @param tns the tns to add as additional children.
 		* @return a copy of this Node but with tns as additional children.
 		*/
-	def ++(tns: Seq[Node[T]]): Node[T] = unit(t, children ++ tns)
+	def ++(tns: Seq[Node[T]]): Node[T] = unit(t, terminal = false, children ++ tns)
 
 	/**
 		* Method to add the given values to the children of this Node.
@@ -58,7 +94,7 @@ trait Node[T] extends Outputable[Unit] {
 		* @param node the node to add as a child.
 		* @return a copy of this Node but with node as an additional child.
 		*/
-	def :+(node: Node[T]): Node[T] = unit(t, children :+ node)
+	def :+(node: Node[T]): Node[T] = unit(t, terminal = false, children :+ node)
 
 	/**
 		* Method to add the given x-value to the children of this Node.
@@ -73,18 +109,23 @@ trait Node[T] extends Outputable[Unit] {
 		*
 		* TODO: watch out for the ordering of the children changing.
 		*
-		* @param x the node to be replace.
+		* @param x the node to be replaced.
 		* @param y the node with which to replace the given node.
 		* @return a copy of this Node, but with node replaced by replacement.
 		*/
 	def replace(x: Node[T], y: Node[T]): Node[T] =
-		if (children contains x) unit(t, children.filterNot(_ == x) :+ y)
-		else unit(t, children map (n => n.replace(x, y)))
+		if (children contains x) {
+			val result = unit(t, y.terminal, children.map(n => if (n eq x) y else n))
+			result
+		}
+		// TODO consider whether terminal should be y.terminal in the next line
+		else
+			unit(t, terminal = false, children map (n => n.replace(x, y)))
 
 	/**
 		* Method to replace a node of this tree optionally with the given node and to return the resulting tree.
 		*
-		* @param x   the node to be replace.
+		* @param x   the node to be replaced.
 		* @param tno the optional node with which to replace the given node.
 		* @return a copy of this Node, but with node replaced by replacement, assuming that tno exists; otherwise just return this.
 		*/
@@ -170,3 +211,16 @@ trait Node[T] extends Outputable[Unit] {
 }
 
 case class NodeException(str: String) extends Exception(str)
+
+trait Successors[T] {
+	/**
+		* Method to yield the successors (i.e. children) of the underlying type T.
+		*
+		* @param t the value of T.
+		* @return an Option of Seq[T].
+		*         If the return is Some(Seq(...)) then the content of the option is the list of successors.
+		*         If the result is Some(Nil), it signifies that the given value of t holds no promise and therefore should not be further expanded.
+		*         Otherwise, if the return is None, it signifies that we are to stop building our tree and immediately return the existing tree.
+		*/
+	def successors(t: T): Option[Seq[T]]
+}

@@ -1,6 +1,6 @@
 package com.phasmidsoftware.output
 
-import java.io.{Closeable, Flushable, Writer}
+import java.io._
 
 import scala.collection.mutable
 import scala.language.postfixOps
@@ -369,6 +369,14 @@ object Output {
 	def apply(writer: Writer, s: CharSequence): Output = apply(writer) :+ s
 
 	/**
+		* Method to create an Output based on a PrintStream.
+		*
+		* @param printStream a PrintStream such as System.out which will be used as the backing store.
+		* @return a new Output whose appendable is the writer for the given printStream.
+		*/
+	def apply(printStream: PrintStream): Output = apply(new PrintWriter(printStream))
+
+	/**
 		* Method to create an empty UnbackedOutput
 		*
 		* @return a new instance of UnbackedOutput.
@@ -402,6 +410,15 @@ case class NonOutput() extends Appendable with Closeable with Flushable {
 	override def flush(): Unit = throw OutputException("cannot flush NonOutput")
 }
 
+/**
+	* Case class implementing Output and based on a NonOutput.
+	* This type of Output is *not* backed by a writeable store.
+	* This class extends the abstract class BufferedCharSequenceOutput[NonOutput].
+	* The following traits are implemented: Output, CharacterOutput, BufferedOutput, BackedOutput[NonOutput].
+	*
+	* @param initialIndentation the initial value of indentation.
+	* @param stringBuilder      the StringBuilder used for buffering characters.
+	*/
 case class UnbackedOutput(initialIndentation: CharSequence = "", stringBuilder: mutable.StringBuilder = new StringBuilder) extends BufferedCharSequenceOutput[NonOutput](NonOutput(), initialIndentation, stringBuilder) {
 
 	def isBacked: Boolean = false
@@ -425,6 +442,16 @@ case class UnbackedOutput(initialIndentation: CharSequence = "", stringBuilder: 
 	def copy: Output = UnbackedOutput(indentation)
 }
 
+/**
+	* Case class implementing Output and based on a Writer.
+	* This type of Output is backed by the given writer.
+	* This class extends the abstract class BufferedCharSequenceOutput[Writer].
+	* The following traits are implemented: Output, CharacterOutput, BufferedOutput, BackedOutput[Writer].
+	*
+	* @param writer             the appendable to which characters are flushed when appropriate.
+	* @param initialIndentation the initial value of indentation.
+	* @param stringBuilder      the StringBuilder used for buffering characters.
+	*/
 case class WriterOutput(writer: Writer, initialIndentation: CharSequence = "", stringBuilder: mutable.StringBuilder = new StringBuilder) extends BufferedCharSequenceOutput[Writer](writer, initialIndentation, stringBuilder) {
 	def isBacked: Boolean = true
 
@@ -444,6 +471,11 @@ case class WriterOutput(writer: Writer, initialIndentation: CharSequence = "", s
 
 case class OutputException(w: String) extends Exception(w)
 
+/**
+	* A trait which provides the behavior of something that can be output to Output.
+	*
+	* @tparam X the underlying type of the optional parameter to the output method.
+	*/
 trait Outputable[X] {
 
 	/**
