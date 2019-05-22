@@ -26,7 +26,7 @@ case class Tree(root: TreeNode) extends Outputable[Unit] {
 object Tree {
 	def apply(deal: Deal): Tree = apply(TreeNode(State(deal, Trick(0, Nil, 0, Spades), Tricks.zero), Nil))
 
-	def makeStates(d: Deal, tricks: Tricks, ts: Seq[Trick]): Seq[State] = ts map (t => State.create(d, t, tricks))
+	def makeStates(d: Deal, tricks: Tricks, ts: Seq[Trick]): Seq[State] = ts.map(t => State.create(d, t, tricks)).filter(_.fitness > 6)
 
 	/**
 		* Choose the plays for this Deal, based on the prior plays.

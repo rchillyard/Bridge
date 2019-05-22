@@ -49,10 +49,19 @@ case class State(deal: Deal, trick: Trick, tricks: Tricks) extends Outputable[Un
 		*/
 	def cardsPlayed: Int = trick.index * 4 + trick.size
 
+	/**
+		* @return the fitness of this State rounded to the nearest 0.1
+		*/
 	def fitness: Double = math.rint(State.StateFitness.fitness(this) * 10) / 10
 
 	override def toString: String = s"State: $trick $fitness ${deal.neatOutput}"
 
+	/**
+		* Invokes output on the trick, passing it Some(deal) and appending the fitness in parentheses.
+		* @param output the output to append to.
+		* @param xo     an optional value of X, defaulting to None.
+		* @return a new instance of Output.
+		*/
 	def output(output: Output, xo: Option[Unit] = None): Output = trick.output(output, Some(deal)) :+ s" ($fitness)"
 }
 

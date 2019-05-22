@@ -43,7 +43,7 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
 		*
 		* @return a number which corresponds to the trick-taking ability of the N/S hands.
 		*/
-	def evaluate: Double = hands.tail.sliding(1, 2).flatten.map(_.evaluate).sum
+	def evaluate: Double = hands.sliding(1, 2).flatten.map(_.evaluate).sum
 
 	/**
 		* @return the number of cards remaining in this Deal.

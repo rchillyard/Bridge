@@ -40,19 +40,20 @@ class TreeSpec extends FlatSpec with Matchers {
 	}
 
 	it should "enumerateLeads 1" in {
-		val deal = Deal("test", 0L)
+		val deal = Deal("test", 2L)
 		// Figure out all the possible leads from the North's longest and strongest suit.
 		// Bear in mind that we consider all cards from a "sequence" equivalent.
 		val ss: Seq[State] = Tree.enumerateLeads(deal, 0, 0, Tricks.zero)
-		ss.size shouldBe 3
+		ss.size shouldBe 4
 		ss.head should matchPattern { case State(_, _, _) => }
-		ss.head.trick.toString shouldBe "T0 lead=0: H {Play: 0 HQ}"
+		ss.head.trick.toString shouldBe "T0 lead=0: H {Play: 0 HK}"
 		ss.tail.head.trick.toString shouldBe "T0 lead=0: H {Play: 0 H9}"
-		ss.last.trick.toString shouldBe "T0 lead=0: H {Play: 0 H4}"
+		ss.init.last.trick.toString shouldBe "T0 lead=0: H {Play: 0 H5}"
+		ss.last.trick.toString shouldBe "T0 lead=0: H {Play: 0 H2}"
 	}
 
 	it should "enumerateLeads 2" in {
-		val deal = Deal("test", 0L)
+		val deal = Deal("test", 2L)
 		val hands = deal.hands
 		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
 		val trick = Trick.create(0, 0, Spades, CardPlay(deal, 0, Spades, priority1S), CardPlay(deal, 1, Spades, priority2S), CardPlay(deal, 2, Spades, priority3S), CardPlay(deal, 3, Spades, priority4S))
@@ -60,83 +61,89 @@ class TreeSpec extends FlatSpec with Matchers {
 		trick.winner match {
 			case Some(winner) =>
 				val ss: Seq[State] = Tree.enumerateLeads(deal2, 1, winner, Tricks.zero)
-				ss.size shouldBe 3
+				ss.size shouldBe 4
 				ss.head should matchPattern { case State(_, _, _) => }
-				ss.head.trick.toString shouldBe "T1 lead=2: S {Play: 2 SA}"
-				ss.tail.head.trick.toString shouldBe "T1 lead=2: S {Play: 2 SJ}"
-				ss.last.trick.toString shouldBe "T1 lead=2: S {Play: 2 S8}"
+				ss.head.trick.toString shouldBe "T1 lead=0: H {Play: 0 HK}"
+				ss.tail.head.trick.toString shouldBe "T1 lead=0: H {Play: 0 H9}"
+				ss.init.last.trick.toString shouldBe "T1 lead=0: H {Play: 0 H5}"
+				ss.last.trick.toString shouldBe "T1 lead=0: H {Play: 0 H2}"
 			case None => fail("no winner")
 		}
 
 	}
 
 	it should "enumerateFollows" in {
-		val target = Tree(Deal("test", 0L))
+		val target = Tree(Deal("test", 2L))
 		val ss = Tree.enumerateFollows(target.root.state)
 		ss.size shouldBe 2
-		ss.head.trick.toString shouldBe "T0 lead=0: S {Play: 0 S9}"
-		ss.last.trick.toString shouldBe "T0 lead=0: S {Play: 0 S5}"
+		ss.head.trick.toString shouldBe "T0 lead=0: S {Play: 0 SK}"
+		ss.last.trick.toString shouldBe "T0 lead=0: S {Play: 0 ST}"
 	}
 
 	it should "enumeratePlays 1" in {
-		val target = Tree(Deal("test", 0L))
+		val target = Tree(Deal("test", 2L))
 		val result = target.enumeratePlays(1)
 		result.children.size shouldBe 2
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
 		//		println(writer.spillway)
 		writer.spilled shouldBe 42
+		result.depthFirstTraverse.size shouldBe 3
 	}
 
 	it should "enumeratePlays 2" in {
-		val deal = Deal("test", 0L)
+		val deal = Deal("test", 2L)
 		val target = Tree(deal)
 		val result = target.enumeratePlays(2)
 		result.children.size shouldBe 2
+		result.depthFirstTraverse.size shouldBe 7
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
 		//		println(writer.spillway)
-		writer.spilled shouldBe 188
+		writer.spilled shouldBe 116
 	}
 
 	it should "enumeratePlays 3" in {
-		val deal = Deal("test", 0L)
+		val deal = Deal("test", 2L)
 		val target = Tree(deal)
 		val result = target.enumeratePlays(3)
 		result.children.size shouldBe 2
+		result.depthFirstTraverse.size shouldBe 15
 		val writer = MockWriter(8192)
 		result.output(Output(writer)).close()
 		//		println(writer.spillway)
-		writer.spilled shouldBe 836
+		writer.spilled shouldBe 280
 	}
 
 	it should "enumeratePlays 4" in {
-		val deal = Deal("test", 0L)
+		val deal = Deal("test", 2L)
 		val target = Tree(deal)
 		val result = target.enumeratePlays(4)
 		result.children.size shouldBe 2
 		val writer = MockWriter(8192)
 		result.output(Output(writer)).close()
 		//		println(writer.spillway)
-		writer.spilled shouldBe 2276
+		writer.spilled shouldBe 816
+		result.depthFirstTraverse.size shouldBe 39
 	}
 
 	it should "enumeratePlays 5" in {
-		val deal = Deal("test", 0L)
+		val deal = Deal("test", 2L)
 		val target = Tree(deal)
 		val result = target.enumeratePlays(5)
 		result.children.size shouldBe 2
 		val writer = MockWriter(16384)
 		result.output(Output(writer)).close()
 		//		println(writer.spillway)
-		writer.spilled shouldBe 7188
+		writer.spilled shouldBe 3000
+		result.depthFirstTraverse.size shouldBe 129
 	}
 
 	it should "enumeratePlays 8" in {
-		val deal = Deal("test", 0L)
+		val deal = Deal("test", 2L)
 		val target = Tree(deal)
 		val result = target.enumeratePlays(8)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 3012
+		states.size shouldBe 912
 	}
 }

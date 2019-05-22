@@ -73,7 +73,10 @@ class DealSpec extends FlatSpec with Matchers {
 
 	it should "evaluate" in {
 		val target = Deal("test", 0L)
-		target.evaluate shouldBe 6.28 +- 0.1
+		val Seq(n, _, s, _) = target.hands
+		n.evaluate shouldBe 0.44 +- 0.02
+		s.evaluate shouldBe 3.41 +- 0.02
+		target.evaluate shouldBe (0.44 + 3.41) +- 0.03
 	}
 
 	behavior of "playAll"
