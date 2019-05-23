@@ -12,7 +12,7 @@ trait Fitness[X] {
 
 }
 
-abstract class FitNode[X: Fitness](val t: X, val terminal: Boolean, val children: Seq[Node[X]]) extends Node[X] with Ordered[FitNode[X]] {
+abstract class FitNode[X: Fitness](val t: X, val isTerminal: Boolean, val children: Seq[Node[X]]) extends Node[X] with Ordered[FitNode[X]] {
 
 	def compare(that: FitNode[X]): Int = {
 		val xf = implicitly[Fitness[X]]

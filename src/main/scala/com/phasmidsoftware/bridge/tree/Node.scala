@@ -24,14 +24,17 @@ trait Node[T] extends Outputable[Unit] {
 		*
 		* @return true if this Node is terminal.
 		*/
-	def terminal: Boolean
+	def isTerminal: Boolean
 
 	/**
 		* Method to expand a branch of a tree, by taking this Node and replacing it with children nodes which are themselves recursively expanded.
 		* The algorithm operates in a depth-first-search manner.
 		*
 		* If successor(t) yields a Some(Nil), it simply means that this branch will not be further expanded, but other branches will continue as normal.
-		* If successor(t) yields None, we break out of the expansion and return this as is. However, some siblings, uncles and aunts of the success node will remain in this.
+		* If successor(t) yields None, we break out of the expansion and return this node with the successful node marked terminal.
+		* Note, however, some siblings, uncles and aunts of the success node will remain in this.
+		*
+		* TODO make this tail-recurseive
 		*
 		* @tparam U a super-type of T (or T, of course) for which there is evidence of Successors[U].
 		* @return an Option of Node[U]
@@ -41,7 +44,7 @@ trait Node[T] extends Outputable[Unit] {
 		else {
 			val node = this.asInstanceOf[Node[U]]
 
-			def replaceExpandedChild(r: Node[U], n: Node[U]): Node[U] = if (r.terminal) r else r.replace(n, n.expand(levels - 1))
+			def replaceExpandedChild(r: Node[U], n: Node[U]): Node[U] = if (r.isTerminal) r else r.replace(n, n.expand(levels - 1))
 
 			implicitly[Successors[U]].successors(t) match {
 				case Some(us) =>
@@ -68,6 +71,11 @@ trait Node[T] extends Outputable[Unit] {
 		*/
 	def unit(t: T): Node[T] = unit(t, terminal = false, Nil)
 
+	/**
+		* Method to mark this Node as terminal (i.e. success).
+		*
+		* @return a new copy of this Node but with isTerminal set to true.
+		*/
 	def makeTerminal: Node[T] = unit(t, terminal = true, children)
 
 	/**
@@ -115,10 +123,10 @@ trait Node[T] extends Outputable[Unit] {
 		*/
 	def replace(x: Node[T], y: Node[T]): Node[T] =
 		if (children contains x) {
-			val result = unit(t, y.terminal, children.map(n => if (n eq x) y else n))
+			val result = unit(t, y.isTerminal, children.map(n => if (n eq x) y else n))
 			result
 		}
-		// TODO consider whether terminal should be y.terminal in the next line
+		// TODO consider whether isTerminal should be y.isTerminal in the next line
 		else
 			unit(t, terminal = false, children map (n => n.replace(x, y)))
 

@@ -187,22 +187,22 @@ class NodeSpec extends FlatSpec with Matchers {
 
 }
 
-case class MockNode(t: Int, terminal: Boolean, children: Seq[Node[Int]]) extends Node[Int] {
+case class MockNode(t: Int, isTerminal: Boolean, children: Seq[Node[Int]]) extends Node[Int] {
 	def unit(t: Int, terminal: Boolean, tns: Seq[Node[Int]]): Node[Int] = MockNode(t, terminal, tns)
 }
 
 object MockNode {
-	def apply(t: Int, children: Seq[Node[Int]]): MockNode = apply(t, terminal = false, children)
+	def apply(t: Int, children: Seq[Node[Int]]): MockNode = apply(t, isTerminal = false, children)
 
 	def apply(t: Int): MockNode = apply(t, Nil)
 }
 
-case class AltMockNode(t: String, terminal: Boolean, children: Seq[Node[String]]) extends Node[String] {
+case class AltMockNode(t: String, isTerminal: Boolean, children: Seq[Node[String]]) extends Node[String] {
 	def unit(t: String, terminal: Boolean, tns: Seq[Node[String]]): Node[String] = AltMockNode(t, terminal, tns)
 }
 
 object AltMockNode {
-	def apply(t: String, children: Seq[Node[String]]): AltMockNode = apply(t, terminal = false, children)
+	def apply(t: String, children: Seq[Node[String]]): AltMockNode = apply(t, isTerminal = false, children)
 
 	def apply(t: String): AltMockNode = apply(t, Nil)
 }

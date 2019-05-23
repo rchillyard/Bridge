@@ -1,5 +1,7 @@
 package com.phasmidsoftware.bridge.cards
 
+import org.scalatest.{FlatSpec, Matchers}
+
 class IntegrationTreeSpec extends FlatSpec with Matchers {
 
 	def success(n: TreeNode): Boolean = false
