@@ -10,7 +10,7 @@ class TreeSpec extends FlatSpec with Matchers {
 	it should "apply" in {
 		val deal = Deal("test", 0L)
 		val trick = Trick(0, Nil, 0, Spades)
-		val root = TreeNode(State(deal, trick, Tricks.zero), done = false, Nil)
+		val root = StateNode(State(deal, trick, Tricks.zero), done = false, Nil)
 		val target = Tree(root)
 		target.root.state.deal shouldBe deal
 		target.root.state.trick shouldBe trick
@@ -28,7 +28,6 @@ class TreeSpec extends FlatSpec with Matchers {
 		result.last shouldBe CardPlay(deal, 0, Hearts, 10)
 		val writer = MockWriter()
 		target.output(Output(writer)).close()
-		println(writer.spillway)
 		writer.spilled shouldBe 9
 	}
 
@@ -36,14 +35,13 @@ class TreeSpec extends FlatSpec with Matchers {
 		val target = Tree(Deal("test", 0L))
 		val writer = MockWriter()
 		target.output(Output(writer)).close()
-		//		println(writer.spillway)
 		writer.spilled shouldBe 9
 	}
 
 	it should "enumerateLeads 1" in {
 		val deal = Deal("test", 2L)
 		val state = State(deal)
-		// Figure out all the possible leads from the North's longest and strongest suit.
+		// NOTE: Figure out all the possible leads from the North's longest and strongest suit.
 		// Bear in mind that we consider all cards from a "sequence" equivalent.
 		val ss: Seq[State] = state.enumerateLeads(0, 0)
 		ss.size shouldBe 4
@@ -93,7 +91,6 @@ class TreeSpec extends FlatSpec with Matchers {
 		result.children.size shouldBe 2
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
-		//		println(writer.spillway)
 		writer.spilled shouldBe 42
 		result.depthFirstTraverse.size shouldBe 3
 	}
@@ -109,7 +106,6 @@ class TreeSpec extends FlatSpec with Matchers {
 		result.depthFirstTraverse.size shouldBe 7
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
-		//		println(writer.spillway)
 		writer.spilled shouldBe 116
 	}
 
@@ -124,7 +120,6 @@ class TreeSpec extends FlatSpec with Matchers {
 		result.depthFirstTraverse.size shouldBe 15
 		val writer = MockWriter(8192)
 		result.output(Output(writer)).close()
-		//		println(writer.spillway)
 		writer.spilled shouldBe 280
 	}
 
@@ -138,7 +133,6 @@ class TreeSpec extends FlatSpec with Matchers {
 		result.children.size shouldBe 2
 		val writer = MockWriter(8192)
 		result.output(Output(writer)).close()
-		//		println(writer.spillway)
 		writer.spilled shouldBe 816
 		result.depthFirstTraverse.size shouldBe 39
 	}
@@ -153,7 +147,6 @@ class TreeSpec extends FlatSpec with Matchers {
 		result.children.size shouldBe 2
 		val writer = MockWriter(16384)
 		result.output(Output(writer)).close()
-		//		println(writer.spillway)
 		writer.spilled shouldBe 3000
 		result.depthFirstTraverse.size shouldBe 129
 	}
@@ -170,8 +163,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		states.size shouldBe 23
 		states foreach {
 			s =>
-				if (s.trick.isComplete)
-					println(s"${s.trick} ${s.tricks}")
+			//					println(s"${s.trick} ${s.tricks}")
 		}
 	}
 

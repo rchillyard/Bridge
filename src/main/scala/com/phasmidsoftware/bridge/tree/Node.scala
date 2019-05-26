@@ -115,20 +115,15 @@ trait Node[T] extends Outputable[Unit] {
 	/**
 		* Method to replace a node of this tree with the given node and to return the resulting tree.
 		*
-		* TODO: watch out for the ordering of the children changing.
+		* CONSIDER: whether isTerminal should be y.isTerminal in the else part (I don't think so).
 		*
 		* @param x the node to be replaced.
 		* @param y the node with which to replace the given node.
 		* @return a copy of this Node, but with node replaced by replacement.
 		*/
 	def replace(x: Node[T], y: Node[T]): Node[T] =
-		if (children contains x) {
-			val result = unit(t, y.isTerminal, children.map(n => if (n eq x) y else n))
-			result
-		}
-		// TODO consider whether isTerminal should be y.isTerminal in the next line
-		else
-			unit(t, terminal = false, children map (n => n.replace(x, y)))
+		if (children contains x) unit(t, y.isTerminal, children.map(n => if (n eq x) y else n))
+		else unit(t, terminal = false, children map (n => n.replace(x, y)))
 
 	/**
 		* Method to replace a node of this tree optionally with the given node and to return the resulting tree.

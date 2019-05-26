@@ -167,14 +167,14 @@ class WhistSpec extends FlatSpec with Matchers {
 	}
 
 	it should "form string" in {
-		// TODO sort this out: we shouldn't be created a full deal and then creating a hand.
+		// TODO sort this out: we shouldn't be creating a full deal and then creating a hand.
 		val deal = Deal("test", 0L)
 		val target = Hand.from(deal, 0, "SAT32", "CQT98", "D43", "HKJT")
 		target.neatOutput shouldBe "SAT32 HKJT D43 CQT98"
 	}
 
 	it should "evaluate" in {
-		// TODO sort this out: we shouldn't be created a full deal and then creating a hand.
+		// TODO sort this out: we shouldn't be creating a full deal and then creating a hand.
 		val deal = Deal("test", 0L)
 		val target = Hand.from(deal, 0, "SAT32", "CQT98", "D43", "HKJT")
 		target.evaluate shouldBe 2.7529296875 +- 0.02

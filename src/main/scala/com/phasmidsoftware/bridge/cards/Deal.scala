@@ -212,7 +212,7 @@ case class Trick(index: Int, plays: Seq[CardPlay], leader: Int, suit: Suit) exte
 		*/
 	def evaluate: Double = _evaluate
 
-	override def toString: String = s"T$index lead=$leader: $suit ${plays.mkString("{", ",", "}")}"
+	override def toString: String = s"T$index lead=$leader: $suit ${plays.mkString("{", ", ", "}")}"
 
 	lazy val winner: Option[Int] =
 		if (isComplete) Some(plays.maxBy(p => if (p.suit == suit) Ace.priority - p.priority else 0).hand)

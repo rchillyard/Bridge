@@ -302,7 +302,7 @@ object Holding {
 		override def compare(x: Rank, y: Rank): Int = -x.priority + y.priority
 	}
 
-	// TODO merge the two create methods
+	// CONSIDER merge the two create methods
 	def create(suit: Suit, cards: Seq[Card]): Holding = apply(suit, (cards map (_.rank)).sorted.reverse: _*)
 
 	def create(ranks: Seq[Rank], suit: Suit) = Holding(suit, ranks.sorted.reverse: _*)
@@ -366,7 +366,7 @@ case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Ou
 		*/
 	def discard(trick: Trick): Seq[CardPlay] = {
 		for {
-			// first get the holdings from the other suits in order of length
+			// NOTE: first get the holdings from the other suits in order of length
 			h <- holdings.flatMap { case (k, v) => if (k != trick.suit) Some(v) else None }.toSeq.sortWith(_.length < _.length)
 			ps <- h.choosePlays(deal, index, Duck)
 		} yield ps

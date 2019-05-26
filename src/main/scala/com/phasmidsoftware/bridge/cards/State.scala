@@ -29,15 +29,15 @@ case class State(deal: Deal, trick: Trick, tricks: Tricks) extends Outputable[Un
 		*/
 	def enumeratePlays: Seq[State] = _enumeratePlays
 
-	//	private
+	//	TODO make private
 	lazy val enumerateFollows: Seq[State] =
 		Tree.makeStates(deal, tricks, for (p <- deal.hands(trick.next).choosePlays(trick)) yield trick :+ p)
 
-	//	private
+	//	TODO make private
 	def enumerateLeads(leader: Int, index: Int): Seq[State] =
 		Tree.makeStates(deal, tricks, for (p <- chooseLead(leader)) yield Trick(index, Seq(p), leader, p.suit))
 
-	// private
+	// TODO make private
 	def chooseLead(leader: Int): Seq[CardPlay] = deal.hands(leader).longestSuit.choosePlays(deal, leader, FourthBest)
 
 	/**
