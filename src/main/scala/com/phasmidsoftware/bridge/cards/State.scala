@@ -147,7 +147,7 @@ case class Tricks(ns: Int, ew: Int) extends Evaluatable {
 		case None => this
 	}
 
-	override def toString: String = s"${ns - ew}"
+	override def toString: String = s"$ns:$ew"
 
 	private lazy val _evaluate = ns - ew
 }

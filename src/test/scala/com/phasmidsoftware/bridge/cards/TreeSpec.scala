@@ -167,7 +167,12 @@ class TreeSpec extends FlatSpec with Matchers {
 
 		val result = target.enumeratePlays(9)(success, failure)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 894
+		states.size shouldBe 23
+		states foreach {
+			s =>
+				if (s.trick.isComplete)
+					println(s"${s.trick} ${s.tricks}")
+		}
 	}
 
 	it should "enumeratePlays 9" in {
@@ -179,7 +184,7 @@ class TreeSpec extends FlatSpec with Matchers {
 
 		val result = target.enumeratePlays(13)(success, failure)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 25761
+		states.size shouldBe 33
 	}
 
 }

@@ -1,7 +1,5 @@
 package com.phasmidsoftware.bridge.cards
 
-import org.scalatest.{FlatSpec, Matchers}
-
 class IntegrationTreeSpec extends FlatSpec with Matchers {
 
 	def success(n: TreeNode): Boolean = false
@@ -21,16 +19,25 @@ class IntegrationTreeSpec extends FlatSpec with Matchers {
 
 		val result = target.enumeratePlays(17)(_.tricks.ns >= 3, _.tricks.ew >= 2)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 247335
+		states.size shouldBe 33
 	}
 
-	ignore should "go to level 21 with short circuit" in {
+	it should "go to level 21 with short circuit" in {
 		val deal = Deal("test", 2L)
 		val target = Tree(deal)
 
 		val result = target.enumeratePlays(21)(_.tricks.ns >= 3, _.tricks.ew >= 2)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 247335
+		states.size shouldBe 33
+	}
+
+	it should "go to level 25 with short circuit" in {
+		val deal = Deal("test", 2L)
+		val target = Tree(deal)
+
+		val result = target.enumeratePlays(25)(_.tricks.ns >= 4, _.tricks.ew >= 2)
+		val states: Seq[State] = result.depthFirstTraverse
+		states.size shouldBe 48
 	}
 
 }

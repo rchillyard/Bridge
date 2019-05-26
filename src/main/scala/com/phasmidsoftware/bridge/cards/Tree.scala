@@ -39,6 +39,8 @@ object Tree {
 /**
 	* This represents a Node in the deal analysis tree.
 	*
+	* TODO rename as StateNode
+	*
 	* @param state     a Trick/Deal combination: the trick is in general incomplete: each node represents a different play.
 	* @param done      true if this is a terminal Node (see definition of Node[X]).
 	* @param followers the children of this node, i.e. the nodes which will follow.
@@ -55,11 +57,12 @@ case class TreeNode(state: State, done: Boolean, followers: Seq[TreeNode]) exten
 	/**
 		* Method to form a Node from a State and from children.
 		*
-		* @param t   the given value of State.
-		* @param tns the nodes which will be the children of the result.
+		* @param t        the given value of State.
+		* @param terminal true if the new node is to be marked terminal.
+		* @param tns      the nodes which will be the children of the result.
 		* @return a new Node based on t and tns.
 		*/
-	def unit(t: State, terminal: Boolean, tns: Seq[Node[State]]): TreeNode = TreeNode(t, done = false, tns.asInstanceOf[Seq[TreeNode]])
+	def unit(t: State, terminal: Boolean, tns: Seq[Node[State]]): TreeNode = TreeNode(t, done = terminal, tns.asInstanceOf[Seq[TreeNode]])
 
 	/**
 		* Method to form a Node from a State.

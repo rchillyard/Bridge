@@ -34,7 +34,7 @@ trait Node[T] extends Outputable[Unit] {
 		* If successor(t) yields None, we break out of the expansion and return this node with the successful node marked terminal.
 		* Note, however, some siblings, uncles and aunts of the success node will remain in this.
 		*
-		* TODO make this tail-recurseive
+		* TODO make this tail-recursive
 		*
 		* @tparam U a super-type of T (or T, of course) for which there is evidence of Successors[U].
 		* @return an Option of Node[U]
@@ -84,7 +84,7 @@ trait Node[T] extends Outputable[Unit] {
 		* @param tns the tns to add as additional children.
 		* @return a copy of this Node but with tns as additional children.
 		*/
-	def ++(tns: Seq[Node[T]]): Node[T] = unit(t, terminal = false, children ++ tns)
+	def ++(tns: Seq[Node[T]]): Node[T] = unit(t, terminal = isTerminal, children ++ tns)
 
 	/**
 		* Method to add the given values to the children of this Node.
@@ -102,7 +102,7 @@ trait Node[T] extends Outputable[Unit] {
 		* @param node the node to add as a child.
 		* @return a copy of this Node but with node as an additional child.
 		*/
-	def :+(node: Node[T]): Node[T] = unit(t, terminal = false, children :+ node)
+	def :+(node: Node[T]): Node[T] = unit(t, terminal = isTerminal, children :+ node)
 
 	/**
 		* Method to add the given x-value to the children of this Node.
