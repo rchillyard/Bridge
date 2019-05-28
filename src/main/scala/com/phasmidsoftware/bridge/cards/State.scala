@@ -10,17 +10,19 @@ import scala.language.postfixOps
 	* The state must be consistent, which is to say that the deal is the result of playing all of the previous tricks AND
 	* the current (possibly partial) trick.
 	*
-	* @param deal  the Deal.
+	* @param whist the whist game that is being played.
 	* @param trick the Trick.
 	*/
-case class State(deal: Deal, trick: Trick, tricks: Tricks) extends Outputable[Unit] with Validatable {
+case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[Unit] with Validatable {
 
 	/**
 		* Initialization: just checking that this State is consistent.
 		*
 		* TODO remove this check.
 		*/
-	if (!isConsistent) System.err.println(s"state not consistent ${deal.cards}, $deal: $trick")
+	if (!isConsistent) System.err.println(s"state not consistent ${whist.deal.cards}, ${whist.deal}: $trick")
+
+	val deal: Deal = whist.deal
 
 	/**
 		* Method to enumerate all of the possible states that could be children of the Node enclosing this State.
@@ -30,12 +32,14 @@ case class State(deal: Deal, trick: Trick, tricks: Tricks) extends Outputable[Un
 	def enumeratePlays: Seq[State] = _enumeratePlays
 
 	//	TODO make private
-	lazy val enumerateFollows: Seq[State] =
-		Tree.makeStates(deal, tricks, for (p <- deal.hands(trick.next).choosePlays(trick)) yield trick :+ p)
+	lazy val enumerateFollows: Seq[State] = trick.next match {
+		case Some(t) => Tree.makeStates(whist, tricks, for (p <- deal.hands(t).choosePlays(trick)) yield trick :+ p)
+		case None => throw CardException(s"State: $this cannot be followed")
+	}
 
 	//	TODO make private
 	def enumerateLeads(leader: Int, index: Int): Seq[State] =
-		Tree.makeStates(deal, tricks, for (p <- chooseLead(leader)) yield Trick(index, Seq(p), leader, p.suit))
+		Tree.makeStates(whist, tricks, for (p <- chooseLead(leader)) yield Trick(index, Seq(p)))
 
 	// TODO make private
 	def chooseLead(leader: Int): Seq[CardPlay] = deal.hands(leader).longestSuit.choosePlays(deal, leader, FourthBest)
@@ -46,7 +50,7 @@ case class State(deal: Deal, trick: Trick, tricks: Tricks) extends Outputable[Un
 		* @param t the next Trick.
 		* @return a new consistent State based on deal and t.
 		*/
-	def next(t: Trick): State = State.create(deal, t, tricks)
+	def next(t: Trick): State = State.create(whist, t, tricks)
 
 	/**
 		* @return true if the number of cards played according to the trick plus the number of cares remaining in the deal equals 52
@@ -65,7 +69,7 @@ case class State(deal: Deal, trick: Trick, tricks: Tricks) extends Outputable[Un
 		*
 		* @return
 		*/
-	lazy val cardsPlayed: Int = trick.index * 4 + trick.size
+	lazy val cardsPlayed: Int = trick.index * Deal.CardsPerTrick + trick.size
 
 	/**
 		* @return the fitness of this State rounded to the nearest 0.1
@@ -82,40 +86,46 @@ case class State(deal: Deal, trick: Trick, tricks: Tricks) extends Outputable[Un
 		*/
 	def output(output: Output, xo: Option[Unit] = None): Output = trick.output(output, Some(deal)) :+ s" ($fitness)"
 
+	// CONSIDER moving this to Trick
 	private lazy val _enumeratePlays = trick.winner match {
-		case Some(winner) => enumerateLeads(winner, trick.index + 1)
-		case None => enumerateFollows
+		case Some(winner) =>
+			enumerateLeads(winner, trick.index + 1)
+		case None =>
+			if (trick.started)
+				enumerateFollows
+			else
+				enumerateLeads(whist.openingLeader, trick.index + 1)
 	}
 
 	private lazy val _validate = trick.plays.map(_.validate).forall(_ == true)
 
-	private lazy val _isConsistent = cardsPlayed + deal.cards == 52 // && validate
+	// TODO fix this back as it was
+	private lazy val _isConsistent = true // cardsPlayed + deal.cards == 52 // && validate
 }
 
 object State {
 	/**
 		* Method to create an initial state based on a deal.
 		*
-		* TODO we need a better representation of a non-trick, for example with a non-suit defined.
-		*
-		* @param deal the Deal of the new State.
-		* @return a new State based on the Deal without any tricks having been played.
+		* @param whist the game we are playing.
+		* @return a new State based on the game, without any tricks having been played.
 		*/
-	def apply(deal: Deal, trick: Trick): State = apply(deal, trick, Tricks.zero.increment(trick))
+	def apply(whist: Whist, trick: Trick): State = apply(whist, trick, Tricks.zero.increment(trick))
 
 	/**
 		* Method to create an initial state based on a deal.
 		*
-		* TODO we need a better representation of a non-trick, for example with a non-suit defined.
-		*
-		* @param deal the Deal of the new State.
+		* @param whist the Deal of the new State.
 		* @return a new State based on the Deal without any tricks having been played.
 		*/
-	def apply(deal: Deal): State = apply(deal, Trick(0, Nil, 0, Spades))
+	def apply(whist: Whist): State = apply(whist, Trick(0, Nil))
 
-	def create(deal: Deal, trick: Trick, tricks: Tricks): State =
-		if (trick.isComplete) State(deal.play(trick.plays.last).quit, trick, tricks.increment(trick))
-		else State(deal.play(trick.plays.last), trick, tricks)
+	def create(whist: Whist, trick: Trick, tricks: Tricks): State =
+		if (trick.isComplete) State(whist.play(trick.plays.last).quit, trick, tricks.increment(trick))
+		else State(whist.play(trick.plays.last), trick, tricks)
+
+	//	if (trick.isComplete) State(deal.play(trick.plays.last).quit, trick, tricks.increment(trick))
+	//	else State(deal.play(trick.plays.last), trick, tricks)
 
 	implicit object StateFitness extends Fitness[State] {
 		/**

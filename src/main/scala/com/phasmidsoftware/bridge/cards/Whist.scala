@@ -4,6 +4,52 @@ import com.phasmidsoftware.output.{Output, Outputable}
 
 import scala.language.implicitConversions
 
+case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Quittable[Whist] {
+	/**
+		* Play a card from this Playable object.
+		*
+		* @param cardPlay the card play.
+		* @return a new Playable.
+		*/
+	def play(cardPlay: CardPlay): Whist = Whist(deal.play(cardPlay), openingLeader)
+
+	/**
+		* Create the initial state for this Whist game.
+		*
+		* @return a State using deal and openingLeader
+		*/
+	def createState: State = State(this)
+
+	/**
+		* Solve this Whist game as a double-dummy problem where one side or the other (depending on directionNS)
+		* attempts to reach a total of tricks. As soon as our protagonists have reached the trick total, all expansion will cease.
+		* When the opponents have made it impossible for the protagonists to reach said trick total, all expansion will cease.
+		*
+		* FIXME at present, when opponents exceed complementary trick total, we don't terminate, we merely suppress further expansion.
+		*
+		* @param tricks      the number of tricks required.
+		* @param directionNS if true then the direction we care about is NS else EW.
+		* @return a Boolean which is true if the number of tricks are taken by the given direction.
+		*/
+	def analyzeDoubleDummy(tricks: Int, directionNS: Boolean): Boolean = {
+		val tree = Tree(this)
+		val node = if (directionNS) tree.enumerateNoTrumpPlaysNS(tricks) else tree.enumerateNoTrumpPlaysEW(tricks)
+		//		node.depthFirstTraverse foreach (	s => println(s"${s.trick} ${s.tricks}") )
+		node.done
+	}
+
+	/**
+		* Method to enact the pending promotions on this Quittable.
+		*
+		* @return an eagerly promoted Whist game.
+		*/
+	def quit: Whist = Whist(deal.quit, openingLeader)
+}
+
+object Whist {
+
+}
+
 /**
 	* A (non-empty) sequence of cards.
 	*
@@ -90,7 +136,7 @@ object Sequence {
 	/**
 		* @return true if the top card of the sequence with the given priority is at least a ten.
 		*/
-	def isHonor(priority: Int): Boolean = priority <= 4
+	def isHonor(priority: Int): Boolean = priority <= Rank.honorPriority
 
 	/**
 		* Method to compare two priorities.
@@ -113,12 +159,11 @@ object Sequence {
 	implicit object SequenceOrdering extends Ordering[Sequence] {
 		override def compare(x: Sequence, y: Sequence): Int = x.priority - y.priority
 	}
-
 }
 
 trait Quittable[X] {
 	/**
-		* Method to enact the pending promotions on this Holding.
+		* Method to enact the pending promotions on this Quittable.
 		*
 		* @return an eagerly promoted X.
 		*/
@@ -175,18 +220,23 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 		* @param trick the current state of this trick (i.e. the prior plays).
 		* @return a sequence of all possible plays, starting with the ones most suited to the appropriate strategy.
 		*/
-	def choosePlays(deal: Deal, hand: Int, trick: Trick): Seq[CardPlay] = if (suit == trick.suit) {
-		val strategy: Strategy =
-			trick.size match {
-				case 0 => if (hasHonorSequence) LeadHigh else FourthBest
-				case 1 => if (trick.isHonorLed || realSequences.nonEmpty) Cover else Duck
-				case 2 => Finesse
-				case 3 => WinIt
-				case x => throw CardException(s"too many prior plays: $x")
-			}
+	def choosePlays(deal: Deal, hand: Int, trick: Trick): Seq[CardPlay] = {
+		def suitMatches(x: Strategy) = trick.suit match {
+			case Some(`suit`) => x;
+			case _ => Discard
+		}
+
+		val strategy: Strategy = trick.size match {
+			case 0 => if (hasHonorSequence) LeadHigh else FourthBest
+			case 1 => suitMatches(if (trick.isHonorLed || realSequences.nonEmpty) Cover else Duck)
+			case 2 => suitMatches(Finesse)
+			case 3 => suitMatches(WinIt)
+			case x => throw CardException(s"too many prior plays: $x")
+		}
+
 		choosePlays(deal, hand, strategy)
 	}
-	else throw CardException(s"Holding.choosePlays logic error: trick suit ${trick.suit} does not match this suit $suit")
+
 
 	/**
 		* For now, we ignore strategy which is only used to ensure that we try the likely more successful card play first.
@@ -262,7 +312,7 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 		Holding(ss.foldLeft[Seq[Sequence]](Nil)((r, s) => s.merge(r)), suit, Nil)
 	}
 
-	private lazy val hasHonorSequence: Boolean = realSequences exists (_.priority < 4)
+	private lazy val hasHonorSequence: Boolean = realSequences exists (_.isHonor)
 
 	private lazy val realSequences = sequences filter (_.cards.lengthCompare(1) > 0)
 
@@ -365,24 +415,30 @@ case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Ou
 		* @return a sequence of card plays.
 		*/
 	def discard(trick: Trick): Seq[CardPlay] = {
+		def suitsMatch(k: Suit) = trick.suit match {
+			case Some(`k`) => true;
+			case _ => false
+		}
 		for {
 			// NOTE: first get the holdings from the other suits in order of length
-			h <- holdings.flatMap { case (k, v) => if (k != trick.suit) Some(v) else None }.toSeq.sortWith(_.length < _.length)
+			h <- holdings.flatMap { case (k, v) => if (suitsMatch(k)) None else Some(v) }.toSeq.sortWith(_.length < _.length)
 			ps <- h.choosePlays(deal, index, Duck)
 		} yield ps
 	}
 
 	/**
-		* Choose the plays for this Hand, based on the prior plays.
+		* Choose the plays for this Hand, based on the prior plays of the given trick.
 		*
 		* @param trick the prior plays to the current trick.
 		* @return a Seq[CardPlay].
 		*/
-	def choosePlays(trick: Trick): Seq[CardPlay] = {
-		val holding = holdings(trick.suit)
+	def choosePlays(trick: Trick): Seq[CardPlay] =
+		if (trick.started) {
+			val holding = holdings(trick.suit.get)
 		if (holding.isVoid) discard(trick)
 		else holding.choosePlays(deal, index, trick)
 	}
+		else throw CardException("choosePlays called with empty trick")
 
 	/**
 		* Method to get the count of the cards in this Hand.
@@ -486,7 +542,7 @@ object Hand {
 
 	def next(index: Int): Int = next(index, 1)
 
-	def next(index: Int, step: Int): Int = (index + step) % 4
+	def next(index: Int, step: Int): Int = (index + step) % Deal.HandsPerDeal
 }
 
 trait Strategy {
@@ -519,6 +575,8 @@ case object WinIt extends BaseStrategy(true, false, false)
 case object Duck extends BaseStrategy(false, false, false)
 
 case object Finesse extends BaseStrategy(false, false, true)
+
+case object Discard extends BaseStrategy(false, false, false)
 
 trait Playable[X] {
 	/**

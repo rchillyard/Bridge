@@ -185,6 +185,11 @@ object Rank {
 
 	def fromPriority(priority: Int): Rank = apply(14 - priority)
 
+	/**
+		* The priority of a Ten: 4
+		*/
+	val honorPriority: Int = Ten.priority
+
 	private val spotR = """(\d\d?)""".r
 	private val honorR = """([AKQJT])""".r
 }

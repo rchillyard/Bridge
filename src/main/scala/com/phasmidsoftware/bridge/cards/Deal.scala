@@ -5,6 +5,14 @@ import com.phasmidsoftware.output.{Output, Outputable}
 
 import scala.language.postfixOps
 
+/**
+	* Class to describe a Deal.
+	*
+	* TODO refactor so that there is a Whist class with parameters Deal, openingLeader.
+	*
+	* @param title    the title of this Deal.
+	* @param holdings the holdings of the four Hands of this Deal.
+	*/
 case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends Outputable[Unit] with Quittable[Deal] with Playable[Deal] with Evaluatable {
 
 	def hands: Seq[Hand] = (for ((i, hs) <- holdings) yield Hand(this, i, hs)).toSeq
@@ -39,7 +47,7 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
 		*/
 	def play(cardPlay: CardPlay): Deal = Deal(title, hands map (_.play(cardPlay)))
 
-	def handsInSequence(leader: Int): Seq[Hand] = for (i <- leader to leader + 3) yield hands(i % 4)
+	def handsInSequence(leader: Int): Seq[Hand] = for (i <- leader to leader + 3) yield hands(i % Deal.HandsPerDeal)
 
 	/**
 		* Evaluate the N and S hands heuristically.
@@ -47,6 +55,7 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
 		* @return a number which corresponds to the trick-taking ability of the N/S hands.
 		*/
 	def evaluate: Double = _evaluate
+
 
 	/**
 		* @return the number of cards remaining in this Deal.
@@ -80,12 +89,51 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
 }
 
 object Deal {
-	val CardsPerHand = 13
+	/**
+		* The number of Cards per Hand: 13
+		*/
+	val CardsPerHand: Int = 13
+
+	/**
+		* The number of Hands per Deal: 4
+		*/
+	val HandsPerDeal: Int = 4
+
+	/**
+		* The number of Cards per Deal: 52
+		*/
+	val CardsPerDeal: Int = CardsPerHand * HandsPerDeal
+
+	/**
+		* The number of Tricks per Deal: 13
+		*/
+	val TricksPerDeal: Int = 13
+
+	/**
+		* The number of Cards per Trick: 4
+		*/
+	val CardsPerTrick: Int = 4
 
 	def apply(title: String, hands: Seq[Hand]): Deal = apply(title, (for (h <- hands) yield h.index -> h.holdings).toMap)
 
+	/**
+		* Construct a Deal from a sequence of Cards.
+		*
+		* TODO this should not need openingLeader.
+		*
+		* @param title a title for the new Deal.
+		* @param cs    the cards dealt in sequence.
+		* @return a new Deal.
+		*/
 	def fromCards(title: String, cs: Seq[Card]): Deal = new Deal(title, (for ((cs, index) <- cs.grouped(CardsPerHand).zipWithIndex) yield index -> Hand.createHoldings(cs)).toMap)
 
+	/**
+		* Construct a Deal from a sequence of Cards.
+		*
+		* @param title a title for the Deal.
+		* @param seed  a seed for the random number generator,
+		* @return
+		*/
 	def apply(title: String, seed: Long = System.nanoTime()): Deal = {
 		val newDeck: Seq[Card] = for (s <- Seq(Spades, Hearts, Diamonds, Clubs); r <- Seq(Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)) yield Card(s, r)
 		val shuffler = Shuffle[Card](seed)
@@ -157,16 +205,23 @@ case class CardPlay(deal: Deal, hand: Int, suit: Suit, priority: Int) extends Or
 	*
 	* NOTE: we extend Outputable[Deal] because that gives the type of the second (optional) parameter to the output method.
 	*
+	* TODO move Trick into Whist
+	*
 	* @param index  the position of this trick in sequence, starting with zero.
 	* @param plays  the sequence of plays (in sequence).
-	* @param leader the index of the leader to the suit.
-	* @param suit   the suit led.
 	*/
-case class Trick(index: Int, plays: Seq[CardPlay], leader: Int, suit: Suit) extends Outputable[Deal] with Evaluatable {
+case class Trick(index: Int, plays: Seq[CardPlay]) extends Outputable[Deal] with Evaluatable {
+
+	val started: Boolean = plays.nonEmpty
+
+	lazy val suit: Option[Suit] = plays.headOption.map(_.suit)
+
+	lazy val leader: Option[Int] = plays.headOption.map(_.hand)
+
 	/**
 		* @return the index of the hand next to play in this trick.
 		*/
-	lazy val next: Int = Hand.next(leader, size)
+	lazy val next: Option[Int] = leader.map(Hand.next(_, size))
 
 	/**
 		* @return the number of cards currently in this Trick.
@@ -176,7 +231,7 @@ case class Trick(index: Int, plays: Seq[CardPlay], leader: Int, suit: Suit) exte
 	/**
 		* @return true if this trick is complete (size == 4).
 		*/
-	lazy val isComplete: Boolean = size == 4
+	lazy val isComplete: Boolean = size == Deal.CardsPerTrick
 
 	/**
 		* @return (optionally) the card play that was led to start the trick.
@@ -187,7 +242,7 @@ case class Trick(index: Int, plays: Seq[CardPlay], leader: Int, suit: Suit) exte
 		* @return the most recent play of this Trick.
 		* @throws CardException if this Trick has no plays
 		*/
-	lazy val last: CardPlay = if (plays.nonEmpty) plays.last else throw CardException(s"Trick: logic error: empty trick")
+	lazy val last: CardPlay = if (plays.nonEmpty) plays.last else throw CardException(s"Trick: last: empty trick")
 
 	/**
 		* Add to the current Trick.
@@ -195,7 +250,7 @@ case class Trick(index: Int, plays: Seq[CardPlay], leader: Int, suit: Suit) exte
 		* @param play a card play which is to be added to the sequence of card plays.
 		* @return a new Trick, with one more card play than this.
 		*/
-	def :+(play: CardPlay): Trick = Trick(if (isComplete) index + 1 else index, plays :+ play, leader, suit)
+	def :+(play: CardPlay): Trick = Trick(if (isComplete) index + 1 else index, plays :+ play)
 
 	/**
 		* @return true if the first card in this trick is an honor.
@@ -212,10 +267,10 @@ case class Trick(index: Int, plays: Seq[CardPlay], leader: Int, suit: Suit) exte
 		*/
 	def evaluate: Double = _evaluate
 
-	override def toString: String = s"T$index lead=$leader: $suit ${plays.mkString("{", ", ", "}")}"
+	override def toString: String = s"T$index ${plays.mkString("{", ", ", "}")}"
 
 	lazy val winner: Option[Int] =
-		if (isComplete) Some(plays.maxBy(p => if (p.suit == suit) Ace.priority - p.priority else 0).hand)
+		if (isComplete) Some(plays.maxBy(p => if (p.suit == suit.get) Ace.priority - p.priority else 0).hand)
 		else None
 
 	lazy val value: Option[Double] = winner map (x => if (x % 2 == 0) 1 else 0)
@@ -227,7 +282,7 @@ case class Trick(index: Int, plays: Seq[CardPlay], leader: Int, suit: Suit) exte
 
 object Trick {
 
-	def create(index: Int, leader: Int, suit: Suit, plays: CardPlay*) = apply(index, plays, leader, suit)
+	def create(index: Int, leader: Int, suit: Suit, plays: CardPlay*) = apply(index, plays)
 
 	def create(index: Int, leader: Int, suit: Suit): Trick = create(index, leader, suit)
 }

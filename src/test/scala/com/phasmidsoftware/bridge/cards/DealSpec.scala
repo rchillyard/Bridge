@@ -17,7 +17,7 @@ class DealSpec extends FlatSpec with Matchers {
 		target.west.holdings(Clubs) shouldBe Holding(Clubs, Nine, Eight, Four)
 	}
 
-	it should "applyStringSeed" in {
+	it should "applyString" in {
 		val target = Deal("Test random")
 		val output = target.output(Output(new PrintWriter(System.out)))
 		output.close()
@@ -106,4 +106,18 @@ class DealSpec extends FlatSpec with Matchers {
 		quitted.cards shouldBe 48
 	}
 
+	// This is part of Whist behavior
+	it should "analyzeDoubleDummy2" in {
+		val target = Deal("test", 2L)
+		target.output(Output(new PrintWriter(System.out))).close()
+		val whist = Whist(target, 3)
+		whist.analyzeDoubleDummy(9, directionNS = true) shouldBe true
+	}
+	// This is part of Whist behavior
+	ignore should "analyzeDoubleDummy0" in {
+		val target = Deal("test", 0L)
+		target.output(Output(new PrintWriter(System.out))).close()
+		val whist = Whist(target, 0)
+		whist.analyzeDoubleDummy(9, directionNS = false) shouldBe true
+	}
 }

@@ -5,6 +5,12 @@ import com.phasmidsoftware.output.{Output, Outputable}
 
 import scala.language.postfixOps
 
+/**
+	* This class represents a tree of State nodes.
+	* Each State represents a sequence of card plays and current score of NS vs EW tricks.
+	*
+	* @param root the root node of the tree.
+	*/
 case class Tree(root: StateNode) extends Outputable[Unit] {
 
 	/**
@@ -13,9 +19,9 @@ case class Tree(root: StateNode) extends Outputable[Unit] {
 		* @param levels the number of levels to enumerate.
 		* @return a StateNode.
 		*/
-	def enumeratePlays(levels: Int = 52)(success: State => Boolean, failure: State => Boolean): StateNode = {
+	def enumeratePlays(levels: Int = Deal.CardsPerDeal)(success: State => Boolean, failure: State => Boolean): StateNode = {
 		trait SuccessorsState extends Successors[State] {
-			def successors(t: State): Option[Seq[State]] = if (success(t)) None else if (failure(t)) Some(Nil) else Some(t.enumeratePlays)
+			def successors(state: State): Option[Seq[State]] = if (success(state)) None else if (failure(state)) Some(Nil) else Some(state.enumeratePlays)
 		}
 		implicit object SuccessorsState extends SuccessorsState
 
@@ -30,17 +36,55 @@ case class Tree(root: StateNode) extends Outputable[Unit] {
 		*
 		* @return a StateNode.
 		*/
-	def enumerateNoTrumpPlays(nsTricks: Int): StateNode = enumeratePlays()(_.tricks.ns >= nsTricks, _.tricks.ew > 13 - nsTricks)
+	def enumerateNoTrumpPlaysNS(nsTricks: Int): StateNode = enumeratePlays()(_.tricks.ns >= nsTricks, _.tricks.ew > Deal.TricksPerDeal - nsTricks)
 
+	/**
+		* Choose the plays for this Deal, by running enumeratePlays for 52 levels, and terminating when NS have nsTricks or when EW have more than 13-nsTricks.
+		*
+		* @return a StateNode.
+		*/
+	def enumerateNoTrumpPlaysEW(ewTricks: Int): StateNode = enumeratePlays()(_.tricks.ew >= ewTricks, _.tricks.ns > Deal.TricksPerDeal - ewTricks)
+
+	/**
+		* Output this Tree to the given Output.
+		*
+		* @param output the output to append to.
+		* @param xo     an optional value of X, defaulting to None.
+		* @return a new instance of Output.
+		*/
 	def output(output: Output, xo: Option[Unit] = None): Output = root.output(output)
 }
 
 object Tree {
+	/**
+		* Method to create a Tree from a State.
+		*
+		* @param state the given State.
+		* @return a new Tree based on the state as its root.
+		*/
 	def apply(state: State): Tree = apply(StateNode(state, done = false, Nil))
 
-	def apply(deal: Deal): Tree = apply(State(deal, Trick(0, Nil, 0, Spades), Tricks.zero))
+	/**
+		* Method to create a Tree from a given Whist.
+		*
+		* @param whist the game.
+		* @return a new Tree based on the given game.
+		*/
+	def apply(whist: Whist): Tree = apply(State(whist))
 
-	def makeStates(d: Deal, tricks: Tricks, ts: Seq[Trick]): Seq[State] = ts.map(t => State.create(d, t, tricks)).filter(_.fitness > 6)
+	/**
+		* Method to make a list of States corresponding to the given set of Trick objects.
+		*
+		* CONSIDER moving this to be an instance method of Whist.
+		*
+		* NOTE: this originally had a filter that removed States that did not have a high fitness.
+		*
+		* @param whist  the game being played.
+		* @param tricks the current value of Tricks.
+		* @param ts     a sequence of Trick instances.
+		* @return a sequence of State objects corresponding to the values of ts.
+		*/
+	def makeStates(whist: Whist, tricks: Tricks, ts: Seq[Trick]): Seq[State] = ts.map(t => State.create(whist, t, tricks))
 }
 
 /**

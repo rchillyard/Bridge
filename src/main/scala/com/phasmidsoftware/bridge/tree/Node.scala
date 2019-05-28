@@ -2,6 +2,11 @@ package com.phasmidsoftware.bridge.tree
 
 import com.phasmidsoftware.output.{Output, Outputable}
 
+/**
+	* This trait defines the behavior of a node in a tree.
+	*
+	* @tparam T the underlying type of the node.
+	*/
 trait Node[T] extends Outputable[Unit] {
 
 	/**
@@ -44,7 +49,7 @@ trait Node[T] extends Outputable[Unit] {
 		else {
 			val node = this.asInstanceOf[Node[U]]
 
-			def replaceExpandedChild(r: Node[U], n: Node[U]): Node[U] = if (r.isTerminal) r else r.replace(n, n.expand(levels - 1))
+			def replaceExpandedChild(r: Node[U], n: Node[U]) = if (r.isTerminal) r else r.replace(n, n.expand(levels - 1))
 
 			implicitly[Successors[U]].successors(t) match {
 				case Some(us) =>
