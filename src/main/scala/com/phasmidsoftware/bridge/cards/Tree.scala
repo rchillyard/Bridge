@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019. Phasmid Software
+ */
+
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.tree.{FitNode, Node, NodeException, Successors}
@@ -14,12 +18,12 @@ import scala.language.postfixOps
 case class Tree(root: StateNode) extends Outputable[Unit] {
 
 	/**
-		* Choose the plays for this Deal, based on the prior plays.
+		* Expand the states of this Tree.
 		*
 		* @param levels the number of levels to enumerate.
 		* @return a StateNode.
 		*/
-	def enumeratePlays(levels: Int = Deal.CardsPerDeal)(success: State => Boolean, failure: State => Boolean): StateNode = {
+	def expand(levels: Int = Deal.CardsPerDeal)(success: State => Boolean, failure: State => Boolean): StateNode = {
 		trait SuccessorsState extends Successors[State] {
 			def successors(state: State): Option[Seq[State]] = if (success(state)) None else if (failure(state)) Some(Nil) else Some(state.enumeratePlays)
 		}
@@ -32,18 +36,18 @@ case class Tree(root: StateNode) extends Outputable[Unit] {
 	}
 
 	/**
-		* Choose the plays for this Deal, by running enumeratePlays for 52 levels, and terminating when NS have nsTricks or when EW have more than 13-nsTricks.
+		* Choose the plays for this Deal, by running expand for 52 levels, and terminating when NS have nsTricks or when EW have more than 13-nsTricks.
 		*
 		* @return a StateNode.
 		*/
-	def enumerateNoTrumpPlaysNS(nsTricks: Int): StateNode = enumeratePlays()(_.tricks.ns >= nsTricks, _.tricks.ew > Deal.TricksPerDeal - nsTricks)
+	def enumerateNoTrumpPlaysNS(nsTricks: Int): StateNode = expand()(_.tricks.ns >= nsTricks, _.tricks.ew > Deal.TricksPerDeal - nsTricks)
 
 	/**
-		* Choose the plays for this Deal, by running enumeratePlays for 52 levels, and terminating when NS have nsTricks or when EW have more than 13-nsTricks.
+		* Choose the plays for this Deal, by running expand for 52 levels, and terminating when NS have nsTricks or when EW have more than 13-nsTricks.
 		*
 		* @return a StateNode.
 		*/
-	def enumerateNoTrumpPlaysEW(ewTricks: Int): StateNode = enumeratePlays()(_.tricks.ew >= ewTricks, _.tricks.ns > Deal.TricksPerDeal - ewTricks)
+	def enumerateNoTrumpPlaysEW(ewTricks: Int): StateNode = expand()(_.tricks.ew >= ewTricks, _.tricks.ns > Deal.TricksPerDeal - ewTricks)
 
 	/**
 		* Output this Tree to the given Output.

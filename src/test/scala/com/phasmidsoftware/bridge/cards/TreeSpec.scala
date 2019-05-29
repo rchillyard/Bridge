@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019. Phasmid Software
+ */
+
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.output.{MockWriter, Output}
@@ -60,7 +64,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		val whist = Whist(deal, 0)
 		val hands = deal.hands
 		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
-		val trick = Trick.create(0, 0, Spades, CardPlay(deal, 0, Spades, priority1S), CardPlay(deal, 1, Spades, priority2S), CardPlay(deal, 2, Spades, priority3S), CardPlay(deal, 3, Spades, priority4S))
+		val trick = Trick.create(0, CardPlay(deal, 0, Spades, priority1S), CardPlay(deal, 1, Spades, priority2S), CardPlay(deal, 2, Spades, priority3S), CardPlay(deal, 3, Spades, priority4S))
 		// TODO need to sort this out.
 		val deal2 = deal.playAll(trick)
 		trick.winner match {
@@ -90,13 +94,13 @@ class TreeSpec extends FlatSpec with Matchers {
 		ss.last.trick.toString shouldBe "T0 {Play: 0 SK, Play: 1 S4}"
 	}
 
-	it should "enumeratePlays 1" in {
+	it should "expand 1" in {
 		val deal = Deal("test", 2L)
 		val whist = Whist(deal, 0)
 		val target = Tree(whist)
 		def alwaysFalse(n: State): Boolean = false
 
-		val result = target.enumeratePlays(1)(alwaysFalse, alwaysFalse)
+		val result = target.expand(1)(alwaysFalse, alwaysFalse)
 		result.children.size shouldBe 4
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
@@ -106,14 +110,14 @@ class TreeSpec extends FlatSpec with Matchers {
 		traverse foreach { s => println(s"${s.trick} ${s.tricks}") }
 	}
 
-	it should "enumeratePlays 2" in {
+	it should "expand 2" in {
 		val deal = Deal("test", 2L)
 		val whist = Whist(deal, 0)
 		val target = Tree(whist)
 
 		def alwaysFalse(n: State): Boolean = false
 
-		val result = target.enumeratePlays(2)(alwaysFalse, alwaysFalse)
+		val result = target.expand(2)(alwaysFalse, alwaysFalse)
 		result.children.size shouldBe 4
 		val states = result.depthFirstTraverse
 		states.size shouldBe 17
@@ -123,14 +127,14 @@ class TreeSpec extends FlatSpec with Matchers {
 		writer.spilled shouldBe 294
 	}
 
-	it should "enumeratePlays 3" in {
+	it should "expand 3" in {
 		val deal = Deal("test", 2L)
 		val whist = Whist(deal, 0)
 		val target = Tree(whist)
 
 		def alwaysFalse(n: State): Boolean = false
 
-		val result = target.enumeratePlays(3)(alwaysFalse, alwaysFalse)
+		val result = target.expand(3)(alwaysFalse, alwaysFalse)
 		result.children.size shouldBe 4
 		result.depthFirstTraverse.size shouldBe 29
 		val writer = MockWriter(8192)
@@ -138,14 +142,14 @@ class TreeSpec extends FlatSpec with Matchers {
 		writer.spilled shouldBe 546
 	}
 
-	it should "enumeratePlays 4" in {
+	it should "expand 4" in {
 		val deal = Deal("test", 2L)
 		val whist = Whist(deal, 0)
 		val target = Tree(whist)
 
 		def alwaysFalse(n: State): Boolean = false
 
-		val result = target.enumeratePlays(4)(alwaysFalse, alwaysFalse)
+		val result = target.expand(4)(alwaysFalse, alwaysFalse)
 		result.children.size shouldBe 4
 		val writer = MockWriter(8192)
 		result.output(Output(writer)).close()
@@ -153,14 +157,14 @@ class TreeSpec extends FlatSpec with Matchers {
 		result.depthFirstTraverse.size shouldBe 53
 	}
 
-	it should "enumeratePlays 5" in {
+	it should "expand 5" in {
 		val deal = Deal("test", 2L)
 		val whist = Whist(deal, 0)
 		val target = Tree(whist)
 
 		def alwaysFalse(n: State): Boolean = false
 
-		val result = target.enumeratePlays(5)(alwaysFalse, alwaysFalse)
+		val result = target.expand(5)(alwaysFalse, alwaysFalse)
 		result.children.size shouldBe 4
 		val writer = MockWriter(16384)
 		result.output(Output(writer)).close()
@@ -168,7 +172,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		result.depthFirstTraverse.size shouldBe 125
 	}
 
-	it should "enumeratePlays 8" in {
+	it should "expand 8" in {
 		val deal = Deal("test", 2L)
 		val whist = Whist(deal, 0)
 		val target = Tree(whist)
@@ -176,12 +180,12 @@ class TreeSpec extends FlatSpec with Matchers {
 
 		def failure(s: State): Boolean = s.tricks.ew >= 1
 
-		val result = target.enumeratePlays(9)(success, failure)
+		val result = target.expand(9)(success, failure)
 		val states: Seq[State] = result.depthFirstTraverse
 		states.size shouldBe 21
 	}
 
-	it should "enumeratePlays 9" in {
+	it should "expand 9" in {
 		val deal = Deal("test", 2L)
 		val whist = Whist(deal, 0)
 		val target = Tree(whist)
@@ -189,7 +193,7 @@ class TreeSpec extends FlatSpec with Matchers {
 
 		def failure(s: State): Boolean = s.tricks.ew >= 1
 
-		val result = target.enumeratePlays(13)(success, failure)
+		val result = target.expand(13)(success, failure)
 		val states: Seq[State] = result.depthFirstTraverse
 		states.size shouldBe 55
 		// FIXME

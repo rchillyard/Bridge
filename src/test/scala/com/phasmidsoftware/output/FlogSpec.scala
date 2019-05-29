@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019. Phasmid Software
+ */
+
 package com.phasmidsoftware.output
 
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}

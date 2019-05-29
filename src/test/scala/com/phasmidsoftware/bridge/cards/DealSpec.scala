@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019. Phasmid Software
+ */
+
 package com.phasmidsoftware.bridge.cards
 
 import java.io.PrintWriter
@@ -6,6 +10,38 @@ import com.phasmidsoftware.output.{MockWriter, Output}
 import org.scalatest.{FlatSpec, Matchers}
 
 class DealSpec extends FlatSpec with Matchers {
+
+	behavior of "Trick"
+
+	it should "construct" in {
+		val index = 0
+		val target = Trick(index, Nil)
+		target.index shouldBe index
+		target.plays shouldBe Nil
+		target.started shouldBe false
+		target.suit shouldBe None
+		target.winner shouldBe None
+		target.isComplete shouldBe false
+		target.evaluate shouldBe 0.5
+		target.isHonorLed shouldBe false
+		an[CardException] should be thrownBy target.last
+	}
+
+	it should "append" in {
+		val index = 0
+		val nothing = Trick(index, Nil)
+		val deal = Deal("test", 0L)
+		val play = CardPlay(deal, 0, Spades, 0)
+		val target = nothing :+ play
+		target.plays shouldBe Seq(play)
+		target.started shouldBe true
+		target.suit shouldBe Some(Spades)
+		target.winner shouldBe None
+		target.isComplete shouldBe false
+		target.evaluate shouldBe 0.5
+		target.isHonorLed shouldBe true
+		target.last shouldBe play
+	}
 
 	behavior of "Deal"
 
@@ -24,7 +60,8 @@ class DealSpec extends FlatSpec with Matchers {
 	}
 
 	it should "fromCards" in {
-		val newDeck: Seq[Card] = for (s <- Seq(Spades, Hearts, Diamonds, Clubs); r <- Seq(Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)) yield Card(s, r)
+		val newDeck: Seq[Card] =
+			for (s <- Seq(Spades, Hearts, Diamonds, Clubs); r <- Seq(Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)) yield Card(s, r)
 		val target = Deal.fromCards("test", newDeck)
 		target.north.holdings(Spades) shouldBe Holding(Spades, Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)
 		target.east.holdings(Hearts) shouldBe Holding(Hearts, Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)
@@ -86,7 +123,8 @@ class DealSpec extends FlatSpec with Matchers {
 		val hands = target.hands
 		hands.size shouldBe 4
 		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
-		val trick = Trick.create(0, 0, Spades, CardPlay(target, 0, Spades, priority1S), CardPlay(target, 1, Spades, priority2S), CardPlay(target, 2, Spades, priority3S), CardPlay(target, 3, Spades, priority4S))
+		val trick =
+			Trick.create(0, CardPlay(target, 0, Spades, priority1S), CardPlay(target, 1, Spades, priority2S), CardPlay(target, 2, Spades, priority3S), CardPlay(target, 3, Spades, priority4S))
 		val played: Deal = target.playAll(trick)
 		played.cards shouldBe 48
 		val quitted = played.quit
@@ -99,7 +137,8 @@ class DealSpec extends FlatSpec with Matchers {
 		val hands = target.hands
 		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
 
-		val trick = Trick.create(0, 0, Spades, CardPlay(target, 0, Spades, priority1S), CardPlay(target, 1, Spades, priority2S), CardPlay(target, 2, Spades, priority3S), CardPlay(target, 3, Spades, priority4S))
+		val trick =
+			Trick.create(0, CardPlay(target, 0, Spades, priority1S), CardPlay(target, 1, Spades, priority2S), CardPlay(target, 2, Spades, priority3S), CardPlay(target, 3, Spades, priority4S))
 		val played: Deal = target.playAll(trick)
 		played.cards shouldBe 48
 		val quitted = played.quit

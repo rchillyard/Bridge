@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019. Phasmid Software
+ */
+
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.output.{Output, Outputable}
@@ -15,6 +19,10 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
 
 	/**
 		* Create the initial state for this Whist game.
+		*
+		* CONSIDER making this a lazy val.
+		*
+		* NOTE: only used in unit testing.
 		*
 		* @return a State using deal and openingLeader
 		*/
@@ -40,6 +48,8 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
 
 	/**
 		* Method to enact the pending promotions on this Quittable.
+		*
+		* CONSIDER making this a lazy val.
 		*
 		* @return an eagerly promoted Whist game.
 		*/
@@ -355,7 +365,7 @@ object Holding {
 	// CONSIDER merge the two create methods
 	def create(suit: Suit, cards: Seq[Card]): Holding = apply(suit, (cards map (_.rank)).sorted.reverse: _*)
 
-	def create(ranks: Seq[Rank], suit: Suit) = Holding(suit, ranks.sorted.reverse: _*)
+	def create(ranks: Seq[Rank], suit: Suit): Holding = Holding(suit, ranks.sorted.reverse: _*)
 
 	def ranksToString(ranks: Seq[Rank]): String = if (ranks.nonEmpty) ranks.mkString("", "", "") else "-"
 }
@@ -419,6 +429,7 @@ case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Ou
 			case Some(`k`) => true;
 			case _ => false
 		}
+
 		for {
 			// NOTE: first get the holdings from the other suits in order of length
 			h <- holdings.flatMap { case (k, v) => if (suitsMatch(k)) None else Some(v) }.toSeq.sortWith(_.length < _.length)
@@ -435,9 +446,9 @@ case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Ou
 	def choosePlays(trick: Trick): Seq[CardPlay] =
 		if (trick.started) {
 			val holding = holdings(trick.suit.get)
-		if (holding.isVoid) discard(trick)
-		else holding.choosePlays(deal, index, trick)
-	}
+			if (holding.isVoid) discard(trick)
+			else holding.choosePlays(deal, index, trick)
+		}
 		else throw CardException("choosePlays called with empty trick")
 
 	/**

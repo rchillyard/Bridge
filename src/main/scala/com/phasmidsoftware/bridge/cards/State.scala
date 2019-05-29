@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019. Phasmid Software
+ */
+
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.tree.Fitness
@@ -14,15 +18,6 @@ import scala.language.postfixOps
 	* @param trick the Trick.
 	*/
 case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[Unit] with Validatable {
-
-	/**
-		* Initialization: just checking that this State is consistent.
-		*
-		* TODO remove this check.
-		*/
-	if (!isConsistent) System.err.println(s"state not consistent ${whist.deal.cards}, ${whist.deal}: $trick")
-
-	val deal: Deal = whist.deal
 
 	/**
 		* Method to enumerate all of the possible states that could be children of the Node enclosing this State.
@@ -45,12 +40,14 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 	def chooseLead(leader: Int): Seq[CardPlay] = deal.hands(leader).longestSuit.choosePlays(deal, leader, FourthBest)
 
 	/**
+		* NOTE: this is used only in unit tests
+		*
 		* Method to get the next State in sequence.
 		*
-		* @param t the next Trick.
+		* @param trick the next Trick.
 		* @return a new consistent State based on deal and t.
 		*/
-	def next(t: Trick): State = State.create(whist, t, tricks)
+	def next(trick: Trick): State = State.create(whist, trick, tricks)
 
 	/**
 		* @return true if the number of cards played according to the trick plus the number of cares remaining in the deal equals 52
@@ -65,9 +62,14 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 	def validate: Boolean = _validate
 
 	/**
-		* The total number of cards played according to
+		* The deal referenced by this State.
+		*/
+	val deal: Deal = whist.deal
+
+	/**
+		* The total number of cards played at this state of the game.
 		*
-		* @return
+		* @return an Int 0..52
 		*/
 	lazy val cardsPlayed: Int = trick.index * Deal.CardsPerTrick + trick.size
 
@@ -76,10 +78,16 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 		*/
 	lazy val fitness: Double = math.rint(State.StateFitness.fitness(this) * 10) / 10
 
-	override def toString: String = s"State: $trick $fitness ${deal.neatOutput}"
+	/**
+		* Method to yield neat output for a State.
+		*
+		* @return a compact String
+		*/
+	def neatOutput: String = s"State: $trick $fitness ${deal.neatOutput}"
 
 	/**
 		* Invokes output on the trick, passing it Some(deal) and appending the fitness in parentheses.
+		*
 		* @param output the output to append to.
 		* @param xo     an optional value of X, defaulting to None.
 		* @return a new instance of Output.
@@ -97,10 +105,9 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 				enumerateLeads(whist.openingLeader, trick.index + 1)
 	}
 
-	private lazy val _validate = trick.plays.map(_.validate).forall(_ == true)
+	private lazy val _validate: Boolean = trick.plays.forall(_.validate)
 
-	// TODO fix this back as it was
-	private lazy val _isConsistent = true // cardsPlayed + deal.cards == 52 // && validate
+	private lazy val _isConsistent = trick.cardsPlayed + deal.cards == 52 // && validate
 }
 
 object State {
@@ -120,12 +127,26 @@ object State {
 		*/
 	def apply(whist: Whist): State = apply(whist, Trick(0, Nil))
 
+	/**
+		* Method to create a new State based on the outcome of the current trick.
+		* If the current trick is complete then we create a new State based on:
+		* (1) an update of the current game of whist according to the (quitted) trick, and
+		* (2) the new tricks value.
+		* If the current trick is not complete, we simply return a new State based on:
+		* (1) an update of the current game of whist according to the trick, and
+		* (2) the same tricks value.
+		*
+		* @param whist  the current state of the game we are playing.
+		* @param trick  the current trick.
+		* @param tricks the current state of the tricks.
+		* @return a new State with an updated Whist and, potentially, an updated tricks.
+		*/
 	def create(whist: Whist, trick: Trick, tricks: Tricks): State =
-		if (trick.isComplete) State(whist.play(trick.plays.last).quit, trick, tricks.increment(trick))
-		else State(whist.play(trick.plays.last), trick, tricks)
-
-	//	if (trick.isComplete) State(deal.play(trick.plays.last).quit, trick, tricks.increment(trick))
-	//	else State(deal.play(trick.plays.last), trick, tricks)
+		if (trick.started) {
+			if (trick.isComplete) State(whist.play(trick.plays.last).quit, trick, tricks.increment(trick))
+			else State(whist.play(trick.plays.last), trick, tricks)
+		}
+		else throw CardException(s"cannot create a new State based on an empty trick")
 
 	implicit object StateFitness extends Fitness[State] {
 		/**

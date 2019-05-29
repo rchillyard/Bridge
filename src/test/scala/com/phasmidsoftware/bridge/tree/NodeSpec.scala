@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019. Phasmid Software
+ */
+
 package com.phasmidsoftware.bridge.tree
 
 import com.phasmidsoftware.output.{MockWriter, Output}

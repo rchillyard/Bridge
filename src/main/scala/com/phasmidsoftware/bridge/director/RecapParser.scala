@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019. Phasmid Software
+ */
+
 package com.phasmidsoftware.bridge.director
 
 import scala.io.Source
@@ -34,25 +38,30 @@ class RecapParser extends JavaTokenParsers {
 	def playerPlayer: Parser[Player ~ Player] = (player <~"""&""") ~ player
 
 	// XXX player parser yields a Player object and is at least one character that is neither & nor a newline char
-	def player: Parser[Player] = """\s*\w[^\r\n&]*""".r ^^ (s => Player(s.trim))
+	def player: Parser[Player] =
+		"""\s*\w[^\r\n&]*""".r ^^ (s => Player(s.trim))
 
 	// XXX travelers, each terminated by a endOfLine
 	def travelers: Parser[List[Traveler]] = rep(traveler)
 
 	// XXX traveler parser yields a Traveler object and must start with a "T" and end with a blank line. In between is a list of Play objects
-	def traveler: Parser[Traveler] = opt(spacer) ~> "T" ~> spacer ~> (wholeNumber <~ endOfLine) ~ plays <~ (endOfLine | eoi) ^^ { case b ~ ps => Traveler(Try(b.toInt), ps) }
+	def traveler: Parser[Traveler] =
+		opt(spacer) ~> "T" ~> spacer ~> (wholeNumber <~ endOfLine) ~ plays <~ (endOfLine | eoi) ^^ { case b ~ ps => Traveler(Try(b.toInt), ps) }
 
 	// XXX pickups, each terminated by a endOfLine
 	def pickups: Parser[List[Pickup]] = rep(pickup)
 
 	// XXX pickup parser yields a Pickup object and must start with a "P" and end with a blank line. In between is a list of Play objects
-	def pickup: Parser[Pickup] = opt(spacer) ~> "P" ~> spacer ~> wholeNumber ~ (spacer ~> wholeNumber <~ endOfLine) ~ boardResults <~ (endOfLine | eoi) ^^ { case ns ~ ew ~ rs => Pickup(ns.toInt, ew.toInt, rs) }
+	def pickup: Parser[Pickup] =
+		opt(spacer) ~> "P" ~> spacer ~> wholeNumber ~ (spacer ~> wholeNumber <~ endOfLine) ~ boardResults <~ (endOfLine | eoi) ^^
+			{ case ns ~ ew ~ rs => Pickup(ns.toInt, ew.toInt, rs) }
 
 	// XXX plays parser yields a list of Play objects where each play is terminated by a endOfLine.
 	def plays: Parser[List[Play]] = rep(play <~ endOfLine)
 
 	// XXX play parser yields a Play object and must be two integer numbers followed by a result
-	def play: Parser[Play] = (opt(spacer) ~> wholeNumber <~ spacer) ~ (wholeNumber <~ spacer) ~ result ^^ { case n ~ e ~ r => Play(Try(n.toInt), Try(e.toInt), r) }
+	def play: Parser[Play] =
+		(opt(spacer) ~> wholeNumber <~ spacer) ~ (wholeNumber <~ spacer) ~ result ^^ { case n ~ e ~ r => Play(Try(n.toInt), Try(e.toInt), r) }
 
 	// XXX boardResults parser yields a list of BoardResult objects where each result is terminated by a endOfLine.
 	def boardResults: Parser[List[BoardResult]] = rep(boardResult <~ endOfLine)

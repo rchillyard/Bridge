@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019. Phasmid Software
+ */
+
 package com.phasmidsoftware.bridge.tree
 
 import com.phasmidsoftware.output.{Output, Outputable}
@@ -52,6 +56,9 @@ trait Node[T] extends Outputable[Unit] {
 			def replaceExpandedChild(r: Node[U], n: Node[U]) = if (r.isTerminal) r else r.replace(n, n.expand(levels - 1))
 
 			implicitly[Successors[U]].successors(t) match {
+				//  NOTE: this first case is just a short-cut for the situation where successors yields an empty list.
+				//  The other code works fine in all cases, though.
+				case Some(Nil) => Some(node)
 				case Some(us) =>
 					val z = node :+ us
 					Some(z.children.foldLeft(z)(replaceExpandedChild))
@@ -127,7 +134,8 @@ trait Node[T] extends Outputable[Unit] {
 		* @return a copy of this Node, but with node replaced by replacement.
 		*/
 	def replace(x: Node[T], y: Node[T]): Node[T] =
-		if (children contains x) unit(t, y.isTerminal, children.map(n => if (n eq x) y else n))
+		if (x == y) this
+		else if (children contains x) unit(t, y.isTerminal, children.map(n => if (n eq x) y else n))
 		else unit(t, terminal = false, children map (n => n.replace(x, y)))
 
 	/**
@@ -140,6 +148,7 @@ trait Node[T] extends Outputable[Unit] {
 	def replace(x: Node[T], tno: Option[Node[T]]): Node[T] =
 		tno match {
 			case Some(tn) => replace(x, tn)
+			// TODO remove x in the following situation...
 			case None => this
 		}
 

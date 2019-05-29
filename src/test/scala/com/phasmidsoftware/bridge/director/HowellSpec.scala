@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019. Phasmid Software
+ */
+
 package com.phasmidsoftware.bridge.director
 
 import com.phasmidsoftware.bridge.director
@@ -34,7 +38,9 @@ class HowellSpec extends FlatSpec with Matchers with Inside {
 		positions.size shouldBe 4
 		positions.tail.head shouldBe Position(Seq(Encounter(1, 2, 1, 2), Encounter(2, 3, 3, 3), Encounter(3, 1, 2, 4), Encounter(4, 4, 4, 1)))
 		val labeledPositions = Howell.labelPositions(howell.positions(start))
-		labeledPositions.tail.tail.head should matchPattern { case (3, Position(Seq(Encounter(1, 4, 2, 3), Encounter(2, 2, 4, 4), Encounter(3, 3, 1, 1), Encounter(4, 1, 3, 2)))) => }
+		labeledPositions.tail.tail.head should matchPattern {
+			case (3, Position(Seq(Encounter(1, 4, 2, 3), Encounter(2, 2, 4, 4), Encounter(3, 3, 1, 1), Encounter(4, 1, 3, 2)))) =>
+		}
 	}
 
 	it should "work with 7 tables" in {

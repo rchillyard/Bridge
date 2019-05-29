@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019. Phasmid Software
+ */
+
 package com.phasmidsoftware.bridge.director
 
 import com.phasmidsoftware.bridge.director.Howell.{MovePlan, Moves, Trio}
@@ -52,13 +56,13 @@ abstract class MappedProduct3[T, F[_]](_1: T, _2: T, _3: T) extends Product3[T, 
 		x.result()
 	}
 
-	override def toString = s"n:${_1} e:${_2} b:${_3}"
+	override def toString: String = s"n:${_1} e:${_2} b:${_3}"
 }
 
 case class Triple[T](_1: T, _2: T, _3: T) extends Product3[T, T, T] {
 	def map[U](f: T => U): Triple[U] = Triple(f(_1), f(_2), f(_3))
 
-	override def toString = s"n:${_1} e:${_2} b:${_3}"
+	override def toString: String = s"n:${_1} e:${_2} b:${_3}"
 }
 
 object Triple {
@@ -78,6 +82,7 @@ object Movement {
 		Movement(Triple.zip(x))
 }
 
+//noinspection ScalaStyle
 object Howell extends App {
 	type Trio = Triple[Int]
 	type MovePlan = Triple[Seq[Int]]
@@ -101,7 +106,7 @@ object Howell extends App {
 	for ((r, p) <- labelPositions(h.positions(s)))
 		println(s"Round $r: $p")
 
-	def labelPositions(positions: List[Position]) = for ((p, r) <- positions zip Stream.from(1)) yield (r, p)
+	def labelPositions(positions: List[Position]): List[(Int, Position)] = for ((p, r) <- positions zip Stream.from(1)) yield (r, p)
 }
 
 case class Encounter(table: Int, n: Int, e: Int, b: Int)(implicit tables: Int) {
@@ -113,7 +118,7 @@ case class Encounter(table: Int, n: Int, e: Int, b: Int)(implicit tables: Int) {
 	// Transforms a number n in the range 1-tables..infinity into the range 1..tables
 	def modulo(n: Int): Int = (n + tables - 1) % tables + 1
 
-	override def toString = s"T$table: $n-$e@#$b"
+	override def toString: String = s"T$table: $n-$e@#$b"
 }
 
 object Encounter {
