@@ -76,6 +76,11 @@ class DealSpec extends FlatSpec with Matchers {
 		writer.spillway shouldBe "test\nNorth:\tS95 HQ9432 D64 CT652\nEast:\tSK742 HA7 DT93 CAQJ7\nSouth:\tSAJT86 HKT8 DK82 CK3\nWest:\tSQ3 HJ65 DAQJ75 C984\n"
 	}
 
+	it should "neatOutput" in {
+		val target = Deal("test", 0L)
+		target.neatOutput shouldBe "Deal test (52)\nList(S95 HQ9432 D64 CT652, SK742 HA7 DT93 CAQJ7, SAJT86 HKT8 DK82 CK3, SQ3 HJ65 DAQJ75 C984)"
+	}
+
 	it should "asCard" in {
 		val deal = Deal("test", 0L)
 		val cardPlay = CardPlay(deal, 0, Spades, 5)

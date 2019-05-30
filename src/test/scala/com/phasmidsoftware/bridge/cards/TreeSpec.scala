@@ -101,12 +101,13 @@ class TreeSpec extends FlatSpec with Matchers {
 		def alwaysFalse(n: State): Boolean = false
 
 		val result = target.expand(1)(alwaysFalse, alwaysFalse)
-		result.children.size shouldBe 4
+		result.children.size shouldBe 0
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
-		writer.spilled shouldBe 74
+		writer.spilled shouldBe 9
+		writer.spillway shouldBe "T0  (7.0)"
 		val traverse = result.depthFirstTraverse
-		traverse.size shouldBe 5
+		traverse.size shouldBe 1
 		traverse foreach { s => println(s"${s.trick} ${s.tricks}") }
 	}
 
@@ -120,11 +121,12 @@ class TreeSpec extends FlatSpec with Matchers {
 		val result = target.expand(2)(alwaysFalse, alwaysFalse)
 		result.children.size shouldBe 4
 		val states = result.depthFirstTraverse
-		states.size shouldBe 17
 		states foreach { s => println(s"${s.trick} ${s.tricks}") }
+		states.size shouldBe 5
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
-		writer.spilled shouldBe 294
+		writer.spilled shouldBe 74
+		writer.spillway shouldBe "T0  (7.0) \n  T1 N:HK (6.5)\n  T1 N:H9 (6.9)\n  T1 N:H5 (7.0)\n  T1 N:H2 (7.0)"
 	}
 
 	it should "expand 3" in {
@@ -136,10 +138,12 @@ class TreeSpec extends FlatSpec with Matchers {
 
 		val result = target.expand(3)(alwaysFalse, alwaysFalse)
 		result.children.size shouldBe 4
-		result.depthFirstTraverse.size shouldBe 29
+		result.children foreach { s => println(s"${s.t.trick} ${s.t.tricks}") }
+		result.depthFirstTraverse.size shouldBe 17
 		val writer = MockWriter(8192)
 		result.output(Output(writer)).close()
-		writer.spilled shouldBe 546
+		writer.spillway shouldBe "T0  (7.0) \n  T1 N:HK (6.5) \n    T1 E:HJ (6.5)\n    T1 E:H8 (6.5)\n    T1 E:H3 (6.5)\n  T1 N:H9 (6.9) \n    T1 E:HJ (6.9)\n    T1 E:H8 (6.9)\n    T1 E:H3 (6.9)\n  T1 N:H5 (7.0) \n    T1 E:HJ (7.0)\n    T1 E:H8 (7.0)\n    T1 E:H3 (7.0)\n  T1 N:H2 (7.0) \n    T1 E:HJ (7.0)\n    T1 E:H8 (7.0)\n    T1 E:H3 (7.0)"
+		writer.spilled shouldBe 294
 	}
 
 	it should "expand 4" in {
@@ -153,8 +157,8 @@ class TreeSpec extends FlatSpec with Matchers {
 		result.children.size shouldBe 4
 		val writer = MockWriter(8192)
 		result.output(Output(writer)).close()
-		writer.spilled shouldBe 1086
-		result.depthFirstTraverse.size shouldBe 53
+		writer.spilled shouldBe 546
+		result.depthFirstTraverse.size shouldBe 29
 	}
 
 	it should "expand 5" in {
@@ -168,8 +172,8 @@ class TreeSpec extends FlatSpec with Matchers {
 		result.children.size shouldBe 4
 		val writer = MockWriter(16384)
 		result.output(Output(writer)).close()
-		writer.spilled shouldBe 2838
-		result.depthFirstTraverse.size shouldBe 125
+		writer.spilled shouldBe 1086
+		result.depthFirstTraverse.size shouldBe 53
 	}
 
 	it should "expand 8" in {
@@ -195,7 +199,7 @@ class TreeSpec extends FlatSpec with Matchers {
 
 		val result = target.expand(13)(success, failure)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 55
+		states.size shouldBe 46
 		// FIXME
 		states foreach { s => println(s"${s.trick} ${s.tricks}") }
 	}

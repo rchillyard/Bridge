@@ -87,7 +87,7 @@ class StateSpec extends FlatSpec with Matchers {
 
 	it should "neatOutput" in {
 		val target = State.create(whist, trick0 :+ play0, tricks0)
-		target.neatOutput shouldBe "State: T0 {Play: 0 S5} 3.8 Deal test (51)\nList(S9 HQ9432 D64 CT652, SK742 HA7 DT93 CAQJ7, SAJT86 HKT8 DK82 CK3, SQ3 HJ65 DAQJ75 C984)"
+		target.neatOutput shouldBe "State: T0 {Play: 0 S5} 0:0 3.8 Deal test (51)\nList(S9 HQ9432 D64 CT652, SK742 HA7 DT93 CAQJ7, SAJT86 HKT8 DK82 CK3, SQ3 HJ65 DAQJ75 C984)"
 	}
 
 	it should "isConsistent" in {

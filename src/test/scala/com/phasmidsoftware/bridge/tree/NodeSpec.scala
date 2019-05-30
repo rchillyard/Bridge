@@ -7,6 +7,7 @@ package com.phasmidsoftware.bridge.tree
 import com.phasmidsoftware.output.{MockWriter, Output}
 import org.scalatest.{FlatSpec, Matchers}
 
+//noinspection ScalaStyle
 class NodeSpec extends FlatSpec with Matchers {
 
 	behavior of "Node"
@@ -119,7 +120,7 @@ class NodeSpec extends FlatSpec with Matchers {
 		implicit object SuccessorsInt extends SuccessorsInt
 		val expansion: Option[Node[Int]] = target.expand(2)
 		expansion match {
-			case Some(n) => n.depthFirstTraverse shouldBe List(3, 2, 1)
+			case Some(n) => n.depthFirstTraverse shouldBe List(2, 1)
 			case None => fail("None returned")
 		}
 	}
@@ -145,20 +146,21 @@ class NodeSpec extends FlatSpec with Matchers {
 		implicit object SuccessorsInt extends SuccessorsInt
 		val expansion: Option[Node[Int]] = target.expand(10)
 		expansion match {
-			case Some(n) => n.depthFirstTraverse shouldBe List(3, 4, 3, 2, 1)
+			case Some(n) => n.depthFirstTraverse shouldBe List(2, 1)
 			case None => fail("None returned")
 		}
 	}
 
-	it should "work with both success and failure conditions" in {
+	it should "work with successors n(AltNode)" in {
 		val target = AltMockNode("1")
 		trait SuccessorsString extends Successors[String] {
-			def successors(t: String): Option[Seq[String]] = if (t == "1.3.1.2") None else if (t.contains("1.2.3")) Some(Nil) else Some(Seq(t + ".1", t + ".2", t + ".3"))
+			def successors(t: String): Option[Seq[String]] =
+				if (t == "1.3.1.2") None else if (t.contains("1.2.3")) Some(Nil) else Some(Seq(t + ".1", t + ".2", t + ".3"))
 		}
 		implicit object SuccessorsString extends SuccessorsString
 		val expansion: Option[Node[String]] = target.expand(8)
 		expansion match {
-			case Some(n) => n.depthFirstTraverse.size shouldBe 4693
+			case Some(n) => n.depthFirstTraverse.size shouldBe 1568
 			case None => fail("None returned")
 		}
 	}

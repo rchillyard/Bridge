@@ -12,7 +12,7 @@ class IntegrationTreeSpec extends FlatSpec with Matchers {
 	private val whist = Whist(deal2, 0)
 
 	it should "go to level 12" in {
-		Tree(whist).expand(12)(_ => false, _ => false).depthFirstTraverse.size shouldBe 93339
+		Tree(whist).expand(12)(_ => false, _ => false).depthFirstTraverse.size shouldBe 47717
 	}
 
 	ignore should "go to level 16" in {
@@ -23,7 +23,7 @@ class IntegrationTreeSpec extends FlatSpec with Matchers {
 		val target = Tree(whist)
 		val result = target.expand(16)(_.tricks.ns >= 3, _.tricks.ew > 2)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 3237
+		states.size shouldBe 1225
 	}
 
 	it should "go to level 20 with short circuit" in {
@@ -51,14 +51,15 @@ class IntegrationTreeSpec extends FlatSpec with Matchers {
 		val target = Tree(whist)
 		val result = target.expand(32)(_.tricks.ns >= 6, _.tricks.ew > 2)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 3834
+		states.size shouldBe 2138
 	}
 
 	it should "go to level 36 with short circuit" in {
 		val target = Tree(whist)
 		val result = target.expand(36)(_.tricks.ns >= 7, _.tricks.ew > 2)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 65624
+		states foreach (s => println(s"${s.trick}, ${s.tricks}"))
+		states.size shouldBe 26678
 	}
 
 	ignore should "go to level 40 with short circuit" in {

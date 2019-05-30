@@ -39,7 +39,7 @@ trait Node[T] extends Outputable[Unit] {
 		* Method to expand a branch of a tree, by taking this Node and replacing it with children nodes which are themselves recursively expanded.
 		* The algorithm operates in a depth-first-search manner.
 		*
-		* If successor(t) yields a Some(Nil), it simply means that this branch will not be further expanded, but other branches will continue as normal.
+		* If successor(t) yields a Some(Nil), it simply means that this branch will be eliminated, while other branches will continue as normal.
 		* If successor(t) yields None, we break out of the expansion and return this node with the successful node marked terminal.
 		* Note, however, some siblings, uncles and aunts of the success node will remain in this.
 		*
@@ -51,18 +51,17 @@ trait Node[T] extends Outputable[Unit] {
 	def expand[U >: T : Successors](levels: Int): Option[Node[U]] =
 		if (levels <= 0) None
 		else {
-			val node = this.asInstanceOf[Node[U]]
-
 			def replaceExpandedChild(r: Node[U], n: Node[U]) = if (r.isTerminal) r else r.replace(n, n.expand(levels - 1))
 
+			val node = this.asInstanceOf[Node[U]]
 			implicitly[Successors[U]].successors(t) match {
-				//  NOTE: this first case is just a short-cut for the situation where successors yields an empty list.
-				//  The other code works fine in all cases, though.
-				case Some(Nil) => Some(node)
-				case Some(us) =>
+				case Some(Nil) => // no descendants? signal for this Node to be removed.
+					None
+				case None => // terminating condition found? mark it.
+					Some(node.makeTerminal)
+				case Some(us) => // normal situation with descendants? recursively expand them.
 					val z = node :+ us
 					Some(z.children.foldLeft(z)(replaceExpandedChild))
-				case None => Some(node.makeTerminal)
 			}
 		}
 
@@ -136,7 +135,16 @@ trait Node[T] extends Outputable[Unit] {
 	def replace(x: Node[T], y: Node[T]): Node[T] =
 		if (x == y) this
 		else if (children contains x) unit(t, y.isTerminal, children.map(n => if (n eq x) y else n))
-		else unit(t, terminal = false, children map (n => n.replace(x, y)))
+		else unit(t, y.isTerminal, children map (n => n.replace(x, y)))
+
+	/**
+		* Method to remove the child x from this Node
+		*
+		* @param x the node to be removed.
+		* @return a copy of this Node, but with node removed.
+		*/
+	def remove(x: Node[T]): Node[T] = if (children contains x) unit(t, isTerminal, children.flatMap(n => if (n eq x) None else Some(n)))
+	else unit(t, isTerminal, children map (n => n.remove(x)))
 
 	/**
 		* Method to replace a node of this tree optionally with the given node and to return the resulting tree.
@@ -148,8 +156,8 @@ trait Node[T] extends Outputable[Unit] {
 	def replace(x: Node[T], tno: Option[Node[T]]): Node[T] =
 		tno match {
 			case Some(tn) => replace(x, tn)
-			// TODO remove x in the following situation...
-			case None => this
+			// NOTE: we remove a parent who produces no children. The idea is to reduce strain on the GC.
+			case None => remove(x)
 		}
 
 	/**

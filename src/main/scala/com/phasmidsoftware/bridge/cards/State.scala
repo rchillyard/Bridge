@@ -83,7 +83,7 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 		*
 		* @return a compact String
 		*/
-	def neatOutput: String = s"State: $trick $fitness ${deal.neatOutput}"
+	def neatOutput: String = s"State: $trick $tricks $fitness ${deal.neatOutput}"
 
 	/**
 		* Invokes output on the trick, passing it Some(deal) and appending the fitness in parentheses.
