@@ -56,10 +56,6 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
 	def quit: Whist = Whist(deal.quit, openingLeader)
 }
 
-object Whist {
-
-}
-
 /**
 	* A (non-empty) sequence of cards.
 	*
@@ -118,7 +114,7 @@ case class Sequence(priority: Int, cards: Seq[Card]) extends Evaluatable {
 	def merge(ss: Seq[Sequence]): Seq[Sequence] = if (ss.nonEmpty && ss.last.canCombine(this)) ss.init :+ (ss.last ++ this) else ss :+ this
 
 	/**
-		* Not currently used?
+		* Method to concatenate two Sequences.
 		*
 		* @param s the input Sequence
 		* @return the concatenation of this and s.
@@ -240,11 +236,29 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 			case 0 => if (hasHonorSequence) LeadHigh else FourthBest
 			case 1 => suitMatches(if (trick.isHonorLed || realSequences.nonEmpty) Cover else Duck)
 			case 2 => suitMatches(Finesse)
-			case 3 => suitMatches(WinIt)
+			case 3 => suitMatches(Cover)
 			case x => throw CardException(s"too many prior plays: $x")
 		}
 
-		choosePlays(deal, hand, strategy)
+		choosePlays(deal, hand, strategy, trick.winner)
+	}
+
+	/**
+		* Method to assess the given strategy in the current situation.
+		*
+		* @param play          a potential card play.
+		* @param strategy      the required strategy.
+		* @param index         the index of the sequence from which this play arises.
+		* @param currentWinner the priority of the card play which is currently winning this trick.
+		* @return a relatively low number if this matches the given strategy, otherwise a high number.
+		*/
+	def applyStrategy(play: CardPlay, strategy: Strategy, index: Int, currentWinner: Int): Int = {
+		val rank = Rank.lowestPriority - play.priority // XXX the value according to the rank of the played card.
+		if (play.suit != suit) rank // XXX discard situation: prefer the lowest ranking card.
+		else if (strategy.winIfPossible) play.priority // XXX best card to use is the highest ranking.
+		else if (strategy.finesse) if (index == 1 && play.priority < currentWinner) 0 else play.priority
+		else if (strategy.split) if (sequences(index).length > 1 && play.priority < currentWinner) 0 else play.priority
+		else rank // XXX ducking: prefer the the lowest ranking card.
 	}
 
 
@@ -253,10 +267,19 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 		*
 		* @param deal     the deal to which these plays will belong.
 		* @param hand     the index of this Hand (N, E, S, W).
-		* @param strategy the recommended strategy (currently ignored).
+		* @param strategy the recommended strategy.
+		* @param currentWinner the play currently winning the trick.
 		* @return a sequence of CardPlay objects.
 		*/
-	def choosePlays(deal: Deal, hand: Int, strategy: Strategy): Seq[CardPlay] = for (s <- sequences) yield CardPlay(deal, hand, suit, s.priority)
+	def choosePlays(deal: Deal, hand: Int, strategy: Strategy, currentWinner: Option[Winner]): Seq[CardPlay] = {
+		val priorityToBeat = (currentWinner map (_.priorityToBeat(hand))).getOrElse(Rank.lowestPriority)
+
+		def f(play: CardPlay, index: Int): Int = applyStrategy(play, strategy, index, priorityToBeat)
+
+		(for ((s, i) <- sequences.zipWithIndex) yield CardPlay(deal, hand, suit, s.priority) -> i).
+			sortBy((f _).tupled).
+			map(_._1)
+	}
 
 	/**
 		* @return true if this Holding is void.
@@ -380,6 +403,8 @@ object Holding {
 case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Outputable[Unit] with Quittable[Hand] with Playable[Hand] with Evaluatable {
 
 	/**
+		* CONSIDER eliminating: not used.
+		*
 		* @return the index of the next hand in sequence around the table.
 		*/
 	lazy val next: Int = Hand.next(index)
@@ -433,7 +458,7 @@ case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Ou
 		for {
 			// NOTE: first get the holdings from the other suits in order of length
 			h <- holdings.flatMap { case (k, v) => if (suitsMatch(k)) None else Some(v) }.toSeq.sortWith(_.length < _.length)
-			ps <- h.choosePlays(deal, index, Duck)
+			ps <- h.choosePlays(deal, index, Duck, None)
 		} yield ps
 	}
 
@@ -525,21 +550,6 @@ case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Ou
 
 }
 
-/**
-	* Trait defining the priority: the number of objects which precede this object in the ordering.
-	*/
-trait Priority {
-	/**
-		* The priority of this object.
-		* For Rank, Ace: 0, King: 1, Deuce: 2.
-		* TODO check the following:
-		* For Suit, Spades: 0, Clubs: 3.
-		*
-		* @return
-		*/
-	def priority: Int
-}
-
 object Hand {
 
 	def apply(deal: Deal, index: Int, cs: Seq[Card]): Hand = Hand(deal, index, createHoldings(cs))
@@ -554,30 +564,47 @@ object Hand {
 	def next(index: Int): Int = next(index, 1)
 
 	def next(index: Int, step: Int): Int = (index + step) % Deal.HandsPerDeal
+
+	/**
+		* Method to determine if the given hand is on the same side as the other hand.
+		*
+		* @param hand  one hand index.
+		* @param other the other hand's index.
+		* @return true if their difference is an even number.
+		*/
+	def sameSide(hand: Int, other: Int): Boolean = (other - hand) % 2 == 0
+
 }
 
+/**
+	* Trait to model the behavior of play-choosing strategy.
+	* We aim to choose the most favorable play each time so that we can achieve our goal quicker.
+	*
+	* In general, we check these values in the same sequence as they are defined below.
+	*/
 trait Strategy {
 	/**
-		* @return true if we always play highest card if it will beat the existing cards.
+		* @return true if we always play the highest card if it will beat the existing cards.
 		*/
 	val winIfPossible: Boolean
 
 	/**
-		* @return true if we want to play from a sequence that is higher than any existing card.
-		*/
-	val split: Boolean
-
-	/**
-		* @return true if we want to play an intermediate card in the hope of winning.
+		* @return true if we want to play an intermediate card that beats the current highest in the hope of winning.
+		*         Typically, this may mean choosing the second sequence from a holding.
 		*/
 	val finesse: Boolean
+
+	/**
+		* @return true if we want to play from a sequence that is higher than the current highest.
+		*/
+	val split: Boolean
 }
 
-abstract class BaseStrategy(val winIfPossible: Boolean, val split: Boolean, val finesse: Boolean) extends Strategy
+abstract class BaseStrategy(val winIfPossible: Boolean, val finesse: Boolean, val split: Boolean) extends Strategy
 
 case object FourthBest extends BaseStrategy(false, false, false)
 
-case object LeadHigh extends BaseStrategy(true, true, false)
+case object LeadHigh extends BaseStrategy(true, false, true)
 
 case object Cover extends BaseStrategy(false, true, true)
 
@@ -585,7 +612,7 @@ case object WinIt extends BaseStrategy(true, false, false)
 
 case object Duck extends BaseStrategy(false, false, false)
 
-case object Finesse extends BaseStrategy(false, false, true)
+case object Finesse extends BaseStrategy(false, true, false)
 
 case object Discard extends BaseStrategy(false, false, false)
 

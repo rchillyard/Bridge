@@ -23,35 +23,35 @@ class IntegrationTreeSpec extends FlatSpec with Matchers {
 		val target = Tree(whist)
 		val result = target.expand(16)(_.tricks.ns >= 3, _.tricks.ew > 2)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 1225
+		states.size shouldBe 36
 	}
 
 	it should "go to level 20 with short circuit" in {
 		val target = Tree(whist)
 		val result = target.expand(20)(_.tricks.ns >= 3, _.tricks.ew > 2)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 56
+		states.size shouldBe 36
 	}
 
 	it should "go to level 24 with short circuit" in {
 		val target = Tree(whist)
 		val result = target.expand(24)(_.tricks.ns >= 4, _.tricks.ew > 2)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 62
+		states.size shouldBe 42
 	}
 
 	it should "go to level 28 with short circuit" in {
 		val target = Tree(whist)
 		val result = target.expand(28)(_.tricks.ns >= 5, _.tricks.ew > 2)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 73
+		states.size shouldBe 59
 	}
 
 	it should "go to level 32 with short circuit" in {
 		val target = Tree(whist)
 		val result = target.expand(32)(_.tricks.ns >= 6, _.tricks.ew > 2)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 2138
+		states.size shouldBe 70
 	}
 
 	it should "go to level 36 with short circuit" in {
@@ -59,42 +59,42 @@ class IntegrationTreeSpec extends FlatSpec with Matchers {
 		val result = target.expand(36)(_.tricks.ns >= 7, _.tricks.ew > 2)
 		val states: Seq[State] = result.depthFirstTraverse
 		states foreach (s => println(s"${s.trick}, ${s.tricks}"))
-		states.size shouldBe 26678
+		states.size shouldBe 82
 	}
 
-	ignore should "go to level 40 with short circuit" in {
+	it should "go to level 40 with short circuit" in {
 		val target = Tree(whist)
 		val result = target.expand(40)(_.tricks.ns >= 8, _.tricks.ew > 2)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 183
+		states.size shouldBe 91
 	}
 
-	ignore should "go to level 40 with short alternative circuit" in {
+	it should "go to level 40 with short alternative circuit" in {
 		val target = Tree(whist)
 		val result = target.expand(40)(_.tricks.ns >= 7, _.tricks.ew > 3)
 		val states: Seq[State] = result.depthFirstTraverse
 		states.size shouldBe 82
 	}
 
-	ignore should "go to level 44 with short circuit" in {
+	it should "go to level 44 with short circuit" in {
 		val target = Tree(whist)
 		val result = target.expand(44)(_.tricks.ns >= 9, _.tricks.ew > 2)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 298
+		states.size shouldBe 105
 	}
 
-	ignore should "go to level 48 with short circuit" in {
+	it should "go to level 48 with short circuit" in {
 		val target = Tree(whist)
 		val result = target.expand(48)(_.tricks.ns >= 9, _.tricks.ew > 3)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 2266
+		states.size shouldBe 105
 	}
 
-	ignore should "go through all levels with short circuit based on 3NT" in {
+	it should "go through all levels with short circuit based on 3NT" in {
 		val target = Tree(whist)
 		val result = target.enumerateNoTrumpPlaysNS(9)
 		val states: Seq[State] = result.depthFirstTraverse
 		states foreach (s => println(s"${s.trick}, ${s.tricks}"))
-		states.size shouldBe 120
+		states.size shouldBe 105
 	}
 }

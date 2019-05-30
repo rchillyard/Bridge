@@ -24,14 +24,14 @@ class TreeSpec extends FlatSpec with Matchers {
 		target.root shouldBe root
 	}
 
-	it should "chooseLead" in {
+	it should "chooseLeads" in {
 		val state = State(whist00)
 		val target = Tree(state)
-		val result: Seq[CardPlay] = state.chooseLead(0)
+		val result: Seq[CardPlay] = state.chooseLeads(0)
 		result.size shouldBe 3
-		result.head shouldBe CardPlay(deal0, 0, Hearts, 2)
+		result.head shouldBe CardPlay(deal0, 0, Hearts, 10)
 		result(1) shouldBe CardPlay(deal0, 0, Hearts, 5)
-		result.last shouldBe CardPlay(deal0, 0, Hearts, 10)
+		result.last shouldBe CardPlay(deal0, 0, Hearts, 2)
 		val writer = MockWriter()
 		target.output(Output(writer)).close()
 		writer.spilled shouldBe 9
@@ -53,10 +53,10 @@ class TreeSpec extends FlatSpec with Matchers {
 		val ss: Seq[State] = state.enumerateLeads(0, 0)
 		ss.size shouldBe 4
 		ss.head should matchPattern { case State(_, _, _) => }
-		ss.head.trick.toString shouldBe "T0 {Play: 0 HK}"
-		ss.tail.head.trick.toString shouldBe "T0 {Play: 0 H9}"
-		ss.init.last.trick.toString shouldBe "T0 {Play: 0 H5}"
-		ss.last.trick.toString shouldBe "T0 {Play: 0 H2}"
+		ss.head.trick.toString shouldBe "T0 {Play: 0 H2}"
+		ss.tail.head.trick.toString shouldBe "T0 {Play: 0 H5}"
+		ss.init.last.trick.toString shouldBe "T0 {Play: 0 H9}"
+		ss.last.trick.toString shouldBe "T0 {Play: 0 HK}"
 	}
 
 	it should "enumerateLeads 2" in {
@@ -68,16 +68,16 @@ class TreeSpec extends FlatSpec with Matchers {
 		// TODO need to sort this out.
 		val deal2 = deal.playAll(trick)
 		trick.winner match {
-			case Some(winner) =>
+			case Some(Winner(p, true)) =>
 				val state = State(whist, trick, Tricks(0, 0).increment(trick))
-				val ss: Seq[State] = state.enumerateLeads(winner, trick.index + 1)
+				val ss: Seq[State] = state.enumerateLeads(p.hand, trick.index + 1)
 				ss.size shouldBe 4
 				ss.head should matchPattern { case State(_, _, _) => }
-				ss.head.trick.toString shouldBe "T1 {Play: 0 HK}"
-				ss.tail.head.trick.toString shouldBe "T1 {Play: 0 H9}"
-				ss.init.last.trick.toString shouldBe "T1 {Play: 0 H5}"
-				ss.last.trick.toString shouldBe "T1 {Play: 0 H2}"
-			case None => fail("no winner")
+				ss.head.trick.toString shouldBe "T1 {Play: 0 H2}"
+				ss.tail.head.trick.toString shouldBe "T1 {Play: 0 H5}"
+				ss.init.last.trick.toString shouldBe "T1 {Play: 0 H9}"
+				ss.last.trick.toString shouldBe "T1 {Play: 0 HK}"
+			case _ => fail("no winner")
 		}
 
 	}
@@ -126,7 +126,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
 		writer.spilled shouldBe 74
-		writer.spillway shouldBe "T0  (7.0) \n  T1 N:HK (6.5)\n  T1 N:H9 (6.9)\n  T1 N:H5 (7.0)\n  T1 N:H2 (7.0)"
+		writer.spillway shouldBe "T0  (7.0) \n  T1 N:H2 (7.0)\n  T1 N:H5 (7.0)\n  T1 N:H9 (6.9)\n  T1 N:HK (6.5)"
 	}
 
 	it should "expand 3" in {
@@ -142,7 +142,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		result.depthFirstTraverse.size shouldBe 17
 		val writer = MockWriter(8192)
 		result.output(Output(writer)).close()
-		writer.spillway shouldBe "T0  (7.0) \n  T1 N:HK (6.5) \n    T1 E:HJ (6.5)\n    T1 E:H8 (6.5)\n    T1 E:H3 (6.5)\n  T1 N:H9 (6.9) \n    T1 E:HJ (6.9)\n    T1 E:H8 (6.9)\n    T1 E:H3 (6.9)\n  T1 N:H5 (7.0) \n    T1 E:HJ (7.0)\n    T1 E:H8 (7.0)\n    T1 E:H3 (7.0)\n  T1 N:H2 (7.0) \n    T1 E:HJ (7.0)\n    T1 E:H8 (7.0)\n    T1 E:H3 (7.0)"
+		writer.spillway shouldBe "T0  (7.0) \n  T1 N:H2 (7.0) \n    T1 E:H8 (7.0)\n    T1 E:HJ (7.0)\n    T1 E:H3 (7.0)\n  T1 N:H5 (7.0) \n    T1 E:H8 (7.0)\n    T1 E:HJ (7.0)\n    T1 E:H3 (7.0)\n  T1 N:H9 (6.9) \n    T1 E:HJ (6.9)\n    T1 E:H8 (6.9)\n    T1 E:H3 (6.9)\n  T1 N:HK (6.5) \n    T1 E:HJ (6.5)\n    T1 E:H8 (6.5)\n    T1 E:H3 (6.5)"
 		writer.spilled shouldBe 294
 	}
 
@@ -199,7 +199,7 @@ class TreeSpec extends FlatSpec with Matchers {
 
 		val result = target.expand(13)(success, failure)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 46
+		states.size shouldBe 36
 		// FIXME
 		states foreach { s => println(s"${s.trick} ${s.tricks}") }
 	}

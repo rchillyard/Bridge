@@ -127,6 +127,56 @@ class WhistSpec extends FlatSpec with Matchers {
 		Holding(Seq(SAK, SJT), Spades).evaluate shouldBe 3.0 +- 0.1
 	}
 
+	it should "apply fourth best lead strategy" in {
+		val deal = Deal("test", 0L)
+		val holding: Holding = deal.hands.head.longestSuit
+		val suit = holding.suit
+		suit shouldBe Hearts
+		// Queen lead?
+		holding.applyStrategy(CardPlay(deal, 0, suit, 2), FourthBest, 0, Rank.lowestPriority) shouldBe 12
+		// Nine lead?
+		holding.applyStrategy(CardPlay(deal, 0, suit, 5), FourthBest, 1, Rank.lowestPriority) shouldBe 9
+		// Four lead?
+		holding.applyStrategy(CardPlay(deal, 0, suit, 10), FourthBest, 2, Rank.lowestPriority) shouldBe 4
+	}
+
+	it should "apply win it strategy" in {
+		val deal = Deal("test", 0L)
+		val holding: Holding = deal.hands.head.longestSuit
+		val suit = holding.suit
+		val leads: Seq[CardPlay] = holding.choosePlays(deal, 0, FourthBest, None)
+		leads.size shouldBe 3
+		val lead: CardPlay = leads.head
+		val trick0 = Trick(0, Seq(lead))
+		val wo = trick0.winner
+		wo should matchPattern { case Some(Winner(`lead`, false)) => }
+		// Ace play?
+		holding.applyStrategy(CardPlay(deal, 1, suit, 0), WinIt, 0, wo.get.play.priority) shouldBe 0
+		// Seven play?
+		holding.applyStrategy(CardPlay(deal, 1, suit, 7), WinIt, 1, wo.get.play.priority) shouldBe 7
+	}
+
+	it should "choose Play" in {
+		val deal = Deal("test", 0L)
+		//		println(deal.neatOutput)
+		val hand0 = deal.hands.head
+		val hand1 = deal.hands(1)
+		val hand2 = deal.hands(2)
+		val holding: Holding = deal.hands.head.longestSuit
+		holding.suit shouldBe Hearts
+		val leads: Seq[CardPlay] = holding.choosePlays(deal, 0, FourthBest, None)
+		leads.size shouldBe 3
+		val lead = leads.head
+		val trick0 = Trick(0, Seq(lead))
+		val wo = trick0.winner
+		wo should matchPattern { case Some(Winner(`lead`, false)) => }
+		val holding1 = hand1.holdings(trick0.suit.get)
+		val plays = holding1.choosePlays(deal, 1, WinIt, wo)
+		plays.size shouldBe 2
+		plays.head shouldBe CardPlay(deal, 1, Hearts, 0)
+		plays.last shouldBe CardPlay(deal, 1, Hearts, 7)
+	}
+
 	behavior of "Hand"
 
 	it should "apply" in {

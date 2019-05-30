@@ -34,10 +34,16 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 
 	//	TODO make private
 	def enumerateLeads(leader: Int, index: Int): Seq[State] =
-		Tree.makeStates(whist, tricks, for (p <- chooseLead(leader)) yield Trick(index, Seq(p)))
+		Tree.makeStates(whist, tricks, enumerateLeadsAsTricks(leader, index))
+
+	//	TODO make private
+	// CONSIDER desugaring the body
+	def enumerateLeadsAsTricks(leader: Int, index: Int): Seq[Trick] =
+		for (p <- chooseLeads(leader)) yield Trick(index, Seq(p))
 
 	// TODO make private
-	def chooseLead(leader: Int): Seq[CardPlay] = deal.hands(leader).longestSuit.choosePlays(deal, leader, FourthBest)
+	def chooseLeads(leader: Int): Seq[CardPlay] =
+		deal.hands(leader).longestSuit.choosePlays(deal, leader, FourthBest, None)
 
 	/**
 		* NOTE: this is used only in unit tests
@@ -96,9 +102,9 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 
 	// CONSIDER moving this to Trick
 	private lazy val _enumeratePlays = trick.winner match {
-		case Some(winner) =>
-			enumerateLeads(winner, trick.index + 1)
-		case None =>
+		case Some(Winner(p, true)) =>
+			enumerateLeads(p.hand, trick.index + 1)
+		case _ =>
 			if (trick.started)
 				enumerateFollows
 			else
@@ -174,8 +180,8 @@ case class Tricks(ns: Int, ew: Int) extends Evaluatable {
 	def increment(winner: Int): Tricks = if (winner % 2 == 0) incNS else incEW
 
 	def increment(trick: Trick): Tricks = trick.winner match {
-		case Some(w) => increment(w)
-		case None => this
+		case Some(Winner(p, true)) => increment(p.hand)
+		case _ => this
 	}
 
 	override def toString: String = s"$ns:$ew"

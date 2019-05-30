@@ -36,7 +36,7 @@ class DealSpec extends FlatSpec with Matchers {
 		target.plays shouldBe Seq(play)
 		target.started shouldBe true
 		target.suit shouldBe Some(Spades)
-		target.winner shouldBe None
+		target.winner should matchPattern { case Some(Winner(p, false)) => }
 		target.isComplete shouldBe false
 		target.evaluate shouldBe 0.5
 		target.isHonorLed shouldBe true

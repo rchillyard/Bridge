@@ -116,11 +116,11 @@ class StateSpec extends FlatSpec with Matchers {
 		an[CardException] should be thrownBy target.enumerateFollows
 	}
 
-	it should "chooseLead" in {
+	it should "chooseLeads" in {
 		val target = State(whist)
-		val leads: Seq[CardPlay] = target.chooseLead(north)
+		val leads: Seq[CardPlay] = target.chooseLeads(north)
 		leads.size shouldBe 3
-		leads.head shouldBe CardPlay(deal, north, Hearts, 2)
+		leads.head shouldBe CardPlay(deal, north, Hearts, 10)
 	}
 
 	it should "enumeratePlays" in {
@@ -128,7 +128,7 @@ class StateSpec extends FlatSpec with Matchers {
 		val plays: Seq[State] = target.enumeratePlays
 		plays.size shouldBe 3
 		plays.head.trick.plays.size shouldBe 1
-		plays.head.trick.plays.head shouldBe CardPlay(deal, north, Hearts, 2)
+		plays.head.trick.plays.head shouldBe CardPlay(deal, north, Hearts, 10)
 	}
 
 
@@ -137,7 +137,7 @@ class StateSpec extends FlatSpec with Matchers {
 		val leads: Seq[State] = target.enumerateLeads(north, 0)
 		leads.size shouldBe 3
 		leads.head.trick.plays.size shouldBe 1
-		leads.head.trick.plays.head shouldBe CardPlay(deal, north, Hearts, 2)
+		leads.head.trick.plays.head shouldBe CardPlay(deal, north, Hearts, 10)
 	}
 
 }

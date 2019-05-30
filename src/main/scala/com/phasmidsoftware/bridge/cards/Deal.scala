@@ -172,7 +172,7 @@ object Deal {
 /**
   * The play of a card.
   *
-  * @param deal     the deal to which this play belongs.
+  * @param deal     the deal to which this play belongs (this is used solely for representing this play as an actual card).
   * @param hand     the index of this hand in the deal.
   * @param suit     rhe suit from which the card is to be played.
   * @param priority the priority of the sequence from which the card is to be played.
@@ -289,11 +289,18 @@ case class Trick(index: Int, plays: Seq[CardPlay]) extends Outputable[Deal] with
 
   override def toString: String = s"T$index ${plays.mkString("{", ", ", "}")}"
 
-  lazy val winner: Option[Int] =
-    if (isComplete) Some(plays.maxBy(p => if (p.suit == suit.get) Ace.priority - p.priority else 0).hand)
+  /**
+    * This lazy val yields an optional Winner.
+    * If this Trick is not yet started, then the result will be None, otherwise Some(winner).
+    */
+  lazy val winner: Option[Winner] =
+    if (started) {
+      val winningPlay = plays.maxBy(p => if (p.suit == suit.get) Ace.priority - p.priority else 0)
+      Some(Winner(winningPlay, isComplete))
+    }
     else None
 
-  lazy val value: Option[Double] = winner map (x => if (x % 2 == 0) 1 else 0)
+  lazy val value: Option[Double] = for (w <- winner; if w.complete) yield if (w.sameSide(0)) 1 else 0
 
   /**
     * The total number of cards played from the deal, including this trick.
@@ -311,4 +318,16 @@ case class Trick(index: Int, plays: Seq[CardPlay]) extends Outputable[Deal] with
 object Trick {
 
   def create(index: Int, plays: CardPlay*): Trick = apply(index, plays)
+}
+
+/**
+  * Class to represent the (current) winner of the trick.
+  *
+  * @param play     the current winning play.
+  * @param complete true if the trick is complete.
+  */
+case class Winner(play: CardPlay, complete: Boolean) {
+  def sameSide(hand: Int): Boolean = Hand.sameSide(hand, play.hand)
+
+  def priorityToBeat(hand: Int): Int = if (sameSide(hand)) Rank.lowestPriority else play.priority
 }
