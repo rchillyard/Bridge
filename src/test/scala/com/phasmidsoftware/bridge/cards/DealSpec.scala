@@ -11,38 +11,6 @@ import org.scalatest.{FlatSpec, Matchers}
 
 class DealSpec extends FlatSpec with Matchers {
 
-	behavior of "Trick"
-
-	it should "construct" in {
-		val index = 0
-		val target = Trick(index, Nil)
-		target.index shouldBe index
-		target.plays shouldBe Nil
-		target.started shouldBe false
-		target.suit shouldBe None
-		target.winner shouldBe None
-		target.isComplete shouldBe false
-		target.evaluate shouldBe 0.5
-		target.isHonorLed shouldBe false
-		an[CardException] should be thrownBy target.last
-	}
-
-	it should "append" in {
-		val index = 0
-		val nothing = Trick(index, Nil)
-		val deal = Deal("test", 0L)
-		val play = CardPlay(deal, 0, Spades, 0)
-		val target = nothing :+ play
-		target.plays shouldBe Seq(play)
-		target.started shouldBe true
-		target.suit shouldBe Some(Spades)
-		target.winner should matchPattern { case Some(Winner(p, false)) => }
-		target.isComplete shouldBe false
-		target.evaluate shouldBe 0.5
-		target.isHonorLed shouldBe true
-		target.last shouldBe play
-	}
-
 	behavior of "Deal"
 
 	it should "applyStringSeed0" in {
@@ -148,20 +116,5 @@ class DealSpec extends FlatSpec with Matchers {
 		played.cards shouldBe 48
 		val quitted = played.quit
 		quitted.cards shouldBe 48
-	}
-
-	// This is part of Whist behavior
-	it should "analyzeDoubleDummy2" in {
-		val target = Deal("test", 2L)
-		target.output(Output(new PrintWriter(System.out))).close()
-		val whist = Whist(target, 3)
-		whist.analyzeDoubleDummy(9, directionNS = true) shouldBe true
-	}
-	// This is part of Whist behavior
-	ignore should "analyzeDoubleDummy0" in {
-		val target = Deal("test", 0L)
-		target.output(Output(new PrintWriter(System.out))).close()
-		val whist = Whist(target, 0)
-		whist.analyzeDoubleDummy(9, directionNS = false) shouldBe true
 	}
 }

@@ -8,6 +8,23 @@ import com.phasmidsoftware.output.{Output, Outputable}
 
 import scala.language.implicitConversions
 
+/**
+	* This class represents a game of Whist.
+	* In Whist, there are four players around a table.
+	* Players sitting opposite each other are part of the same "team." They are said to be partners.
+	* Play goes clockwise around the table, each player contributing one card, and the team which contributed the highest card (or possibly the highest trump)
+	* is credited with that "trick".
+	* There being 52 cards in a deck (pack), there will be 13 tricks.
+	* The player (not the team) who wins one trick must lead to the following trick.
+	* At the start of the game, it is arbitrary which player is the opening leader--there are various schemes to determine
+	* who leads, most notably Auction and Contract Bridge designate the player sitting on "declarer's" left.
+	* Here, however, the opening leader is simply determined by parameter.
+	*
+	* The particular arrangement (shuffle) of the cards is determined by the deal parameter.
+	*
+	* @param deal          the arrangement of cards.
+	* @param openingLeader the player on opening lead (0 thru 3 for "North" thru "West").
+	*/
 case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Quittable[Whist] {
 	/**
 		* Play a card from this Playable object.
@@ -18,22 +35,9 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
 	def play(cardPlay: CardPlay): Whist = Whist(deal.play(cardPlay), openingLeader)
 
 	/**
-		* Create the initial state for this Whist game.
-		*
-		* CONSIDER making this a lazy val.
-		*
-		* NOTE: only used in unit testing.
-		*
-		* @return a State using deal and openingLeader
-		*/
-	def createState: State = State(this)
-
-	/**
 		* Solve this Whist game as a double-dummy problem where one side or the other (depending on directionNS)
 		* attempts to reach a total of tricks. As soon as our protagonists have reached the trick total, all expansion will cease.
 		* When the opponents have made it impossible for the protagonists to reach said trick total, all expansion will cease.
-		*
-		* FIXME at present, when opponents exceed complementary trick total, we don't terminate, we merely suppress further expansion.
 		*
 		* @param tricks      the number of tricks required.
 		* @param directionNS if true then the direction we care about is NS else EW.
@@ -42,7 +46,7 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
 	def analyzeDoubleDummy(tricks: Int, directionNS: Boolean): Boolean = {
 		val tree = Tree(this)
 		val node = if (directionNS) tree.enumerateNoTrumpPlaysNS(tricks) else tree.enumerateNoTrumpPlaysEW(tricks)
-		//		node.depthFirstTraverse foreach (	s => println(s"${s.trick} ${s.tricks}") )
+		//				node.depthFirstTraverse foreach (	s => println(s"${s.trick} ${s.tricks}") )
 		node.done
 	}
 
@@ -54,13 +58,25 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
 		* @return an eagerly promoted Whist game.
 		*/
 	def quit: Whist = Whist(deal.quit, openingLeader)
+
+	/**
+		* Create an initial state for this Whist game.
+		*
+		* NOTE: only used in unit testing.
+		*
+		* @return a State using deal and openingLeader
+		*/
+	lazy val createState: State = State(this)
 }
 
 /**
-	* A (non-empty) sequence of cards.
+	* A (non-empty) sequence of cards forming part of a Holding.
 	*
-	* @param priority the number of higher-ranking cards in the suit
-	* @param cards    the cards
+	* NOTE: the priority of a sequence treats all three other Hands as being antagonists.
+	* An optimization could be developed such that sequences are effectively combined for a partnership, not just a player.
+	*
+	* @param priority the number of higher-ranking cards in the suit.
+	* @param cards    the cards.
 	*/
 case class Sequence(priority: Int, cards: Seq[Card]) extends Evaluatable {
 
@@ -119,8 +135,12 @@ case class Sequence(priority: Int, cards: Seq[Card]) extends Evaluatable {
 		* @param s the input Sequence
 		* @return the concatenation of this and s.
 		*/
+	//noinspection ScalaStyle
 	def ++(s: Sequence): Sequence = if (canCombine(s)) Sequence(priority, cards ++ s.cards) else throw CardException(s"cannot combine Sequences: $this and $s")
 
+	/**
+		* @return a String primarily for debugging purposes.
+		*/
 	override def toString: String = s"${cards.map(_.rank).mkString("")}[$priority]"
 
 	private lazy val canPromote = priority > 0
@@ -162,11 +182,22 @@ object Sequence {
 		*/
 	def higher(p1: Int, p2: Int): Boolean = compare(p1, p2) < 0
 
+	/**
+		* An ordering for a Sequence.
+		* Lower values of priority preced higher values.
+		*/
 	implicit object SequenceOrdering extends Ordering[Sequence] {
 		override def compare(x: Sequence, y: Sequence): Int = x.priority - y.priority
 	}
 }
 
+/**
+	* The behavior of this trait is to (eagerly) quit a trick (holding, sequence),
+	* which is to say take the (lazy) promotions of a sequence and to promote them eagerly according to the
+	* quitting of the current trick.
+	*
+	* @tparam X the underlying type.
+	*/
 trait Quittable[X] {
 	/**
 		* Method to enact the pending promotions on this Quittable.
@@ -178,6 +209,8 @@ trait Quittable[X] {
 
 /**
 	* This class models a holding in a suit.
+	* A Holding is made up of a sequence of Sequences for a particular suit.
+	* Additionally, a Holding keeps track of lazily implemented promotions.
 	*
 	* @param sequences  the sequences (expected to be in order of rank).
 	* @param suit       the suit of this holding.
@@ -221,6 +254,8 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 	/**
 		* Method to choose plays according to the prior plays and the cards in this Holding.
 		*
+		* All possible plays are returned, but the order in which they occur is dependent on the Strategy chosen.
+		*
 		* @param deal  the deal to which these plays will belong.
 		* @param hand  the index of the Hand containing this Holding.
 		* @param trick the current state of this trick (i.e. the prior plays).
@@ -232,7 +267,8 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 			case _ => Discard
 		}
 
-		val strategy: Strategy = trick.size match {
+		// XXX Determine the Strategy to be used when choosePlays is called.
+		lazy val strategy: Strategy = trick.size match {
 			case 0 => if (hasHonorSequence) LeadHigh else FourthBest
 			case 1 => suitMatches(if (trick.isHonorLed || realSequences.nonEmpty) Cover else Duck)
 			case 2 => suitMatches(Finesse)
@@ -242,25 +278,6 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 
 		choosePlays(deal, hand, strategy, trick.winner)
 	}
-
-	/**
-		* Method to assess the given strategy in the current situation.
-		*
-		* @param play          a potential card play.
-		* @param strategy      the required strategy.
-		* @param index         the index of the sequence from which this play arises.
-		* @param currentWinner the priority of the card play which is currently winning this trick.
-		* @return a relatively low number if this matches the given strategy, otherwise a high number.
-		*/
-	def applyStrategy(play: CardPlay, strategy: Strategy, index: Int, currentWinner: Int): Int = {
-		val rank = Rank.lowestPriority - play.priority // XXX the value according to the rank of the played card.
-		if (play.suit != suit) rank // XXX discard situation: prefer the lowest ranking card.
-		else if (strategy.winIfPossible) play.priority // XXX best card to use is the highest ranking.
-		else if (strategy.finesse) if (index == 1 && play.priority < currentWinner) 0 else play.priority
-		else if (strategy.split) if (sequences(index).length > 1 && play.priority < currentWinner) 0 else play.priority
-		else rank // XXX ducking: prefer the the lowest ranking card.
-	}
-
 
 	/**
 		* For now, we ignore strategy which is only used to ensure that we try the likely more successful card play first.
@@ -304,35 +321,54 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 	def quit: Holding = _quit
 
 	/**
-		* TODO implement me.
-		*
-		* Determine the fourth best card.
-		*
-		* @return the fourth best card from this Holding.
-		*/
-	lazy val fourthBest: CardPlay = ???
-
-	/**
 		* Method to remove (i.e. play) a card from this Holding.
 		*
 		* @param priority the sequence from which the card will be played.
 		* @return a new Holding with the sequence either truncated or eliminated entirely.
 		*/
+	//noinspection ScalaStyle
 	def -(priority: Int): Holding = {
 		val sos: Seq[Option[Sequence]] = for (s <- sequences) yield if (s.priority == priority) s.truncate else Some(s)
 		Holding(sos.flatten, suit, promotions)
 	}
 
+	/**
+		* @return a String primarily for debugging purposes.
+		*/
 	override def toString: String = s"{$suit: ${sequences.mkString(", ")}} " + (if (promotions.nonEmpty) promotions.mkString(", ") else "(clean)")
 
 	/**
-		* NOTE: this is used temporarily because Output is messing up
-		*
-		* @return
+		* @return a neat representation of this Sequence.
 		*/
 	lazy val neatOutput: String = s"$suit${Holding.ranksToString(cards map (_.rank))}"
 
+	/**
+		* Output this Sequence to an Output.
+		*
+		* @param output the output to append to.
+		* @param xo     an optional value of Unit, defaulting to None.
+		* @return a new instance of Output.
+		*/
 	def output(output: Output, xo: Option[Unit] = None): Output = output :+ suit.toString :+ Holding.ranksToString(cards map (_.rank))
+
+	/**
+		* Method to assess the given strategy in the current situation.
+		*
+		* @param play          a potential card play.
+		* @param strategy      the required strategy.
+		* @param index         the index of the sequence from which this play arises.
+		* @param currentWinner the priority of the card play which is currently winning this trick.
+		* @return a relatively low number if this matches the given strategy, otherwise a high number.
+		*/
+	//	private
+	def applyStrategy(play: CardPlay, strategy: Strategy, index: Int, currentWinner: Int): Int = {
+		val rank = Rank.lowestPriority - play.priority // XXX the value according to the rank of the played card.
+		if (play.suit != suit) rank // XXX discard situation: prefer the lowest ranking card.
+		else if (strategy.winIfPossible) play.priority // XXX best card to use is the highest ranking.
+		else if (strategy.finesse) if (index == 1 && play.priority < currentWinner) 0 else play.priority
+		else if (strategy.split) if (sequences(index).length > 1 && play.priority < currentWinner) 0 else play.priority
+		else rank // XXX ducking: prefer the the lowest ranking card.
+	}
 
 	private lazy val _quit = {
 
@@ -372,6 +408,13 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 	*/
 object Holding {
 
+	/**
+		* Create a new Holding from a suit and a variable number of Ranks.
+		*
+		* @param suit  the suit.
+		* @param ranks a variable number of Ranks.
+		* @return a new Holding.
+		*/
 	def apply(suit: Suit, ranks: Rank*): Holding = {
 		val cards = ranks map (rank => Card(suit, rank))
 		val cXsXm = (for ((c, i) <- cards.zipWithIndex) yield i - c.priority -> c).groupBy(_._1)
@@ -379,8 +422,18 @@ object Holding {
 		apply(ss.toSeq.sorted, suit, Nil)
 	}
 
+	/**
+		* Implicit converter from a String to a Holding.
+		*
+		* @param s the String made up of (abbreviated) suit and ranks.
+		* @return a new Holding.
+		*/
 	implicit def parseHolding(s: String): Holding = create(Card.parser.parseRanks(s.tail), Suit(s.head))
 
+	/**
+		* An ordering for Ranks.
+		* Lower priorities precede higher priorities.
+		*/
 	implicit object RankOrdering extends Ordering[Rank] {
 		override def compare(x: Rank, y: Rank): Int = -x.priority + y.priority
 	}
@@ -388,26 +441,19 @@ object Holding {
 	// CONSIDER merge the two create methods
 	def create(suit: Suit, cards: Seq[Card]): Holding = apply(suit, (cards map (_.rank)).sorted.reverse: _*)
 
-	def create(ranks: Seq[Rank], suit: Suit): Holding = Holding(suit, ranks.sorted.reverse: _*)
+	def create(ranks: Seq[Rank], suit: Suit): Holding = apply(suit, ranks.sorted.reverse: _*)
 
 	def ranksToString(ranks: Seq[Rank]): String = if (ranks.nonEmpty) ranks.mkString("", "", "") else "-"
 }
 
 /**
-	* This class models a bridge hand (four suits).
+	* This class models a Whist hand (four Holdings, comprising thirteen cards).
 	*
 	* @param deal     the deal to which this Hand belongs.
-	* @param index    the index of this hand within the deal.
+	* @param index    the index of this hand within the deal (North = 0).
 	* @param holdings the four holdings (as a Map).
 	*/
 case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Outputable[Unit] with Quittable[Hand] with Playable[Hand] with Evaluatable {
-
-	/**
-		* CONSIDER eliminating: not used.
-		*
-		* @return the index of the next hand in sequence around the table.
-		*/
-	lazy val next: Int = Hand.next(index)
 
 	/**
 		* CONSIDER: using strength of suit as a decider between equal lengths.
@@ -490,6 +536,7 @@ case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Ou
 		* @param priority the priority of the sequence from which we take a card.
 		* @return a new Hand, with one less card.
 		*/
+	//noinspection ScalaStyle
 	def -(suit: Suit, priority: Int): Hand =
 		Hand(deal, index, holdings + (suit -> (holdings(suit) - priority)))
 
@@ -497,10 +544,16 @@ case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Ou
 		Hand(deal, index, holdings + (suit -> holdings(suit).promote(priority)))
 
 	/**
-		*
 		* @return an eagerly promoted Hand.
 		*/
 	def quit: Hand = _quit
+
+	/**
+		* CONSIDER eliminating: not used.
+		*
+		* @return the index of the next hand in sequence around the table.
+		*/
+	lazy val next: Int = Hand.next(index)
 
 	/**
 		* Method to output this object (and, recursively, all of its children).
@@ -616,6 +669,15 @@ case object Finesse extends BaseStrategy(false, true, false)
 
 case object Discard extends BaseStrategy(false, false, false)
 
+/**
+	* Trait to describe behavior of a type which can experience the play of a card.
+	*
+	* For example, Holding, Sequence, etc. can have cards played.
+	*
+	* NOTE: in practice, this trait is implemented via hierarchy, not type-class.
+	*
+	* @tparam X the underlying type.
+	*/
 trait Playable[X] {
 	/**
 		* Play a card from this Playable object.
@@ -626,6 +688,9 @@ trait Playable[X] {
 	def play(cardPlay: CardPlay): X
 }
 
+/**
+	* Trait to model the property of being (heuristically) evaluated.
+	*/
 trait Evaluatable {
 
 	/**

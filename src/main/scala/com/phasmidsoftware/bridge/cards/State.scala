@@ -56,11 +56,16 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 	def next(trick: Trick): State = State.create(whist, trick, tricks)
 
 	/**
+		* NOTE: this is used only in unit tests
+		*
 		* @return true if the number of cards played according to the trick plus the number of cares remaining in the deal equals 52
 		*/
 	def isConsistent: Boolean = _isConsistent
 
 	/**
+		* NOTE: this is used only in unit tests
+		*
+		*
 		* Method to validate this State.
 		*
 		* @return true if all the plays of the trick are validated
@@ -167,7 +172,35 @@ object State {
 	}
 }
 
+/**
+	* This class represents the current trick totals for the two partnerships.
+	*
+	* @param ns the number of tricks NS has taken.
+	* @param ew the number of tricks EW has taken.
+	*/
 case class Tricks(ns: Int, ew: Int) extends Evaluatable {
+	/**
+		* Increment the total according to the value of winner.
+		* CONSIDER using Hand.sameSide
+		*
+		* @param winner the index of the winner of a trick.
+		* @return a new version of Tricks.
+		*/
+	def increment(winner: Int): Tricks = if (winner % 2 == 0) incNS else incEW
+
+	/**
+		* Increment the total according to the play of the trick given.
+		* Note that, increment(Int) is called only if the trick is complete.
+		* Otherwise, this is returned.
+		*
+		* @param trick the trick.
+		* @return a new version of Tricks.
+		*/
+	def increment(trick: Trick): Tricks = trick.winner match {
+		case Some(Winner(p, true)) => increment(p.hand)
+		case _ => this
+	}
+
 	/**
 		* @return a Double representing the value of this Tricks.
 		*/
@@ -176,13 +209,6 @@ case class Tricks(ns: Int, ew: Int) extends Evaluatable {
 	lazy val incNS: Tricks = Tricks(ns + 1, ew)
 
 	lazy val incEW: Tricks = Tricks(ns, ew + 1)
-
-	def increment(winner: Int): Tricks = if (winner % 2 == 0) incNS else incEW
-
-	def increment(trick: Trick): Tricks = trick.winner match {
-		case Some(Winner(p, true)) => increment(p.hand)
-		case _ => this
-	}
 
 	override def toString: String = s"$ns:$ew"
 
@@ -193,6 +219,9 @@ object Tricks {
 	val zero = Tricks(0, 0)
 }
 
+/**
+	* Behavior of something which can be validated.
+	*/
 trait Validatable {
 	/**
 		* Method to validate this Validatable object.

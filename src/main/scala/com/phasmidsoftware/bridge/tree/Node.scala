@@ -7,7 +7,15 @@ package com.phasmidsoftware.bridge.tree
 import com.phasmidsoftware.output.{Output, Outputable}
 
 /**
-	* This trait defines the behavior of a node in a tree.
+	* This trait defines the behavior of a node (i.e. sub-tree) of a tree.
+	* The node and therefore its tree are immutable!
+	*
+	* However, this trait does have some additional behavior.
+	* In particular, it has a method for expanding a node of the tree, and doing it recursively.
+	* Furthermore, this expansion has a short circuit such that, once a particular condition has been achieved,
+	* tree construction comes to a halt and only the tree built thus far is returned.
+	*
+	* It's also possible to remove a node from the tree or to replace it with another node.
 	*
 	* @tparam T the underlying type of the node.
 	*/
@@ -34,36 +42,6 @@ trait Node[T] extends Outputable[Unit] {
 		* @return true if this Node is terminal.
 		*/
 	def isTerminal: Boolean
-
-	/**
-		* Method to expand a branch of a tree, by taking this Node and replacing it with children nodes which are themselves recursively expanded.
-		* The algorithm operates in a depth-first-search manner.
-		*
-		* If successor(t) yields a Some(Nil), it simply means that this branch will be eliminated, while other branches will continue as normal.
-		* If successor(t) yields None, we break out of the expansion and return this node with the successful node marked terminal.
-		* Note, however, some siblings, uncles and aunts of the success node will remain in this.
-		*
-		* TODO make this tail-recursive
-		*
-		* @tparam U a super-type of T (or T, of course) for which there is evidence of Successors[U].
-		* @return an Option of Node[U]
-		*/
-	def expand[U >: T : Successors](levels: Int): Option[Node[U]] =
-		if (levels <= 0) None
-		else {
-			def replaceExpandedChild(r: Node[U], n: Node[U]) = if (r.isTerminal) r else r.replace(n, n.expand(levels - 1))
-
-			val node = this.asInstanceOf[Node[U]]
-			implicitly[Successors[U]].successors(t) match {
-				case Some(Nil) => // no descendants? signal for this Node to be removed.
-					None
-				case None => // terminating condition found? mark it.
-					Some(node.makeTerminal)
-				case Some(us) => // normal situation with descendants? recursively expand them.
-					val z = node :+ us
-					Some(z.children.foldLeft(z)(replaceExpandedChild))
-			}
-		}
 
 	/**
 		* Method to form a Node from a T.
@@ -95,6 +73,7 @@ trait Node[T] extends Outputable[Unit] {
 		* @param tns the tns to add as additional children.
 		* @return a copy of this Node but with tns as additional children.
 		*/
+	//noinspection ScalaStyle
 	def ++(tns: Seq[Node[T]]): Node[T] = unit(t, terminal = isTerminal, children ++ tns)
 
 	/**
@@ -103,6 +82,7 @@ trait Node[T] extends Outputable[Unit] {
 		* @param ts the values to add as additional child values.
 		* @return a copy of this Node but with ts as additional child values.
 		*/
+	//noinspection ScalaStyle
 	def :+(ts: Seq[T]): Node[T] = this ++ (ts map unit)
 
 	/**
@@ -113,6 +93,7 @@ trait Node[T] extends Outputable[Unit] {
 		* @param node the node to add as a child.
 		* @return a copy of this Node but with node as an additional child.
 		*/
+	//noinspection ScalaStyle
 	def :+(node: Node[T]): Node[T] = unit(t, terminal = isTerminal, children :+ node)
 
 	/**
@@ -121,12 +102,43 @@ trait Node[T] extends Outputable[Unit] {
 		* @param x the x value to be turned into a Node which is then :+'d to this Node.
 		* @return a copy of this Node but with x as an additional child value.
 		*/
+	//noinspection ScalaStyle
 	def :+(x: T): Node[T] = this :+ unit(x)
+
+	/**
+		* Method to expand a branch of a tree, by taking this Node and replacing it with children nodes which are themselves recursively expanded.
+		* The algorithm operates in a depth-first-search manner.
+		*
+		* If successor(t) yields a Some(Nil), it simply means that this branch will be eliminated, while other branches will continue as normal.
+		* If successor(t) yields None, we break out of the expansion and return this node with the successful node marked terminal.
+		* Note, however, some siblings, uncles and aunts of the success node will remain in this.
+		*
+		* TODO make this tail-recursive
+		*
+		* @tparam U a super-type of T (or T, of course) for which there is evidence of Successors[U].
+		* @return an Option of Node[U]
+		*/
+	def expand[U >: T : Successors](levels: Int): Option[Node[U]] =
+		if (levels <= 0) None
+		else {
+			def replaceExpandedChild(r: Node[U], n: Node[U]) = if (r.isTerminal) r else r.replace(n, n.expand(levels - 1))
+
+			val node = this.asInstanceOf[Node[U]]
+			implicitly[Successors[U]].successors(t) match {
+				case Some(Nil) => // XXX no descendants? signal for this Node to be removed.
+					None
+				case None => // XXX terminating condition found? mark it.
+					Some(node.makeTerminal)
+				case Some(us) => // XXX normal situation with descendants? recursively expand them.
+					val z = node :+ us
+					Some(z.children.foldLeft(z)(replaceExpandedChild))
+			}
+		}
 
 	/**
 		* Method to replace a node of this tree with the given node and to return the resulting tree.
 		*
-		* CONSIDER: whether isTerminal should be y.isTerminal in the else part (I don't think so).
+		* CONSIDER: whether isTerminal needs to be y.isTerminal in the else part.
 		*
 		* @param x the node to be replaced.
 		* @param y the node with which to replace the given node.
@@ -217,10 +229,12 @@ trait Node[T] extends Outputable[Unit] {
 		* @param output the Output to append to.
 		* @return a new instance of Output.
 		*/
-	def outputChildren(output: Output): Output = if (children.nonEmpty) {
-		val indentedOutput = output.indent("  ")
-		indentedOutput ++ children.map(_.output(indentedOutput.copy.insertBreak))
-	} else output
+	def outputChildren(output: Output): Output =
+		if (children.nonEmpty) {
+			val indentedOutput = output.indent("  ")
+			indentedOutput ++ children.map(_.output(indentedOutput.copy.insertBreak))
+		}
+		else output
 
 	/**
 		* Method to output the value of this Node.
@@ -237,6 +251,12 @@ trait Node[T] extends Outputable[Unit] {
 
 case class NodeException(str: String) extends Exception(str)
 
+/**
+	* This is the trait (actually, it's the base of a type-class) which allows
+	* the application to program the manner of expanding a tree.
+	*
+	* @tparam T the underlying type (matches the T of a Node).
+	*/
 trait Successors[T] {
 	/**
 		* Method to yield the successors (i.e. children) of the underlying type T.
