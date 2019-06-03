@@ -7,8 +7,8 @@ package com.phasmidsoftware.bridge.pbn
 import scala.io.Source
 import scala.language.postfixOps
 import scala.util._
+import scala.util.matching.Regex
 import scala.util.parsing.combinator.JavaTokenParsers
-
 
 /**
 	* RecapParser will parse a String as either an event, section, preamble, pair, traveler, play or result.
@@ -16,9 +16,18 @@ import scala.util.parsing.combinator.JavaTokenParsers
 class PBNParser extends JavaTokenParsers {
 	override def skipWhitespace: Boolean = false
 
-	def pbn: Parser[PBN] = repsep(game, emptyLine) ^^ { gs => PBN(gs) }
+	/**
+		* Method to parse a PBN as a sequence of game separated by the gameTerminator.
+		*
+		* @return a Parser[PBN]
+		*/
+	def pbn: Parser[PBN] = repsep(game, """\|\|\|\|\|\|\|\|\|\|\n""".r) ^^ { gs => PBN(gs) }
 
-	def game: Parser[Game] = repsep(tagPair, emptySpace) ^^ { ps => Game(ps map { case n ~ v ~ xs => n -> DetailedValue(v, xs) }) }
+	//	def pbn: Parser[PBN] = repsep(game, PBNParser.gameTerminatorR) ^^ ( gs => PBN(gs) )
+
+	def game: Parser[Game] = repsep(tagPair, emptySpace) ^^ { ps =>
+		Game(ps map { case n ~ v ~ xs => n -> DetailedValue.trim(v, xs) })
+	}
 
 	def emptySpace: Parser[Any] = """\s*""".r <~ opt(endOfLine)
 
@@ -30,8 +39,6 @@ class PBNParser extends JavaTokenParsers {
 	def value: Parser[Value] = date | deal | set | stringValue | failure("invalid value")
 
 	def detail: Parser[Seq[String]] = repsep(detailR, emptySpace)
-
-	private def detailR = """[^;\[]+""".r
 
 	def date: Parser[DateValue] = {
 		val yearDigits = 4
@@ -58,20 +65,25 @@ class PBNParser extends JavaTokenParsers {
 	def digits(n: Int): Parser[Int] = nDigits(n) ^^ (x => x.toInt)
 
 	/**
-		* parser for the (insigificant) end of a line, which may include a comment.
+		* parser for the (insignificant) end of a line, which may include a comment.
 		*
 		* @return a Parser[Any]
 		*/
 	def endOfLine: Parser[Any] = semi ~ """.*\n""".r
 
 	/**
-		* A String not containing either a quote or a semi-colon
+		* A String containing neither a quote nor a semi-colon.
 		*/
 	private val generalString = """[^";]*""".r
 
+	/**
+		* NOTE: the vertical bar should be a reference to the unusedCharacter
+		*/
+	private val detailR = """[^;\|\[]+""".r
+
 	private val semi = """;""".r
 
-	private val emptyLine = """\s*\n""".r
+//	private val emptyLine = """\s*\n""".r
 
 	private def nDigits(n: Int) = s"""\\d{$n}""".r
 
@@ -92,11 +104,41 @@ class PBNParser extends JavaTokenParsers {
 
 
 object PBNParser {
+	/**
+		* Define a character not used by the PBN notation that we can use
+		* to designate the end of a game.
+		* The reason we need to do this is because the PBN definition is very vague about this
+		* and allows multiple empty lines after a the detail following a tag.
+		* Basically, the PBN definition was developed by somebody who had no clue!
+		*/
+	private val unusedChar = """|"""
+
+	private val gameTerminatorLength = 10
+
+	val gameTerminator: String = unusedChar * gameTerminatorLength
+
+	val gameTerminatorR: Regex = (gameTerminator + "\n").r
+
+	/**
+		* Parse a PBN file and return a Try of PBN.
+		* NOTE: the PBN spec (https://www.tistis.nl/pbn/) is unbelievably bad!
+		* This method is mostly concerned with pre-processing the source lines so that they can be parsed
+		* by a real parser.
+		* In particular, we filter out lines beginning with "%" (the so-called escape sequences);
+		* Then we filter out blocks of code delimited by {} (these are block comments);
+		* Then we replace pairs of empty lines with one single line containing ten vertical bars.
+		*
+		* @param s the source from which we will parse the PBN.
+		* @return a Try[PBN]
+		*/
 	def parsePBN(s: Source): Try[PBN] = if (s != null) {
 		val p = new PBNParser
-		// NOTE: in the following two lines we take care of the escape mechanism (lines starting with %),
-		// NOTE: and also the block comment mechanism (sequences matching {...} which may include newlines)
-		val lines = s.getLines() filterNot (_.startsWith("%"))
+		// NOTE: would prefer to construct the terminator string ("||||||||||") from the unusedChar.
+		val lines = s.getLines().filterNot(_.startsWith("%")).
+			sliding(2, 1).
+			filterNot(ws => ws.head.isEmpty && ws.last.isEmpty).
+			map(_.head).
+			map(s => if (s.isEmpty) "||||||||||" else s)
 		val string = lines.mkString("\n").replaceAll("""\{[\n\S\s]*\}""", "")
 		try p.parseAll(p.pbn, string) match {
 			case p.Success(x: PBN, _) => Success(x)

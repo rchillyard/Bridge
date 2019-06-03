@@ -101,7 +101,7 @@ class PBNParserSpec extends FlatSpec with Matchers {
 		val source = Source.fromResource("com/phasmidsoftware/bridge/director/LEXINGTON 2016.2.9.PBN")
 		val pbn = PBNParser.parsePBN(source)
 		pbn should matchPattern { case Success(_) => }
-		println(pbn)
+		pbn.get.games.size shouldBe 8
 	}
 }
 
