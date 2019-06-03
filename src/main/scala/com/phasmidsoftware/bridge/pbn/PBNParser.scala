@@ -29,8 +29,6 @@ class PBNParser extends JavaTokenParsers {
 		Game(ps map { case n ~ v ~ xs => n -> DetailedValue.trim(v, xs) })
 	}
 
-	def emptySpace: Parser[Any] = """\s*""".r <~ opt(endOfLine)
-
 	def tagPair: Parser[Name ~ Value ~ Seq[String]] =
 		openBracket ~> name ~ (atLeastOneWhiteSpace ~> quote ~> value <~ quote <~ closeBracket) ~ detail
 
@@ -38,7 +36,9 @@ class PBNParser extends JavaTokenParsers {
 
 	def value: Parser[Value] = date | deal | set | stringValue | failure("invalid value")
 
-	def detail: Parser[Seq[String]] = repsep(detailR, emptySpace)
+	def detail: Parser[Seq[String]] = repsep(detailR, emptySpace) ^^ { ws =>
+		for (w <- ws; x <- w.split("\n")) yield x
+	}
 
 	def date: Parser[DateValue] = {
 		val yearDigits = 4
@@ -63,6 +63,8 @@ class PBNParser extends JavaTokenParsers {
 	def stringValue: Parser[StringValue] = generalString ^^ (s => StringValue(s))
 
 	def digits(n: Int): Parser[Int] = nDigits(n) ^^ (x => x.toInt)
+
+	def emptySpace: Parser[Any] = """\s*""".r <~ opt(endOfLine)
 
 	/**
 		* parser for the (insignificant) end of a line, which may include a comment.

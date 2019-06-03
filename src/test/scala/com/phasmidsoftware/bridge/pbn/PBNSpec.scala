@@ -4,6 +4,7 @@
 
 package com.phasmidsoftware.bridge.pbn
 
+import com.phasmidsoftware.bridge.cards.{Deal, Whist}
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.io.Source
@@ -41,6 +42,16 @@ class PBNSpec extends FlatSpec with Matchers {
 	it should "toInt" in {
 		val target = StringValue("1")
 		target.toInt shouldBe 1
+	}
+
+	behavior of "DealValue"
+	it should "getDeal" in {
+		val deal = py.get.head("Deal").value.asInstanceOf[DealValue].deal
+		deal should matchPattern { case Deal(_, _) => }
+	}
+	it should "analyze deal" in {
+		val deal = py.get.head("Deal").value.asInstanceOf[DealValue].deal
+		Whist(deal, 1).analyzeDoubleDummy(8, directionNS = true) shouldBe true
 	}
 
 	behavior of "DetailedValue"

@@ -59,7 +59,8 @@ case class DetailedValue(value: Value, detail: Seq[String]) extends Value {
 object DetailedValue {
 	def trim(value: Value, detail: Seq[String]): DetailedValue = DetailedValue(value, trim(detail))
 
-	private def trim(detail: Seq[String]): Seq[String] = (detail.reverse match {
+	// TODO simplify this because we no longer have newlines embedded in the strings.
+	private def trim(detail: Seq[String]): Seq[String] = (detail.reverse.filter(_.nonEmpty) match {
 		case Nil => Nil
 		case h :: t =>
 			h.reverse.replaceFirst("\n", "") match {
@@ -120,6 +121,7 @@ case class DateValue(year: Int, month: Int, day: Int) extends Value {
 	* @return a new Deal.
 	*/
 case class DealValue(q: String, rss: Seq[Seq[String]]) extends Value {
+
 	def deal: Deal = Deal.fromHandStrings("", q, rss)
 }
 
