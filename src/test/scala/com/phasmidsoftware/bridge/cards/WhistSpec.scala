@@ -162,10 +162,7 @@ class WhistSpec extends FlatSpec with Matchers {
 
 	it should "choose Play" in {
 		val deal = Deal("test", 0L)
-		//		println(deal.neatOutput)
-		val hand0 = deal.hands.head
 		val hand1 = deal.hands(1)
-		val hand2 = deal.hands(2)
 		val holding: Holding = deal.hands.head.longestSuit
 		holding.suit shouldBe Hearts
 		val leads: Seq[CardPlay] = holding.choosePlays(deal, 0, FourthBest, None)
@@ -184,10 +181,8 @@ class WhistSpec extends FlatSpec with Matchers {
 	behavior of "Hand"
 
 	it should "apply" in {
-		// TODO either use the deal or the given hand map. Not both!
 		val map: Map[Suit, Holding] = Map(Spades -> Holding.parseHolding("SKQ3"), Hearts -> Holding.parseHolding("H7654"), Diamonds -> Holding.parseHolding("DQ104"), Clubs -> Holding.parseHolding("C842"))
-		val deal = Deal("test", 0L)
-		val target = Hand(deal, 0, map)
+		val target = Hand(0, map)
 		val holdings = target.holdings
 		holdings.size shouldBe 4
 		holdings.head shouldBe Spades -> Holding.parseHolding("SKQ3")
@@ -195,10 +190,8 @@ class WhistSpec extends FlatSpec with Matchers {
 	}
 
 	it should "promote" in {
-		// TODO either use the deal or the given hand map. Not both!
 		val map: Map[Suit, Holding] = Map(Spades -> Holding.parseHolding("SKQ3"), Hearts -> Holding.parseHolding("H7654"), Diamonds -> Holding.parseHolding("DQ104"), Clubs -> Holding.parseHolding("C842"))
-		val deal = Deal("test", 0L)
-		val target = Hand(deal, 0, map)
+		val target = Hand(0, map)
 		target.holdings.head._2.sequences.head.priority shouldBe 1
 		target.holdings.last._2.sequences.head.priority shouldBe 6
 		val promoted = target.promote(Spades, 0).quit
@@ -237,16 +230,12 @@ class WhistSpec extends FlatSpec with Matchers {
 	}
 
 	it should "form string" in {
-		// TODO sort this out: we shouldn't be creating a full deal and then creating a hand.
-		val deal = Deal("test", 0L)
-		val target = Hand.from(deal, 0, "SAT32", "CQT98", "D43", "HKJT")
+		val target = Hand.from(0, "SAT32", "CQT98", "D43", "HKJT")
 		target.neatOutput shouldBe "SAT32 HKJT D43 CQT98"
 	}
 
 	it should "evaluate" in {
-		// TODO sort this out: we shouldn't be creating a full deal and then creating a hand.
-		val deal = Deal("test", 0L)
-		val target = Hand.from(deal, 0, "SAT32", "CQT98", "D43", "HKJT")
+		val target = Hand.from(0, "SAT32", "CQT98", "D43", "HKJT")
 		target.evaluate shouldBe 2.7529296875 +- 0.02
 	}
 
@@ -365,6 +354,12 @@ class WhistSpec extends FlatSpec with Matchers {
 	it should "analyze deal 1" in {
 		val py: Try[PBN] = PBNParser.parsePBN(Source.fromResource("com/phasmidsoftware/bridge/director/LEXINGTON 2016.2.9.PBN"))
 		val game = py.get.tail.head
+		analyzeMakableContracts(game)
+	}
+
+	ignore should "analyze deal 7" in {
+		val py: Try[PBN] = PBNParser.parsePBN(Source.fromResource("com/phasmidsoftware/bridge/director/LEXINGTON 2016.2.9.PBN"))
+		val game = py.get.last
 		analyzeMakableContracts(game)
 	}
 

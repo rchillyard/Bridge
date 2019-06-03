@@ -92,6 +92,28 @@ case class Trick(index: Int, plays: Seq[CardPlay]) extends Outputable[Deal] with
 		}
 		else None
 
+//	def enumeratePlays(deal: Deal): Seq[Trick] = winner match {
+//		case Some(Winner(p, true)) =>
+//			enumerateLeads(p.hand, index + 1)
+//		case _ =>
+//			if (started)
+//				enumerateFollows
+//			else
+//				enumerateLeadsAsTricks(deal, index = index + 1)
+//	}
+//
+//	//	TODO make private
+//	// CONSIDER desugaring the body
+//	// CONSIDER renaming to enumerateLeads
+//	def enumerateLeadsAsTricks(deal: Deal, leader: Int, index: Int): Seq[Trick] =
+//		for (p <- chooseLeads(deal, leader)) yield Trick(index, Seq(p))
+//
+//	// TODO make private
+//	def chooseLeads(deal: Deal, leader: Int): Seq[CardPlay] =
+//		deal.hands(leader).longestSuit.choosePlays(deal, leader, FourthBest, None)
+//
+
+
 	lazy val value: Option[Double] = for (w <- winner; if w.complete) yield if (w.sameSide(0)) 1 else 0
 
 	/**

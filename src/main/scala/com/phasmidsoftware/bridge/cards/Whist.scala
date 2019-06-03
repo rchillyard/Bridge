@@ -458,13 +458,10 @@ object Holding {
 /**
 	* This class models a Whist hand (four Holdings, comprising thirteen cards).
 	*
-	* NOTE: we need to remove the deal parameter and have it provided as a parameter to the methods that need it.
-	*
-	* @param deal     the deal to which this Hand belongs.
 	* @param index    the index of this hand within the deal (North = 0).
 	* @param holdings the four holdings (as a Map).
 	*/
-case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Outputable[Unit] with Quittable[Hand] with Playable[Hand] with Evaluatable {
+case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Unit] with Quittable[Hand] with Playable[Hand] with Evaluatable {
 
 	/**
 		* CONSIDER: using strength of suit as a decider between equal lengths.
@@ -512,11 +509,15 @@ case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Ou
 			case _ => false
 		}
 
-		for {
-			// NOTE: first get the holdings from the other suits in order of length
-			h <- holdings.flatMap { case (k, v) => if (suitsMatch(k)) None else Some(v) }.toSeq.sortWith(_.length < _.length)
-			ps <- h.choosePlays(deal, index, Duck, None)
-		} yield ps
+		trick.plays.headOption.map(_.deal) match {
+			case Some(deal) =>
+				for {
+					// NOTE: first get the holdings from the other suits in order of length
+					h <- holdings.flatMap { case (k, v) => if (suitsMatch(k)) None else Some(v) }.toSeq.sortWith(_.length < _.length)
+					ps <- h.choosePlays(deal, index, Duck, None)
+				} yield ps
+			case None => throw CardException("cannot discard from a trick which is not started.")
+		}
 	}
 
 	/**
@@ -527,6 +528,7 @@ case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Ou
 		*/
 	def choosePlays(trick: Trick): Seq[CardPlay] =
 		if (trick.started) {
+			val deal = trick.plays.head.deal
 			val holding = holdings(trick.suit.get)
 			if (holding.isVoid) discard(trick)
 			else holding.choosePlays(deal, index, trick)
@@ -549,10 +551,10 @@ case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Ou
 		*/
 	//noinspection ScalaStyle
 	def -(suit: Suit, priority: Int): Hand =
-		Hand(deal, index, holdings + (suit -> (holdings(suit) - priority)))
+		Hand(index, holdings + (suit -> (holdings(suit) - priority)))
 
 	def promote(suit: Suit, priority: Int): Hand =
-		Hand(deal, index, holdings + (suit -> holdings(suit).promote(priority)))
+		Hand(index, holdings + (suit -> holdings(suit).promote(priority)))
 
 	/**
 		* @return an eagerly promoted Hand.
@@ -608,7 +610,7 @@ case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Ou
 	private lazy val _evaluate = holdings.values.map(_.evaluate).sum
 
 	// NOTE: only used for testing
-	private lazy val _quit = Hand(deal, index, for ((k, v) <- holdings) yield k -> v.quit)
+	private lazy val _quit = Hand(index, for ((k, v) <- holdings) yield k -> v.quit)
 
 	private lazy val _longestSuit = holdings.values.maxBy(_.length)
 
@@ -624,25 +626,37 @@ object Hand {
 		* @param cs    cards
 		* @return a Hand.
 		*/
-	def apply(deal: Deal, index: Int, cs: Seq[Card]): Hand = Hand(deal, index, createHoldings(cs))
+	def apply(deal: Deal, index: Int, cs: Seq[Card]): Hand = Hand(index, createHoldings(cs))
 
 	def createHoldings(cs: Seq[Card]): Map[Suit, Holding] = for ((suit, cards) <- cs.groupBy(c => c.suit)) yield (suit, Holding.create(suit, cards))
 
 	/**
-		* NOTE: This doesn't really make sense.
+		* Create a Hand from a set of Strings representing Holdings.
 		*
-		* @param deal  deal
 		* @param index index
 		* @param ws    Strings representing holdings.
 		* @return a Hand.
 		*/
-	def from(deal: Deal, index: Int, ws: String*): Hand = {
+	def from(index: Int, ws: String*): Hand = {
 		val tuples = for (w <- ws; h = Holding.parseHolding(w)) yield h.suit -> h
-		Hand(deal, index, tuples.toMap)
+		Hand(index, tuples.toMap)
 	}
 
+	/**
+		* Get the index of the next hand.
+		*
+		* @param index current hand.
+		* @return next hand.
+		*/
 	def next(index: Int): Int = next(index, 1)
 
+	/**
+		* Get the index of a subsequent next hand.
+		*
+		* @param index current hand.
+		* @param step  the number of moves clockwise around the table.
+		* @return subsequent hand.
+		*/
 	def next(index: Int, step: Int): Int = (index + step) % Deal.HandsPerDeal
 
 	/**

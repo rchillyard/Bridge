@@ -9,7 +9,7 @@ import scala.language.implicitConversions
 /**
   * This class models a playing card.
   *
-  * CONSIDER removing the priority parameter because priority can be encoded into a sequence instead.
+  * CONSIDER removing the priority variable because priority can be encoded into a sequence instead.
   *
   * @param suit the suit of the card (spades, hearts, diamonds, or clubs).
   * @param rank the rank of the card (2 thru A).
