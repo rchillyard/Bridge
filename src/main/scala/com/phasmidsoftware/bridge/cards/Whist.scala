@@ -390,7 +390,7 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 	private lazy val maybeSuit: Option[Suit] = cards.headOption map (_.suit)
 
 	private lazy val _evaluate: Double = {
-		// TODO for now, I'm going to use iteration and var !!
+		// TODO Do this properly but, for now, I'm going to use iteration and var !!
 		var result = 0.0
 		var cards = 0
 		for (i <- sequences.indices) {
@@ -423,6 +423,15 @@ object Holding {
 	}
 
 	/**
+		* Create a new Holding from a suit and a String representing the Ranks.
+		*
+		* @param suit  the suit.
+		* @param ranks the Ranks.
+		* @return a new Holding.
+		*/
+	def apply(suit: Suit, ranks: String): Holding = create(Card.parser.parseRanks(ranks), suit)
+
+	/**
 		* Implicit converter from a String to a Holding.
 		*
 		* @param s the String made up of (abbreviated) suit and ranks.
@@ -448,6 +457,8 @@ object Holding {
 
 /**
 	* This class models a Whist hand (four Holdings, comprising thirteen cards).
+	*
+	* NOTE: we need to remove the deal parameter and have it provided as a parameter to the methods that need it.
 	*
 	* @param deal     the deal to which this Hand belongs.
 	* @param index    the index of this hand within the deal (North = 0).
@@ -605,10 +616,26 @@ case class Hand(deal: Deal, index: Int, holdings: Map[Suit, Holding]) extends Ou
 
 object Hand {
 
+	/**
+		* NOTE: This doesn't really make sense.
+		*
+		* @param deal  deal
+		* @param index index
+		* @param cs    cards
+		* @return a Hand.
+		*/
 	def apply(deal: Deal, index: Int, cs: Seq[Card]): Hand = Hand(deal, index, createHoldings(cs))
 
 	def createHoldings(cs: Seq[Card]): Map[Suit, Holding] = for ((suit, cards) <- cs.groupBy(c => c.suit)) yield (suit, Holding.create(suit, cards))
 
+	/**
+		* NOTE: This doesn't really make sense.
+		*
+		* @param deal  deal
+		* @param index index
+		* @param ws    Strings representing holdings.
+		* @return a Hand.
+		*/
 	def from(deal: Deal, index: Int, ws: String*): Hand = {
 		val tuples = for (w <- ws; h = Holding.parseHolding(w)) yield h.suit -> h
 		Hand(deal, index, tuples.toMap)
