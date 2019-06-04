@@ -19,7 +19,7 @@ class WhistSpec extends FlatSpec with Matchers {
 		val whist00 = Whist(deal0, north)
 		whist00.deal shouldBe deal0
 		whist00.openingLeader shouldBe north
-		val state = State(whist00, Trick(0, Nil))
+		val state = State(whist00, Trick.empty)
 		whist00.createState shouldBe state
 	}
 
@@ -151,7 +151,7 @@ class WhistSpec extends FlatSpec with Matchers {
 		val leads: Seq[CardPlay] = holding.choosePlays(deal, 0, FourthBest, None)
 		leads.size shouldBe 3
 		val lead: CardPlay = leads.head
-		val trick0 = Trick(0, Seq(lead))
+		val trick0 = Trick(1, Seq(lead))
 		val wo = trick0.winner
 		wo should matchPattern { case Some(Winner(`lead`, false)) => }
 		// Ace play?
@@ -168,7 +168,7 @@ class WhistSpec extends FlatSpec with Matchers {
 		val leads: Seq[CardPlay] = holding.choosePlays(deal, 0, FourthBest, None)
 		leads.size shouldBe 3
 		val lead = leads.head
-		val trick0 = Trick(0, Seq(lead))
+		val trick0 = Trick(1, Seq(lead))
 		val wo = trick0.winner
 		wo should matchPattern { case Some(Winner(`lead`, false)) => }
 		val holding1 = hand1.holdings(trick0.suit.get)
@@ -271,7 +271,7 @@ class WhistSpec extends FlatSpec with Matchers {
 		val state0 = State(whist00)
 		val states: Seq[State] = state0.enumeratePlays
 		states.size shouldBe 3
-		states foreach { s => println(s"${s.trick} ${s.tricks}") }
+		//		states foreach { s => println(s"${s.trick} ${s.tricks}") }
 	}
 
 	it should "enumeratePlays to two levels" in {
@@ -282,7 +282,7 @@ class WhistSpec extends FlatSpec with Matchers {
 		states1.size shouldBe 3
 		val states2: Seq[State] = for (p <- states1; q <- p.enumeratePlays) yield q
 		states2.size shouldBe 6
-		states2 foreach { s => println(s"${s.trick} ${s.tricks}") }
+		//		states2 foreach { s => println(s"${s.trick} ${s.tricks}") }
 	}
 
 	it should "enumeratePlays to three levels" in {
@@ -295,7 +295,7 @@ class WhistSpec extends FlatSpec with Matchers {
 		states2.size shouldBe 6
 		val states3: Seq[State] = for (p <- states2; q <- p.enumeratePlays) yield q
 		states3.size shouldBe 18
-		states3 foreach { s => println(s"${s.trick} ${s.tricks}") }
+		//		states3 foreach { s => println(s"${s.trick} ${s.tricks}") }
 	}
 
 	it should "enumeratePlays to four levels" in {
@@ -310,7 +310,7 @@ class WhistSpec extends FlatSpec with Matchers {
 		states3.size shouldBe 18
 		val states4: Seq[State] = for (p <- states3; q <- p.enumeratePlays) yield q
 		states4.size shouldBe 36
-		states4 foreach { s => println(s"${s.trick} ${s.tricks}") }
+		//		states4 foreach { s => println(s"${s.trick} ${s.tricks}") }
 	}
 
 	it should "enumeratePlays to five levels" in {
@@ -326,8 +326,8 @@ class WhistSpec extends FlatSpec with Matchers {
 		val states4: Seq[State] = for (p <- states3; q <- p.enumeratePlays) yield q
 		states4.size shouldBe 36
 		val states5: Seq[State] = for (p <- states4; q <- p.enumeratePlays) yield q
-		states5.size shouldBe 134
-		states5 foreach { s => println(s"${s.trick} ${s.tricks}") }
+		states5.size shouldBe 139
+		//		states5 foreach { s => println(s"${s.trick} ${s.tricks}") }
 	}
 
 	behavior of "double dummy"

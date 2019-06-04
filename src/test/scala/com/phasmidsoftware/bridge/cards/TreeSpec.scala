@@ -16,7 +16,7 @@ class TreeSpec extends FlatSpec with Matchers {
 
 	it should "apply" in {
 		// TODO sort this out properly.
-		val trick = Trick(0, Nil)
+		val trick = Trick.empty
 		val root = StateNode(State(whist00, trick, Tricks.zero), done = false, Nil)
 		val target = Tree(root)
 		target.root.state.deal shouldBe deal0
@@ -66,7 +66,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
 		val trick = Trick.create(0, CardPlay(deal, 0, Spades, priority1S), CardPlay(deal, 1, Spades, priority2S), CardPlay(deal, 2, Spades, priority3S), CardPlay(deal, 3, Spades, priority4S))
 		// TODO need to sort this out.
-		val deal2 = deal.playAll(trick)
+		//		val deal2 = deal.playAll(trick)
 		trick.winner match {
 			case Some(Winner(p, true)) =>
 				val state = State(whist, trick, Tricks(0, 0).increment(trick))
@@ -86,12 +86,12 @@ class TreeSpec extends FlatSpec with Matchers {
 		val deal = Deal("test", 2L)
 		deal.output(Output(System.out)).close()
 		val whist = Whist(deal, 0)
-		val trick = Trick(0, Seq(CardPlay(deal, 0, Spades, 1)))
+		val trick = Trick(1, Seq(CardPlay(deal, 0, Spades, 1)))
 		val state = State(whist, trick)
 		val ss = state.enumerateFollows
 		ss.size shouldBe 2
-		ss.head.trick.toString shouldBe "T0 {Play: 0 SK, Play: 1 SQ}"
-		ss.last.trick.toString shouldBe "T0 {Play: 0 SK, Play: 1 S4}"
+		ss.head.trick.toString shouldBe "T1 {Play: 0 SK, Play: 1 SQ}"
+		ss.last.trick.toString shouldBe "T1 {Play: 0 SK, Play: 1 S4}"
 	}
 
 	it should "expand 1" in {
@@ -100,7 +100,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		val target = Tree(whist)
 		def alwaysFalse(n: State): Boolean = false
 
-		val result = target.expand(1)(alwaysFalse, alwaysFalse)
+		val result = target.expand(1)(alwaysFalse)
 		result.children.size shouldBe 0
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
@@ -108,7 +108,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		writer.spillway shouldBe "T0  (7.0)"
 		val traverse = result.depthFirstTraverse
 		traverse.size shouldBe 1
-		traverse foreach { s => println(s"${s.trick} ${s.tricks}") }
+		//		traverse foreach { s => println(s"${s.trick} ${s.tricks}") }
 	}
 
 	it should "expand 2" in {
@@ -118,10 +118,10 @@ class TreeSpec extends FlatSpec with Matchers {
 
 		def alwaysFalse(n: State): Boolean = false
 
-		val result = target.expand(2)(alwaysFalse, alwaysFalse)
+		val result = target.expand(2)(alwaysFalse)
 		result.children.size shouldBe 4
 		val states = result.depthFirstTraverse
-		states foreach { s => println(s"${s.trick} ${s.tricks}") }
+		//		states foreach { s => println(s"${s.trick} ${s.tricks}") }
 		states.size shouldBe 5
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
@@ -136,9 +136,9 @@ class TreeSpec extends FlatSpec with Matchers {
 
 		def alwaysFalse(n: State): Boolean = false
 
-		val result = target.expand(3)(alwaysFalse, alwaysFalse)
+		val result = target.expand(3)(alwaysFalse)
 		result.children.size shouldBe 4
-		result.children foreach { s => println(s"${s.t.trick} ${s.t.tricks}") }
+		//		result.children foreach { s => println(s"${s.t.trick} ${s.t.tricks}") }
 		result.depthFirstTraverse.size shouldBe 17
 		val writer = MockWriter(8192)
 		result.output(Output(writer)).close()
@@ -153,7 +153,7 @@ class TreeSpec extends FlatSpec with Matchers {
 
 		def alwaysFalse(n: State): Boolean = false
 
-		val result = target.expand(4)(alwaysFalse, alwaysFalse)
+		val result = target.expand(4)(alwaysFalse)
 		result.children.size shouldBe 4
 		val writer = MockWriter(8192)
 		result.output(Output(writer)).close()
@@ -168,7 +168,7 @@ class TreeSpec extends FlatSpec with Matchers {
 
 		def alwaysFalse(n: State): Boolean = false
 
-		val result = target.expand(5)(alwaysFalse, alwaysFalse)
+		val result = target.expand(5)(alwaysFalse)
 		result.children.size shouldBe 4
 		val writer = MockWriter(16384)
 		result.output(Output(writer)).close()
@@ -199,9 +199,9 @@ class TreeSpec extends FlatSpec with Matchers {
 
 		val result = target.expand(13)(success, failure)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 36
+		states.size shouldBe 31
 		// FIXME
-		states foreach { s => println(s"${s.trick} ${s.tricks}") }
+		//		states foreach { s => println(s"${s.trick} ${s.tricks}") }
 	}
 
 }

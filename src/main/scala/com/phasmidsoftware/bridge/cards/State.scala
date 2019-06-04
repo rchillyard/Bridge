@@ -19,6 +19,26 @@ import scala.language.postfixOps
 	*/
 case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[Unit] with Validatable {
 
+	// TODO remove this.
+	State.count += 1
+
+	//	println(s"State: ${State.count} ${whist.deal.title} ${trick.index} ${trick.plays.lastOption} ${tricks.ns} ${tricks.ew}")
+
+	/**
+		* The goal method for this State.
+		*
+		* @param directionNS  true if the direction of the declarer is NS.
+		* @param declarerGoal the declarer's goal in terms of tricks--once declarer reaches this goal OR...
+		*                     the opponents make this goal impossible, then the goal is achieved.
+		* @param tricksToPlay the total number of tricks to play, usually the value of Deal.TricksPerDeal, i.e. 13.
+		* @return true if the goal has been reached.
+		*/
+	def goal(directionNS: Boolean, declarerGoal: Int, tricksToPlay: Int): Boolean = {
+		val tuple = declarerGoal -> (tricksToPlay + 1 - declarerGoal)
+		val f = (tricks.goal _).tupled
+		f(if (directionNS) tuple else tuple.swap)
+	}
+
 	/**
 		* Method to enumerate all of the possible states that could be children of the Node enclosing this State.
 		*
@@ -28,13 +48,13 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 
 	//	TODO make private
 	lazy val enumerateFollows: Seq[State] = trick.next match {
-		case Some(t) => Tree.makeStates(whist, tricks, for (p <- deal.hands(t).choosePlays(trick)) yield trick :+ p)
+		case Some(t) => whist.makeStates(tricks, for (p <- deal.hands(t).choosePlays(trick)) yield trick :+ p)
 		case None => throw CardException(s"State: $this cannot be followed")
 	}
 
 	//	TODO make private
 	def enumerateLeads(leader: Int, index: Int): Seq[State] =
-		Tree.makeStates(whist, tricks, enumerateLeadsAsTricks(leader, index))
+		whist.makeStates(tricks, enumerateLeadsAsTricks(leader, index))
 
 	//	TODO make private
 	// CONSIDER desugaring the body
@@ -82,7 +102,7 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 		*
 		* @return an Int 0..52
 		*/
-	lazy val cardsPlayed: Int = trick.index * Deal.CardsPerTrick + trick.size
+	lazy val cardsPlayed: Int = trick.cardsPlayed
 
 	/**
 		* @return the fitness of this State rounded to the nearest 0.1
@@ -105,16 +125,7 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 		*/
 	def output(output: Output, xo: Option[Unit] = None): Output = trick.output(output, Some(deal)) :+ s" ($fitness)"
 
-	// CONSIDER moving this to Trick
-	private lazy val _enumeratePlays = trick.winner match {
-		case Some(Winner(p, true)) =>
-			enumerateLeads(p.hand, trick.index + 1)
-		case _ =>
-			if (trick.started)
-				enumerateFollows
-			else
-				enumerateLeads(whist.openingLeader, trick.index + 1)
-	}
+	private lazy val _enumeratePlays = whist.makeStates(tricks, trick.enumerateSubsequentPlays(whist))
 
 	private lazy val _validate: Boolean = trick.plays.forall(_.validate)
 
@@ -136,7 +147,21 @@ object State {
 		* @param whist the Deal of the new State.
 		* @return a new State based on the Deal without any tricks having been played.
 		*/
-	def apply(whist: Whist): State = apply(whist, Trick(0, Nil))
+	def apply(whist: Whist): State = apply(whist, Trick.empty)
+
+	/**
+		* Method to generate a goal function of type State => Boolean.
+		* The function required depends on the three parameters passed in, i.e. it closes on these three parameters.
+		*
+		* @param directionNS  true if the direction of the declarer is NS.
+		* @param declarerGoal the declarer's goal in terms of tricks--once declarer reaches this goal OR...
+		*                     the opponents make this goal impossible, then the goal is achieved.
+		* @param tricksToPlay the total number of tricks to play, usually the value of Deal.TricksPerDeal, i.e. 13.
+		* @return true if the goal has been reached.
+		*/
+	def goalFunction(directionNS: Boolean, declarerGoal: Int, tricksToPlay: Int = Deal.TricksPerDeal): State => Boolean = { s =>
+		(s.goal _).tupled((directionNS, declarerGoal, tricksToPlay))
+	}
 
 	/**
 		* Method to create a new State based on the outcome of the current trick.
@@ -170,6 +195,9 @@ object State {
 			*/
 		override def fitness(x: State): Double = x.tricks.ns + x.deal.evaluate
 	}
+
+	// TODO remove this.
+	var count = 0
 }
 
 /**
@@ -200,6 +228,16 @@ case class Tricks(ns: Int, ew: Int) extends Evaluatable {
 		case Some(Winner(p, true)) => increment(p.hand)
 		case _ => this
 	}
+
+	/**
+		* Method to determine if this instance of Tricks satisfies the goal.
+		* Once the goal is reached, we stop expanding the state tree.
+		*
+		* @param nsTricks the number of NS tricks which will trigger the goal when reached.
+		* @param ewTricks the number of EW tricks which will trigger the goal when reached.
+		* @return true if the goal has been reached, otherwise false.
+		*/
+	def goal(nsTricks: Int, ewTricks: Int): Boolean = ns >= nsTricks || ew >= ewTricks
 
 	/**
 		* @return a Double representing the value of this Tricks.

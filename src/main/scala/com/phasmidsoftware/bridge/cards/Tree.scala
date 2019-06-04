@@ -23,7 +23,7 @@ case class Tree(root: StateNode) extends Outputable[Unit] {
 		* @param levels the number of levels to enumerate.
 		* @return a StateNode.
 		*/
-	def expand(levels: Int = Deal.CardsPerDeal)(success: State => Boolean, failure: State => Boolean): StateNode = {
+	def expand(levels: Int = Deal.CardsPerDeal)(success: State => Boolean, failure: State => Boolean = _ => false): StateNode = {
 		trait SuccessorsState extends Successors[State] {
 			def successors(state: State): Option[Seq[State]] = if (success(state)) None else if (failure(state)) Some(Nil) else Some(state.enumeratePlays)
 		}
@@ -40,14 +40,14 @@ case class Tree(root: StateNode) extends Outputable[Unit] {
 		*
 		* @return a StateNode.
 		*/
-	def enumerateNoTrumpPlaysNS(nsTricks: Int): StateNode = expand()(_.tricks.ns >= nsTricks, _.tricks.ew > Deal.TricksPerDeal - nsTricks)
+	def enumerateNoTrumpPlaysNS(nsTricks: Int): StateNode = expand()(State.goalFunction(directionNS = true, nsTricks))
 
 	/**
 		* Choose the plays for this Deal, by running expand for 52 levels, and terminating when NS have nsTricks or when EW have more than 13-nsTricks.
 		*
 		* @return a StateNode.
 		*/
-	def enumerateNoTrumpPlaysEW(ewTricks: Int): StateNode = expand()(_.tricks.ew >= ewTricks, _.tricks.ns > Deal.TricksPerDeal - ewTricks)
+	def enumerateNoTrumpPlaysEW(ewTricks: Int): StateNode = expand()(State.goalFunction(directionNS = false, ewTricks))
 
 	/**
 		* Output this Tree to the given Output.
@@ -76,19 +76,6 @@ object Tree {
 		*/
 	def apply(whist: Whist): Tree = apply(State(whist))
 
-	/**
-		* Method to make a list of States corresponding to the given set of Trick objects.
-		*
-		* CONSIDER moving this to be an instance method of Whist.
-		*
-		* NOTE: this originally had a filter that removed States that did not have a high fitness.
-		*
-		* @param whist  the game being played.
-		* @param tricks the current value of Tricks.
-		* @param ts     a sequence of Trick instances.
-		* @return a sequence of State objects corresponding to the values of ts.
-		*/
-	def makeStates(whist: Whist, tricks: Tricks, ts: Seq[Trick]): Seq[State] = ts.map(t => State.create(whist, t, tricks))
 }
 
 /**

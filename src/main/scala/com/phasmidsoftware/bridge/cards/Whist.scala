@@ -26,6 +26,18 @@ import scala.language.implicitConversions
 	* @param openingLeader the player on opening lead (0 thru 3 for "North" thru "West").
 	*/
 case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Quittable[Whist] {
+
+	/**
+		* Method to make a sequence of States from the given sequence of Trick instances.
+		*
+		* NOTE: this originally had a filter that removed States that did not have a high fitness.
+		*
+		* @param tricks the current value of Tricks (i.e. current score NS vs. EW).
+		* @param ts     a sequence of Trick instances.
+		* @return a sequence of State objects corresponding to the values of ts.
+		*/
+	def makeStates(tricks: Tricks, ts: Seq[Trick]): Seq[State] = ts.map(t => State.create(this, t, tricks))
+
 	/**
 		* Play a card from this Playable object.
 		*
@@ -184,7 +196,7 @@ object Sequence {
 
 	/**
 		* An ordering for a Sequence.
-		* Lower values of priority preced higher values.
+		* Lower values of priority precede higher values.
 		*/
 	implicit object SequenceOrdering extends Ordering[Sequence] {
 		override def compare(x: Sequence, y: Sequence): Int = x.priority - y.priority
@@ -509,7 +521,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
 			case _ => false
 		}
 
-		trick.plays.headOption.map(_.deal) match {
+		trick.plays.lastOption.map(_.deal) match {
 			case Some(deal) =>
 				for {
 					// NOTE: first get the holdings from the other suits in order of length
@@ -528,7 +540,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
 		*/
 	def choosePlays(trick: Trick): Seq[CardPlay] =
 		if (trick.started) {
-			val deal = trick.plays.head.deal
+			val deal = trick.plays.last.deal
 			val holding = holdings(trick.suit.get)
 			if (holding.isVoid) discard(trick)
 			else holding.choosePlays(deal, index, trick)

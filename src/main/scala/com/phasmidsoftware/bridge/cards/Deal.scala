@@ -157,7 +157,11 @@ object Deal {
   def fromHandStrings(title: String, start: String, wss: Seq[Seq[String]]): Deal = {
     val firstIndex = start match { case "N" => 0; case "E" => 1; case "S" => 2; case "W" => 3 }
     val hSss: Seq[Seq[(Suit, Holding)]] = for (ws <- wss) yield for ((w, x) <- ws zip Seq(Spades, Hearts, Diamonds, Clubs)) yield x -> Holding(x, w)
-    Deal(title, for ((hHs, i) <- hSss zipWithIndex) yield Hand(Hand.next(firstIndex, i), hHs.toMap))
+    val hands = for ((hHs, i) <- hSss zipWithIndex) yield Hand(Hand.next(firstIndex, i), hHs.toMap)
+    // NOTE: at this point, the hands are correct.
+    //  But it seems that code in Deal assumes that North is always first.
+    val (nonNorth, north) = hands.splitAt(4 - firstIndex)
+    Deal(title, north ++ nonNorth)
   }
 
   /**
