@@ -11,8 +11,17 @@ import com.phasmidsoftware.bridge.cards.Deal
 	*
 	* @param games the games for this PBN
 	*/
-case class PBN(games: Seq[Game]) extends Iterable[Game] {
-	def iterator: Iterator[Game] = games.iterator
+case class PBN(games: Seq[Game]) extends Iterable[Game] with (Int => Game) {
+
+  /**
+    * Method to get the ith game.
+    *
+    * @param i the index of the game wanted (0 .. N-1)
+    * @return the designated Game.
+    */
+  override def apply(i: Int): Game = games(i)
+
+  def iterator: Iterator[Game] = games.iterator
 
 	def sorted(implicit ev: Ordering[Game]): Seq[Game] = games.sorted
 }

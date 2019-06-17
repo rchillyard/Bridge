@@ -51,7 +51,7 @@ class PBNSpec extends FlatSpec with Matchers {
 	}
 	it should "analyze deal" in {
 		val deal = py.get.head("Deal").value.asInstanceOf[DealValue].deal
-		Whist(deal, 1).analyzeDoubleDummy(8, directionNS = true) shouldBe true
+		Whist(deal, 1).analyzeDoubleDummy(8, directionNS = true) shouldBe Some(true)
 	}
 
 	behavior of "DetailedValue"

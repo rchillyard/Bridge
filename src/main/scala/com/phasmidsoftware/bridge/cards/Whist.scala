@@ -53,13 +53,16 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
 		*
 		* @param tricks      the number of tricks required.
 		* @param directionNS if true then the direction we care about is NS else EW.
-		* @return a Boolean which is true if the number of tricks are taken by the given direction.
+		* @return an optional Boolean which is Some(true) if the required number of tricks are taken by declarer's direction;
+		*         and is Some(false) if the defenders made that number of tricks impossible;
+		*         and is None if no decision was able to be made.
 		*/
-	def analyzeDoubleDummy(tricks: Int, directionNS: Boolean): Boolean = {
+	def analyzeDoubleDummy(tricks: Int, directionNS: Boolean): Option[Boolean] = {
 		val tree = Tree(this)
 		val node = if (directionNS) tree.enumerateNoTrumpPlaysNS(tricks) else tree.enumerateNoTrumpPlaysEW(tricks)
-		//				node.depthFirstTraverse foreach (	s => println(s"${s.trick} ${s.tricks}") )
-		node.done
+		// TODO remove
+		//						node.depthFirstTraverse foreach (	s => println(s"${s.trick} ${s.tricks}") )
+		node.decided
 	}
 
 	/**

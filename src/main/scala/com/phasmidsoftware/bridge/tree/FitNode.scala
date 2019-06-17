@@ -24,12 +24,12 @@ trait Fitness[X] {
 /**
   * Abstract class representing a Node with a fitness.
   *
-  * @param t          the value of this Node.
-  * @param isTerminal indicator of the node having terminated the expansion of the tree.
-  * @param children   the children nodes of this Node.
+  * @param t        the value of this Node.
+  * @param decided  indicator of the node having terminated the expansion of the tree.
+  * @param children the children nodes of this Node.
   * @tparam X the underlying type of the nodes, for which there must be evidence of Fitness.
   */
-abstract class FitNode[X: Fitness](val t: X, val isTerminal: Boolean, val children: Seq[Node[X]]) extends Node[X] with Ordered[FitNode[X]] {
+abstract class FitNode[X: Fitness](val t: X, val decided: Option[Boolean], val children: Seq[Node[X]]) extends Node[X] with Ordered[FitNode[X]] {
 
   /**
     * Compare this node with that node as far as fitness is concerned.

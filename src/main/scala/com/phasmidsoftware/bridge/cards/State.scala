@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.bridge.tree.Fitness
+import com.phasmidsoftware.bridge.tree.{Expandable, Fitness}
 import com.phasmidsoftware.output.{Output, Outputable}
 
 import scala.language.postfixOps
@@ -22,8 +22,6 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 	// TODO remove this.
 	State.count += 1
 
-	//	println(s"State: ${State.count} ${whist.deal.title} ${trick.index} ${trick.plays.lastOption} ${tricks.ns} ${tricks.ew}")
-
 	/**
 		* The goal method for this State.
 		*
@@ -33,7 +31,7 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 		* @param tricksToPlay the total number of tricks to play, usually the value of Deal.TricksPerDeal, i.e. 13.
 		* @return true if the goal has been reached.
 		*/
-	def goal(directionNS: Boolean, declarerGoal: Int, tricksToPlay: Int): Boolean = {
+	def goal(directionNS: Boolean, declarerGoal: Int, tricksToPlay: Int): Option[Boolean] = {
 		val tuple = declarerGoal -> (tricksToPlay + 1 - declarerGoal)
 		val f = (tricks.goal _).tupled
 		f(if (directionNS) tuple else tuple.swap)
@@ -159,8 +157,10 @@ object State {
 		* @param tricksToPlay the total number of tricks to play, usually the value of Deal.TricksPerDeal, i.e. 13.
 		* @return true if the goal has been reached.
 		*/
-	def goalFunction(directionNS: Boolean, declarerGoal: Int, tricksToPlay: Int = Deal.TricksPerDeal): State => Boolean = { s =>
-		(s.goal _).tupled((directionNS, declarerGoal, tricksToPlay))
+	def goalFunction(directionNS: Boolean, declarerGoal: Int, tricksToPlay: Int = Deal.TricksPerDeal): State => Option[Boolean] = { s =>
+		val result: Option[Boolean] = (s.goal _).tupled((directionNS, declarerGoal, tricksToPlay))
+		if (result.nonEmpty) println(s"$s: $directionNS, $declarerGoal, $tricksToPlay: ${result.get}")
+		result
 	}
 
 	/**
@@ -195,6 +195,46 @@ object State {
 			*/
 		override def fitness(x: State): Double = x.tricks.ns + x.deal.evaluate
 	}
+
+	trait Goal[T] {
+
+		def goalAchieved(t: T): Boolean
+	}
+
+	/**
+		* Trait to capture the behavior of an Expandable State.
+		*/
+	trait ExpandableState extends Expandable[State] {
+		/**
+			* Method to determine if a decision has been reached based on the given value of t.
+			* In such a case, expansion should terminate (not necessarily immediately).
+			*
+			* @param t the value of t to consider.
+			* @return if non-deciding, then None is returned.
+			*         Otherwise Some(b) where b indicates a decision of success or failure.
+			*/
+		def decide(t: State): Option[Boolean] = ??? // TODO implement me
+
+		/**
+			* Method to yield the successors (i.e. children) of the underlying type T for purposes of node expansion.
+			*
+			* @param t the value of T.
+			* @return a Seq[T] containing the successors (children) of T.
+			*/
+		def successors(t: State): Seq[State] = t.enumeratePlays
+
+		/**
+			* Method to determine if a decision can be reached based on the given value of t.
+			*
+			* @param t  the value of t to consider.
+			* @param to true if we are looking for a positive result; otherwise false.
+			* @return true if it's mathematically possible to yield a result.
+			*/
+		def canDecide(t: State, to: Option[State]): Boolean = false
+	}
+
+	implicit object ExpandableState extends ExpandableState
+
 
 	// TODO remove this.
 	var count = 0
@@ -235,9 +275,12 @@ case class Tricks(ns: Int, ew: Int) extends Evaluatable {
 		*
 		* @param nsTricks the number of NS tricks which will trigger the goal when reached.
 		* @param ewTricks the number of EW tricks which will trigger the goal when reached.
-		* @return true if the goal has been reached, otherwise false.
+		* @return Some(true) if nsTricks goal has been reached, Some(false) if the ewTricks goal has been reached, else None.
 		*/
-	def goal(nsTricks: Int, ewTricks: Int): Boolean = ns >= nsTricks || ew >= ewTricks
+	def goal(nsTricks: Int, ewTricks: Int): Option[Boolean] =
+		if (ns >= nsTricks) Some(true)
+		else if (ew >= ewTricks) Some(false)
+		else None
 
 	/**
 		* @return a Double representing the value of this Tricks.
@@ -267,4 +310,10 @@ trait Validatable {
 		* @return true if this object is valid.
 		*/
 	def validate: Boolean
+}
+
+trait GoalOriented {
+
+	val goalAchieved: Boolean
+
 }

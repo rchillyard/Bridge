@@ -12,11 +12,12 @@ class IntegrationTreeSpec extends FlatSpec with Matchers {
 	private val whist = Whist(deal2, 0)
 
 	it should "go to level 12" in {
-		Tree(whist).expand(12)(_ => false, _ => false).depthFirstTraverse.size shouldBe 23021
+		Tree(whist).expand(12)(_ => None).depthFirstTraverse.size shouldBe 23021
 	}
 
+	// NOTE: the following test actually works but it takes a long time!
 	ignore should "go to level 16" in {
-		Tree(whist).expand(16)(_ => false, _ => false).depthFirstTraverse.size shouldBe 1214963
+		Tree(whist).expand(16)(_ => None).depthFirstTraverse.size shouldBe 730493
 	}
 
 	it should "go to level 16 with short circuit" in {
