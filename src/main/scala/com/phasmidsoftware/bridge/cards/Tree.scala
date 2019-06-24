@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.bridge.tree.{ExpandingNode, Node, NodeException}
+import com.phasmidsoftware.bridge.tree.{Expandable, ExpandingNode, Node, NodeException}
 import com.phasmidsoftware.output.{Output, Outputable}
 
 import scala.language.postfixOps
@@ -23,8 +23,8 @@ case class Tree(root: StateNode) extends Outputable[Unit] {
 		* @param levels the number of levels to enumerate.
 		* @return a StateNode.
 		*/
-	def expand(levels: Int = Deal.CardsPerDeal)(goalFunction: State => Option[Boolean], noExpandFunction: State => Boolean = _ => false): StateNode =
-		root.asInstanceOf[ExpandingNode[State]].expand(levels) match {
+  def expand(levels: Int = Deal.CardsPerDeal): StateNode =
+    root.expand(levels) match {
 			case Some(n) => n.asInstanceOf[StateNode]
 			case None => throw NodeException(s"unable to enumerate $levels plays for tree headed by ${root.state}")
 	}
@@ -34,14 +34,14 @@ case class Tree(root: StateNode) extends Outputable[Unit] {
 		*
 		* @return a StateNode.
 		*/
-	def enumerateNoTrumpPlaysNS(nsTricks: Int): StateNode = expand()(State.goalFunction(directionNS = true, nsTricks))
+  def enumerateNoTrumpPlaysNS(nsTricks: Int): StateNode = expand()
 
 	/**
 		* Choose the plays for this Deal, by running expand for 52 levels, and terminating when NS have nsTricks or when EW have more than 13-nsTricks.
 		*
 		* @return a StateNode.
 		*/
-	def enumerateNoTrumpPlaysEW(ewTricks: Int): StateNode = expand()(State.goalFunction(directionNS = false, ewTricks))
+  def enumerateNoTrumpPlaysEW(ewTricks: Int): StateNode = expand()
 
 	/**
 		* Output this Tree to the given Output.
@@ -60,7 +60,7 @@ object Tree {
 		* @param state the given State.
 		* @return a new Tree based on the state as its root.
 		*/
-	def apply(state: State): Tree = apply(StateNode(state, None, Nil))
+  def apply(state: State)(implicit ev: Expandable[State]): Tree = apply(StateNode(state, None, Nil))
 
 	/**
 		* Method to create a Tree from a given Whist.
@@ -68,7 +68,7 @@ object Tree {
 		* @param whist the game.
 		* @return a new Tree based on the given game.
 		*/
-	def apply(whist: Whist): Tree = apply(State(whist))
+  def apply(whist: Whist)(implicit ev: Expandable[State]): Tree = apply(State(whist))
 
 }
 
@@ -79,7 +79,8 @@ object Tree {
 	* @param decided   true if this is a decided State, i.e. a decision has been reached.
 	* @param followers the children of this node, i.e. the nodes which will follow.
 	*/
-case class StateNode(state: State, override val decided: Option[Boolean], followers: Seq[StateNode]) extends ExpandingNode[State](state, decided, followers) {
+case class StateNode(state: State, override val decided: Option[Boolean], followers: Seq[StateNode])(implicit ev: Expandable[State])
+	extends ExpandingNode[State](state, decided, followers) {
 
 	/**
 		* Make a new version of this Node which is decided.

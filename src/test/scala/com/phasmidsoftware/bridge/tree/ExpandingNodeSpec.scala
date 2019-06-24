@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.tree
 
-import com.phasmidsoftware.output.{MockWriter, Output}
+import com.phasmidsoftware.output.Loggable.{LoggableInt, LoggableString}
 import org.scalatest.{FlatSpec, Matchers}
 
 //noinspection ScalaStyle
@@ -108,7 +108,7 @@ case class MockNode(override val t: Int, override val decided: Option[Boolean], 
 		def canDecide(t: Int, to: Option[Int]): Boolean = true
 
 		def successors(t: Int): Seq[Int] = Seq(t + 1)
-	}) {
+	}, LoggableInt) {
 
 	def unit(_t: Int, decide: Option[Boolean], tns: Seq[Node[Int]]): ExpandingNode[Int] = MockNode(_t, decide, tns.asInstanceOf[Seq[ExpandingNode[Int]]])
 }
@@ -126,7 +126,7 @@ case class AltMockNode1(override val t: Int, override val decided: Option[Boolea
 		def canDecide(t: Int, to: Option[Int]): Boolean = true
 
 		def successors(t: Int): Seq[Int] = Seq(t + 1, t + 2)
-	}) {
+	}, LoggableInt) {
 
 	def unit(_t: Int, decide: Option[Boolean], tns: Seq[Node[Int]]): ExpandingNode[Int] = AltMockNode1(_t, decide, tns.asInstanceOf[Seq[ExpandingNode[Int]]])
 
@@ -146,7 +146,7 @@ case class AltMockNode2(override val t: Int, override val decided: Option[Boolea
 		def canDecide(t: Int, to: Option[Int]): Boolean = t < 3
 
 		def successors(t: Int): Seq[Int] = Seq(t + 1, t + 2)
-	}) {
+	}, LoggableInt) {
 
 	def unit(_t: Int, decide: Option[Boolean], tns: Seq[Node[Int]]): ExpandingNode[Int] = AltMockNode2(_t, decide, tns.asInstanceOf[Seq[ExpandingNode[Int]]])
 }
@@ -174,7 +174,7 @@ case class AltMockNodeS(override val t: String, override val decided: Option[Boo
 
 		def successors(t: String): Seq[String] = Seq(t + ".1", t + ".2", t + ".3")
 
-	}) {
+	}, LoggableString) {
 	def unit(t: String, decided: Option[Boolean], tns: Seq[Node[String]]): ExpandingNode[String] =
 		AltMockNodeS(t, decided, tns.asInstanceOf[Seq[AltMockNodeS]])
 

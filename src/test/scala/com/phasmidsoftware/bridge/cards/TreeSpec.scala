@@ -4,9 +4,11 @@
 
 package com.phasmidsoftware.bridge.cards
 
+import com.phasmidsoftware.bridge.tree.Expandable
 import com.phasmidsoftware.output.{MockWriter, Output}
 import org.scalatest.{FlatSpec, Matchers}
 
+//noinspection ScalaStyle
 class TreeSpec extends FlatSpec with Matchers {
 
 	behavior of "Tree"
@@ -15,6 +17,14 @@ class TreeSpec extends FlatSpec with Matchers {
 	private val whist00 = Whist(deal0, 0)
 
   def alwaysNone(n: State): Option[Boolean] = None
+
+	implicit val se: Expandable[State] = new Expandable[State] {
+		def decide(t: State): Option[Boolean] = ???
+
+		def canDecide(t: State, to: Option[State]): Boolean = ???
+
+		def successors(t: State): Seq[State] = ???
+	}
 
 	it should "apply" in {
 		// TODO sort this out properly.
@@ -101,7 +111,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		val whist = Whist(deal, 0)
 		val target = Tree(whist)
 
-    val result = target.expand(1)(alwaysNone)
+		val result = target.expand(1)
 		result.children.size shouldBe 0
 		val writer = MockWriter()
 		result.output(Output(writer)).close()
@@ -117,7 +127,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		val whist = Whist(deal, 0)
 		val target = Tree(whist)
 
-    val result = target.expand(2)(alwaysNone)
+		val result = target.expand(2)
 		result.children.size shouldBe 4
 		val states = result.depthFirstTraverse
 		//		states foreach { s => println(s"${s.trick} ${s.tricks}") }
@@ -133,7 +143,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		val whist = Whist(deal, 0)
 		val target = Tree(whist)
 
-    val result = target.expand(3)(alwaysNone)
+		val result = target.expand(3)
 		result.children.size shouldBe 4
 		//		result.children foreach { s => println(s"${s.t.trick} ${s.t.tricks}") }
 		result.depthFirstTraverse.size shouldBe 17
@@ -148,7 +158,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		val whist = Whist(deal, 0)
 		val target = Tree(whist)
 
-    val result = target.expand(4)(alwaysNone)
+		val result = target.expand(4)
 		result.children.size shouldBe 4
 		val writer = MockWriter(8192)
 		result.output(Output(writer)).close()
@@ -161,7 +171,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		val whist = Whist(deal, 0)
 		val target = Tree(whist)
 
-    val result = target.expand(5)(alwaysNone)
+		val result = target.expand(5)
 		result.children.size shouldBe 4
 		val writer = MockWriter(16384)
 		result.output(Output(writer)).close()
@@ -179,7 +189,7 @@ class TreeSpec extends FlatSpec with Matchers {
     def success(s: State): Option[Boolean] = if (s.tricks.ns >= 2) Some(true) else if (s.tricks.ew >= 1) Some(false) else None
 
 
-    val result = target.expand(9)(success, alwaysFalse)
+		val result = target.expand(9)
 		val states: Seq[State] = result.depthFirstTraverse
 		states.size shouldBe 21
 	}
@@ -191,7 +201,7 @@ class TreeSpec extends FlatSpec with Matchers {
 
     def success(s: State): Option[Boolean] = if (s.tricks.ns >= 3) Some(true) else if (s.tricks.ew >= 1) Some(false) else None
 
-    val result = target.expand(13)(success, alwaysFalse)
+		val result = target.expand(13)
 		val states: Seq[State] = result.depthFirstTraverse
 		states.size shouldBe 31
 		// FIXME

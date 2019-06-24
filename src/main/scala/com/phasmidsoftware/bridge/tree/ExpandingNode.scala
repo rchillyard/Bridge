@@ -4,6 +4,8 @@
 
 package com.phasmidsoftware.bridge.tree
 
+import com.phasmidsoftware.output.Loggable
+
 
 /**
   * Abstract class representing a Node with a fitness.
@@ -13,8 +15,7 @@ package com.phasmidsoftware.bridge.tree
   * @param children the children nodes of this Node.
   * @tparam T the underlying type of the nodes, for which there must be evidence of Fitness.
   */
-abstract class ExpandingNode[T: Expandable](val t: T, val decided: Option[Boolean], val children: Seq[ExpandingNode[T]]) extends Node[T] {
-
+abstract class ExpandingNode[T: Expandable : Loggable](val t: T, val decided: Option[Boolean], val children: Seq[ExpandingNode[T]]) extends Node[T] {
 
   /**
     * Method to form a Node from a T.
@@ -56,18 +57,21 @@ abstract class ExpandingNode[T: Expandable](val t: T, val decided: Option[Boolea
       def replaceExpandedChild(r: ExpandingNode[T], n: ExpandingNode[T]): ExpandingNode[T] = r.decided match {
         //				case Some(goal) => if (implicitly[Successors[U]].canDecide(n.t, !goal)) r.replace(n, n.expand(levels - 1)) else r.remove()
         // TODO we need to pay attention to goal
-        case Some(goal) => s"replaceExpandedChild: $t, $goal, r:" !! r
-        case None => s"replaceExpandedChild: $t, replacement:" !! r.replace(n, n.expand(levels - 1))
+        case Some(goal) => s"replaceExpandedChild: $t, $goal, r:" |! r.decide(goal)
+        case None => s"replaceExpandedChild: $t, replacement:" |! r.replace(n, n.expand(levels - 1))
       }
 
-      // TODO we need to pass in the currently decided state instead of None
-      s"replaceExpandedChild: expand: $t, result:" !! implicitly[Expandable[T]].result(t, None) match {
+      // TODO we need to pass in the currently decided state instead of None:
+      implicitly[Expandable[T]].result(t, None) match {
         case Right(Nil) => // XXX no descendants? signal for this Node to be removed.
-          None
+          s"expand: ${implicitly[Loggable[T]].toLog(t)}, Right(Nil) result:" |! None
         case Right(ts) => // XXX normal situation with descendants? recursively expand them.
           val thisNodeWithSuccessors = this :+ ts
+          s"expand: ${implicitly[Loggable[T]].toLog(t)}, Right(ts) result:" |!
           Some(thisNodeWithSuccessors.children.foldLeft(thisNodeWithSuccessors)(replaceExpandedChild))
         case Left(b) => // XXX terminating condition found? mark it.
+          s"expand: ${implicitly[Loggable[T]].toLog(t)}, " +
+            s"left($b) result:" |!
           Some(decide(b))
       }
     }
@@ -97,7 +101,15 @@ abstract class ExpandingNode[T: Expandable](val t: T, val decided: Option[Boolea
     */
   def decide(success: Boolean): ExpandingNode[T] = unit(t, Some(success), children)
 
-  override def replace(x: Node[T], y: Node[T]): ExpandingNode[T] = super.replace(x, y).asInstanceOf[ExpandingNode[T]]
+  override def replace(x: Node[T], y: Node[T]): ExpandingNode[T] = {
+    val result = super.replace(x, y).asInstanceOf[ExpandingNode[T]]
+    y.asInstanceOf[ExpandingNode[T]].decided match {
+      case Some(b) => result.decide(b)
+      case None => result
+    }
+  }
+
+  //    super.replace(x, y).asInstanceOf[ExpandingNode[T]]
 
   override def remove(x: Node[T]): ExpandingNode[T] = super.remove(x).asInstanceOf[ExpandingNode[T]]
 
@@ -176,3 +188,4 @@ trait Expandable[T] {
 }
 
 case class ExpandingNodeException(str: String) extends Exception(str)
+

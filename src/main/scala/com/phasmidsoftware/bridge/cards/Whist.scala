@@ -4,6 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards
 
+import com.phasmidsoftware.bridge.tree.Expandable
 import com.phasmidsoftware.output.{Output, Outputable}
 
 import scala.language.implicitConversions
@@ -58,6 +59,13 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
 		*         and is None if no decision was able to be made.
 		*/
 	def analyzeDoubleDummy(tricks: Int, directionNS: Boolean): Option[Boolean] = {
+		implicit val se: Expandable[State] = new Expandable[State] {
+			def decide(t: State): Option[Boolean] = t.tricks.decide(tricks, directionNS)
+
+			def canDecide(t: State, to: Option[State]): Boolean = true // TODO this right
+
+			def successors(t: State): Seq[State] = t.enumeratePlays
+		}
 		val tree = Tree(this)
 		val node = if (directionNS) tree.enumerateNoTrumpPlaysNS(tricks) else tree.enumerateNoTrumpPlaysEW(tricks)
 		// TODO remove
