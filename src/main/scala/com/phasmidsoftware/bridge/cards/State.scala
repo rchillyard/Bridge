@@ -5,7 +5,7 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.tree.Fitness
-import com.phasmidsoftware.output.{Loggable, Output, Outputable}
+import com.phasmidsoftware.output.{Loggable, Loggables, Output, Outputable}
 
 import scala.language.postfixOps
 
@@ -20,7 +20,7 @@ import scala.language.postfixOps
 case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[Unit] with Validatable {
 
 	// TODO remove this.
-	State.count += 1
+	//	State.count += 1
 
 	//	/**
 	//		* UNUSED
@@ -132,6 +132,18 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 	private lazy val _isConsistent = trick.cardsPlayed + deal.cards == 52 // && validate
 }
 
+object Tricks {
+	val zero = Tricks(0, 0)
+
+	implicit object LoggableTricks extends Loggable[Tricks] with Loggables {
+		val loggable: Loggable[Tricks] = toLog2(Tricks.apply, Seq("ns", "ew"))
+
+		def toLog(t: Tricks): String = loggable.toLog(t)
+	}
+
+}
+
+
 object State {
 	/**
 		* Method to create an initial state based on a deal.
@@ -200,14 +212,10 @@ object State {
 		override def fitness(x: State): Double = x.tricks.ns + x.deal.evaluate
 	}
 
-	implicit object LoggableState extends Loggable[State] {
-		def toLog(t: State): String = t.neatOutput
-	}
-
-	trait Goal[T] {
-
-		def goalAchieved(t: T): Boolean
-	}
+	//	trait Goal[T] {
+	//
+	//		def goalAchieved(t: T): Boolean
+	//	}
 
 	//	/**
 	//		* Trait to capture the behavior of an Expandable State.
@@ -244,8 +252,18 @@ object State {
 	//	implicit object ExpandableState extends ExpandableState
 	//
 
+	implicit object LoggableState extends Loggable[State] with Loggables {
+
+		import Tricks._
+
+		val applyMethod: (Whist, Trick, Tricks) => State = State.apply
+		val loggable: Loggable[State] = toLog3(applyMethod, Seq("whist", "trick", "tricks"))
+
+		def toLog(t: State): String = loggable.toLog(t)
+	}
+
 	// TODO remove this.
-	var count = 0
+	//	var count = 0
 }
 
 /**
@@ -347,10 +365,6 @@ case class Tricks(ns: Int, ew: Int) extends Evaluatable {
 	override def toString: String = s"$ns:$ew"
 
 	private lazy val _evaluate = ns - ew
-}
-
-object Tricks {
-	val zero = Tricks(0, 0)
 }
 
 /**

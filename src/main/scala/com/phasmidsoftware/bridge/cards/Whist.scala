@@ -5,7 +5,7 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.tree.Expandable
-import com.phasmidsoftware.output.{Output, Outputable}
+import com.phasmidsoftware.output.{Loggable, Loggables, Output, Outputable}
 
 import scala.language.implicitConversions
 
@@ -90,6 +90,17 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
 		* @return a State using deal and openingLeader
 		*/
 	lazy val createState: State = State(this)
+}
+
+object Whist {
+
+	implicit object LoggableWhist extends Loggable[Whist] with Loggables {
+		val loggable: Loggable[Whist] = toLog2(Whist.apply, Seq("deal", "openingLeader"))
+
+		def toLog(t: Whist): String = loggable.toLog(t)
+	}
+
+
 }
 
 /**
@@ -212,6 +223,14 @@ object Sequence {
 	implicit object SequenceOrdering extends Ordering[Sequence] {
 		override def compare(x: Sequence, y: Sequence): Int = x.priority - y.priority
 	}
+
+	implicit object LoggableSequence extends Loggable[Sequence] with Loggables {
+		implicit val cardSequenceLoggable: Loggable[Seq[Card]] = sequenceLoggable[Card]
+		val loggableSequence: Loggable[Sequence] = toLog2(Sequence.apply, Seq("priority", "cards"))
+
+		def toLog(t: Sequence): String = loggableSequence.toLog(t)
+	}
+
 }
 
 /**
@@ -366,6 +385,11 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 	lazy val neatOutput: String = s"$suit${Holding.ranksToString(cards map (_.rank))}"
 
 	/**
+		* @return a neat representation of this Sequence (without suit symbol).
+		*/
+	lazy val asPBN: String = s"${Holding.ranksToString(cards map (_.rank))}"
+
+	/**
 		* Output this Sequence to an Output.
 		*
 		* @param output the output to append to.
@@ -476,6 +500,16 @@ object Holding {
 	def create(ranks: Seq[Rank], suit: Suit): Holding = apply(suit, ranks.sorted.reverse: _*)
 
 	def ranksToString(ranks: Seq[Rank]): String = if (ranks.nonEmpty) ranks.mkString("", "", "") else "-"
+
+	implicit object LoggableHolding extends Loggable[Holding] with Loggables {
+		implicit val sequenceLoggableInt: Loggable[Seq[Int]] = sequenceLoggable[Int]
+		implicit val sequenceLoggableSequence: Loggable[Seq[Sequence]] = sequenceLoggable[Sequence]
+		val applyMethodHolding: (Seq[Sequence], Suit, Seq[Int]) => Holding = Holding.apply
+		val loggableHolding: Loggable[Holding] = toLog3(applyMethodHolding, Seq("sequences", "suit", "promotions"))
+
+		def toLog(t: Holding): String = loggableHolding.toLog(t)
+	}
+
 }
 
 /**
@@ -629,6 +663,8 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
 		val keys = holdings.keys.toSeq.sorted.reverse
 		(for (k <- keys) yield holdings(k).neatOutput).mkString(" ")
 	}
+
+	lazy val asPBN: String = holdings.values.map(_.asPBN).mkString("", ".", "")
 
 	private lazy val _evaluate = holdings.values.map(_.evaluate).sum
 

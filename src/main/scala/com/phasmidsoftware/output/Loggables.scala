@@ -20,7 +20,12 @@ trait Loggables {
     */
   def sequenceLoggable[T: Loggable]: Loggable[Seq[T]] = (ts: Seq[T]) => {
     val tl = implicitly[Loggable[T]]
-    s"[${tl.toLog(ts.head)}, ... (${math.max(ts.size - 2, 0)}), ... ${tl.toLog(ts.last)}]"
+    ts match {
+      case Nil => "[]"
+      case h :: Nil => s"[${tl.toLog(h)}]"
+      case h :: tail => s"[${tl.toLog(h)}, ... (${math.max(tail.size - 1, 0)}), ... ${tl.toLog(tail.last)}]"
+
+    }
   }
 
   /**
@@ -42,7 +47,7 @@ trait Loggables {
     * @tparam T the underlying type of the first parameter of the input to the render method.
     * @return a Loggable[ Option[T] ].
     */
-  def optionLoggable[T: Loggable]: Loggable[Option[T]] = (to: Option[T]) => to match {
+  def optionLoggable[T: Loggable]: Loggable[Option[T]] = {
     case Some(t) => s"Some(${implicitly[Loggable[T]].toLog(t)})"
     case None => "None"
   }
@@ -56,12 +61,16 @@ trait Loggables {
     *
     * @param construct a function P => T, usually the apply method of a case class.
     *                  The sole purpose of this function is for type inference--it is never actually invoked.
+    * @param fields    an explicit list of one field name.
     * @tparam P0 the type of the (single) field of the Product type T.
     * @tparam T  the underlying type of the first parameter of the input to the render method.
     * @return a Loggable[T].
     */
-  def toLog1[P0: Loggable, T <: Product : ClassTag](construct: P0 => T): Loggable[T] = (t: T) => {
-    val Array(p0) = Reflection.extractFieldNames(implicitly[ClassTag[T]])
+  def toLog1[P0: Loggable, T <: Product : ClassTag](construct: P0 => T, fields: Seq[String] = Nil): Loggable[T] = (t: T) => {
+    val Array(p0) = fields match {
+      case Nil => Reflection.extractFieldNames(implicitly[ClassTag[T]], "toLog1")
+      case ps => ps.toArray
+    }
     t.productPrefix + mapLoggable[String, String]("()").toLog(Map(p0 -> valueToLog[P0, T](t, 0)
     )
     )
@@ -72,13 +81,17 @@ trait Loggables {
     *
     * @param construct a function (P1,P2) => T, usually the apply method of a case class.
     *                  The sole purpose of this function is for type inference--it is never actually invoked.
+    * @param fields    an explicit list of 2 field names.
     * @tparam P0 the type of the first field of the Product type T.
     * @tparam P1 the type of the second field of the Product type T.
     * @tparam T  the underlying type of the first parameter of the input to the render method.
     * @return a Loggable[T].
     */
-  def toLog2[P0: Loggable, P1: Loggable, T <: Product : ClassTag](construct: (P0, P1) => T): Loggable[T] = (t: T) => {
-    val Array(p0, p1) = Reflection.extractFieldNames(implicitly[ClassTag[T]])
+  def toLog2[P0: Loggable, P1: Loggable, T <: Product : ClassTag](construct: (P0, P1) => T, fields: Seq[String] = Nil): Loggable[T] = (t: T) => {
+    val Array(p0, p1) = fields match {
+      case Nil => Reflection.extractFieldNames(implicitly[ClassTag[T]], "toLog2")
+      case ps => ps.toArray
+    }
     t.productPrefix + mapLoggable[String, String]("()").toLog(Map(
       p0 -> valueToLog[P0, T](t, 0),
       p1 -> valueToLog[P1, T](t, 1)
@@ -91,14 +104,19 @@ trait Loggables {
     *
     * @param construct a function (P1,P2,P3) => T, usually the apply method of a case class.
     *                  The sole purpose of this function is for type inference--it is never actually invoked.
+    * @param fields    an explicit list of 3 field names.
     * @tparam P0 the type of the first field of the Product type T.
     * @tparam P1 the type of the second field of the Product type T.
     * @tparam P2 the type of the third field of the Product type T.
     * @tparam T  the underlying type of the first parameter of the input to the render method.
     * @return a Loggable[T].
     */
-  def toLog3[P0: Loggable, P1: Loggable, P2: Loggable, T <: Product : ClassTag](construct: (P0, P1, P2) => T): Loggable[T] = (t: T) => {
-    val Array(p0, p1, p2) = Reflection.extractFieldNames(implicitly[ClassTag[T]])
+  def toLog3[P0: Loggable, P1: Loggable, P2: Loggable, T <: Product : ClassTag]
+    (construct: (P0, P1, P2) => T, fields: Seq[String] = Nil): Loggable[T] = (t: T) => {
+    val Array(p0, p1, p2) = fields match {
+      case Nil => Reflection.extractFieldNames(implicitly[ClassTag[T]], "toLog3")
+      case ps => ps.toArray
+    }
     t.productPrefix + mapLoggable[String, String]("()").toLog(Map(
       p0 -> valueToLog[P0, T](t, 0),
       p1 -> valueToLog[P1, T](t, 1),
@@ -112,6 +130,7 @@ trait Loggables {
     *
     * @param construct a function (P0,P1,P2,P3) => T, usually the apply method of a case class.
     *                  The sole purpose of this function is for type inference--it is never actually invoked.
+    * @param fields    an explicit list of 4 field names.
     * @tparam P0 the type of the first field of the Product type T.
     * @tparam P1 the type of the second field of the Product type T.
     * @tparam P2 the type of the third field of the Product type T.
@@ -119,8 +138,12 @@ trait Loggables {
     * @tparam T  the underlying type of the first parameter of the input to the render method.
     * @return a Loggable[T].
     */
-  def toLog4[P0: Loggable, P1: Loggable, P2: Loggable, P3: Loggable, T <: Product : ClassTag](construct: (P0, P1, P2, P3) => T): Loggable[T] = (t: T) => {
-    val Array(p0, p1, p2, p3) = Reflection.extractFieldNames(implicitly[ClassTag[T]])
+  def toLog4[P0: Loggable, P1: Loggable, P2: Loggable, P3: Loggable, T <: Product : ClassTag]
+    (construct: (P0, P1, P2, P3) => T, fields: Seq[String] = Nil): Loggable[T] = (t: T) => {
+    val Array(p0, p1, p2, p3) = fields match {
+      case Nil => Reflection.extractFieldNames(implicitly[ClassTag[T]], "toLog3")
+      case ps => ps.toArray
+    }
     t.productPrefix + mapLoggable[String, String]("()").toLog(Map(
       p0 -> valueToLog[P0, T](t, 0),
       p1 -> valueToLog[P1, T](t, 1),
@@ -142,7 +165,7 @@ object Reflection {
     * @param classTag rhw class tag.
     * @return an Array of String.
     */
-  def extractFieldNames(classTag: ClassTag[_]): Array[String] = {
+  def extractFieldNames(classTag: ClassTag[_], method: String): Array[String] = {
     import java.lang.reflect.Modifier
 
     import scala.util.control.NonFatal
@@ -164,7 +187,7 @@ object Reflection {
       fields.map(f => f.getName)
     } catch {
       case NonFatal(ex) => throw new RuntimeException("Cannot automatically determine case class field names and order " +
-        "for '" + clazz.getName + "', please use the 'jsonFormat' overload with explicit field name specification", ex)
+        s"for '${clazz.getName}', please provide an explicit list of fields in the second parameter of method $method", ex)
     }
   }
 

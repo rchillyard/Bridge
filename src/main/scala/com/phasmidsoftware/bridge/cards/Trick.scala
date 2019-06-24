@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.output.{Output, Outputable}
+import com.phasmidsoftware.output.{Loggable, Loggables, Output, Outputable}
 
 import scala.language.postfixOps
 
@@ -128,16 +128,6 @@ case class Trick(index: Int, plays: Seq[CardPlay]) extends Outputable[Deal] with
 	private lazy val _evaluate = value.getOrElse(0.5)
 }
 
-object Trick {
-
-	def create(index: Int, plays: CardPlay*): Trick = apply(index, plays)
-
-	/**
-		* Create an empty (non-) trick
-		*/
-	val empty: Trick = apply(0, Nil)
-}
-
 /**
 	* Class to represent the (current) winner of the trick.
 	*
@@ -205,3 +195,36 @@ case class CardPlay(deal: Deal, hand: Int, suit: Suit, priority: Int) extends Or
 
 	def output(output: Output, xo: Option[Deal]): Output = output :+ (Deal.name(hand) + ":" + asCard)
 }
+
+object CardPlay {
+
+	implicit object LoggableCardPlay extends Loggable[CardPlay] with Loggables {
+		val loggable: Loggable[CardPlay] = toLog4(CardPlay.apply)
+
+		def toLog(t: CardPlay): String = loggable.toLog(t)
+	}
+
+}
+
+object Trick {
+
+	def create(index: Int, plays: CardPlay*): Trick = apply(index, plays)
+
+	/**
+		* Create an empty (non-) trick
+		*/
+	val empty: Trick = apply(0, Nil)
+
+	implicit object LoggableTrick extends Loggable[Trick] with Loggables {
+
+//		import CardPlay.LoggableCardPlay
+
+		implicit val sequenceLoggableCardPlay: Loggable[Seq[CardPlay]] = sequenceLoggable[CardPlay]
+		val loggable: Loggable[Trick] = toLog2(Trick.apply, Seq("index", "plays"))
+
+		def toLog(t: Trick): String = loggable.toLog(t)
+	}
+
+
+}
+

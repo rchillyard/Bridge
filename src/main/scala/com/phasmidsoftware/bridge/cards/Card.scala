@@ -4,6 +4,8 @@
 
 package com.phasmidsoftware.bridge.cards
 
+import com.phasmidsoftware.output.{Loggable, Loggables}
+
 import scala.language.implicitConversions
 
 /**
@@ -102,6 +104,11 @@ object Suit {
   implicit object SuitOrdering extends Ordering[Suit] {
     override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
   }
+
+  implicit object LoggableSuit extends Loggable[Suit] with Loggables {
+    def toLog(t: Suit): String = t.toString
+  }
+
 }
 
 /**
@@ -223,7 +230,12 @@ object Rank {
 		*/
 	val lowestPriority: Int = 14
 
-	private val spotR = """(\d\d?)""".r
+  implicit object LoggableSuit extends Loggable[Suit] with Loggables {
+    def toLog(t: Suit): String = t.toString
+  }
+
+
+  private val spotR = """(\d\d?)""".r
   private val honorR = """([AKQJT])""".r
 }
 
@@ -303,6 +315,11 @@ object Card {
       else RankOrdering.compare(x.rank, y.rank)
     }
   }
+
+  implicit object LoggableCard extends Loggable[Card] with Loggables {
+    def toLog(t: Card): String = t.toString
+  }
+
 
   private[cards] def bool2Int(b: Boolean): Int = if (b) 1 else 0
 

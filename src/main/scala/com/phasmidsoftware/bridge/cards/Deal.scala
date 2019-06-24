@@ -4,8 +4,10 @@
 
 package com.phasmidsoftware.bridge.cards
 
+import java.io.Writer
+
 import com.phasmid.laScala.Shuffle
-import com.phasmidsoftware.output.{Output, Outputable}
+import com.phasmidsoftware.output.{Loggable, Loggables, Output, Outputable}
 
 import scala.language.postfixOps
 
@@ -29,13 +31,13 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     */
   def quit: Deal = _quit
 
-  lazy val north: Hand = n
+  private[cards] lazy val north: Hand = n
 
-  lazy val east: Hand = e
+  private[cards] lazy val east: Hand = e
 
-  lazy val south: Hand = s
+  private[cards] lazy val south: Hand = s
 
-  lazy val west: Hand = w
+  private[cards] lazy val west: Hand = w
 
   /**
     * Play a card from this Deal.
@@ -90,6 +92,16 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     * @return a String which represents this Deal, primarily for debugging purposes.
     */
   override def toString: String = s"Deal $title ($cards)\n${hands.mkString("\n")}"
+
+  def asPBN(map: Map[String, String], board: Int): String = {
+    val result = new StringBuilder()
+    for ((k, v) <- map) result.append(s"""[$k "$v"]\n""")
+    result.append(s"""[Board "$board"]\n""")
+    result.append("""[Deal "N:""")
+    result.append(hands.map(_.asPBN).mkString("", " ", ""))
+    result.append(""""]""" + "\n")
+    result.toString
+  }
 
   /**
     * Play a trick (made up of four card plays).
@@ -185,4 +197,25 @@ object Deal {
     * @return an appropriate name for the hand.
     */
   def name(hand: Int): String = Seq("N", "E", "S", "W")(hand)
+
+  def toPBN(writer: Writer, map: Map[String, String], boards: Seq[Deal]): Unit = {
+    writer.append("% PBN 2.1\n% EXPORT\n")
+    for ((d, i) <- boards.zipWithIndex) writer.append(d.asPBN(map, i + 1))
+    writer.flush()
+  }
+
+  implicit object LoggableDeal extends Loggable[Deal] with Loggables {
+    implicit val seqSeqLoggable: Loggable[Seq[Sequence]] = sequenceLoggable[Sequence]
+    implicit val seqIntLoggable: Loggable[Seq[Int]] = sequenceLoggable[Int]
+    val applyMethodHolding: (Seq[Sequence], Suit, Seq[Int]) => Holding = Holding.apply
+    val loggableHolding: Loggable[Holding] = toLog3(applyMethodHolding)
+    implicit val mapLoggable1: Loggable[Map[Suit, Holding]] = mapLoggable[Suit, Holding]()
+    implicit val mapLoggable2: Loggable[Map[Int, Map[Suit, Holding]]] = mapLoggable[Int, Map[Suit, Holding]]()
+    val applyMethodDeal: (String, Map[Int, Map[Suit, Holding]]) => Deal = Deal.apply
+    val loggableDeal: Loggable[Deal] = toLog2(applyMethodDeal, Seq("title", "holdings"))
+
+    def toLog(t: Deal): String = loggableDeal.toLog(t)
+  }
+
+
 }

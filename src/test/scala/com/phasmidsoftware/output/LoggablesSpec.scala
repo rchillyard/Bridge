@@ -54,4 +54,10 @@ class LoggablesSpec extends FlatSpec with Matchers with Loggables {
     val target = toLog4(Foursy)
     target.toLog(Foursy(42, y = true, 3.1415927, "x")) shouldBe "Foursy(x:42,y:true,z:3.1415927,q:x)"
   }
+
+  it should "toLog4 with explicit field names" in {
+    case class Foursy(x: Int, y: Boolean, z: Double, q: String)
+    val target = toLog4(Foursy, Seq("x", "y", "z", "q"))
+    target.toLog(Foursy(42, y = true, 3.1415927, "x")) shouldBe "Foursy(x:42,y:true,z:3.1415927,q:x)"
+  }
 }

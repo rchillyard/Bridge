@@ -4,11 +4,13 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import java.io.PrintWriter
+import java.io.{BufferedWriter, File, FileWriter, PrintWriter}
 
+import com.phasmidsoftware.bridge.pbn.PBNParser
 import com.phasmidsoftware.output.{MockWriter, Output}
 import org.scalatest.{FlatSpec, Matchers}
 
+//noinspection ScalaStyle
 class DealSpec extends FlatSpec with Matchers {
 
 	behavior of "Deal"
@@ -116,5 +118,26 @@ class DealSpec extends FlatSpec with Matchers {
 		played.cards shouldBe 48
 		val quitted = played.quit
 		quitted.cards shouldBe 48
+	}
+
+	behavior of "toPBN"
+	it should "write out PBN file 1" in {
+		val file = new File("hand1.pbn")
+		val bw = new BufferedWriter(new FileWriter(file))
+		val deal1: Deal = parseDeal("N:K432.7.A432.A932 J987.QT85.96.K76 AQ6.A432.K8.QJT8 T5.KJ96.QJT75.54")
+		val deal2: Deal = parseDeal("N:A76.863.AK82.732 Q54.K54.QJ94.984 T92.AQJT2.63.AK6 KJ83.97.T75.QJT5")
+		val deal3: Deal = parseDeal("N:A92.AT4.K9864.53 J65.K853.AJT.972 KQ743.QJ7.32.AK4 T8.962.Q75.QJT86")
+		val header = Map("Event" -> "Concord CC", "Date" -> "2019.06.24", "Vulnerable" -> "NS")
+		Deal.toPBN(bw, header, Seq(deal1, deal2, deal3))
+		bw.close()
+	}
+
+	private def parseDeal(cards: String): Deal = {
+		val parser = new PBNParser
+		val parseResult = parser.parseAll(parser.deal, cards)
+		if (parseResult.successful)
+			parseResult.get.deal
+		else
+			throw new RuntimeException(s"parser failure: " + parseResult)
 	}
 }
