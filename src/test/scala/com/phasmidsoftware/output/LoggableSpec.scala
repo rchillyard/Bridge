@@ -21,6 +21,6 @@ class LoggableSpec extends FlatSpec with Matchers {
 
   it should "toLog State" in {
     val whist = Whist(Deal("0", 0L), 0)
-    implicitly[Loggable[State]].toLog(State(whist)) shouldBe "State(T0 {} 0:0 3.9 Deal 0 (52))"
+    implicitly[Loggable[State]].toLog(State(whist)) shouldBe "T0 {} 0:0 3.9 Deal 0/52@N"
   }
 }

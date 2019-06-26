@@ -5,11 +5,25 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.tree.Expandable
-import com.phasmidsoftware.output.{MockWriter, Output}
+import com.phasmidsoftware.output.{Loggable, Loggables, MockWriter, Output}
 import org.scalatest.{FlatSpec, Matchers}
 
 //noinspection ScalaStyle
 class TreeSpec extends FlatSpec with Matchers {
+
+	class OldStyleExpandable(success: State => Boolean = _ => false, failure: State => Boolean = _ => false) extends Expandable[State] with Loggables {
+
+		import com.phasmidsoftware.output.Flog._
+
+		implicit val optionLoggerBoolean: Loggable[Option[Boolean]] = optionLoggable[Boolean]
+		implicit val seqLoggerState: Loggable[Seq[State]] = sequenceLoggable[State]
+
+		def decide(t: State): Option[Boolean] = s"decide on ${implicitly[Loggable[State]].toLog(t)}" !! (if (success(t)) Some(true) else None)
+
+		def canDecide(t: State, to: Option[State]): Boolean = s"canDecide on ${implicitly[Loggable[State]].toLog(t)} and $to" |! !failure(t)
+
+		def successors(t: State): Seq[State] = s"successors on ${implicitly[Loggable[State]].toLog(t)}" |! (if (canDecide(t, None)) t.enumeratePlays else Nil)
+	}
 
 	behavior of "Tree"
 
@@ -18,13 +32,7 @@ class TreeSpec extends FlatSpec with Matchers {
 
   def alwaysNone(n: State): Option[Boolean] = None
 
-	implicit val se: Expandable[State] = new Expandable[State] {
-		def decide(t: State): Option[Boolean] = ???
-
-		def canDecide(t: State, to: Option[State]): Boolean = ???
-
-		def successors(t: State): Seq[State] = ???
-	}
+	implicit val se: Expandable[State] = new OldStyleExpandable()
 
 	it should "apply" in {
 		// TODO sort this out properly.
@@ -179,33 +187,57 @@ class TreeSpec extends FlatSpec with Matchers {
 		result.depthFirstTraverse.size shouldBe 53
 	}
 
-  def alwaysFalse(s: State): Boolean = false
-
-  it should "expand 8" in {
+	it should "expand 6" in {
 		val deal = Deal("test", 2L)
 		val whist = Whist(deal, 0)
 		val target = Tree(whist)
 
-    def success(s: State): Option[Boolean] = if (s.tricks.ns >= 2) Some(true) else if (s.tricks.ew >= 1) Some(false) else None
+		val result = target.expand(6)
+		result.children.size shouldBe 4
+		val writer = MockWriter(16384)
+		result.output(Output(writer)).close()
+		writer.spilled shouldBe 2838
+		result.depthFirstTraverse.size shouldBe 125
+	}
 
+	it should "expand 7" in {
+		val deal = Deal("test", 2L)
+		val whist = Whist(deal, 0)
+		val target = Tree(whist)
+
+		val result = target.expand(7)
+		result.children.size shouldBe 4
+		result.depthFirstTraverse.size shouldBe 341
+	}
+
+	it should "expand 9" in {
+		val deal = Deal("test", 2L)
+		val whist = Whist(deal, 0)
+
+		implicit val se: Expandable[State] = new OldStyleExpandable(
+			s =>
+				s.tricks.ns >= 2,
+			s =>
+				s.tricks.ew >= 1)
+		val target = Tree(whist)
 
 		val result = target.expand(9)
 		val states: Seq[State] = result.depthFirstTraverse
 		states.size shouldBe 21
 	}
 
-	it should "expand 9" in {
+	it should "expand 13" in {
 		val deal = Deal("test", 2L)
 		val whist = Whist(deal, 0)
-		val target = Tree(whist)
 
-    def success(s: State): Option[Boolean] = if (s.tricks.ns >= 3) Some(true) else if (s.tricks.ew >= 1) Some(false) else None
+		implicit val se: Expandable[State] = new OldStyleExpandable(s => s.tricks.ns >= 3, s => s.tricks.ew >= 1)
+		val target = Tree(whist)
 
 		val result = target.expand(13)
 		val states: Seq[State] = result.depthFirstTraverse
 		states.size shouldBe 31
 		// FIXME
-		//		states foreach { s => println(s"${s.trick} ${s.tricks}") }
+		states foreach { s => println(s"${s.trick} ${s.tricks}") }
 	}
 
 }

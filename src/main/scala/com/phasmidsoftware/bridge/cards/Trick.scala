@@ -150,8 +150,6 @@ case class Winner(play: CardPlay, complete: Boolean) {
 	*/
 case class CardPlay(deal: Deal, hand: Int, suit: Suit, priority: Int) extends Ordered[CardPlay] with Outputable[Deal] {
 
-	//	println(this)
-
 	/**
 		* @return true if this play can be validated. Basically, this means that no exception is thrown.
 		*/
@@ -216,13 +214,7 @@ object Trick {
 	val empty: Trick = apply(0, Nil)
 
 	implicit object LoggableTrick extends Loggable[Trick] with Loggables {
-
-//		import CardPlay.LoggableCardPlay
-
-		implicit val sequenceLoggableCardPlay: Loggable[Seq[CardPlay]] = sequenceLoggable[CardPlay]
-		val loggable: Loggable[Trick] = toLog2(Trick.apply, Seq("index", "plays"))
-
-		def toLog(t: Trick): String = loggable.toLog(t)
+		def toLog(t: Trick): String = s"T${t.index} ${t.plays.mkString("{", ", ", "}")}"
 	}
 
 

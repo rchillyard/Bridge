@@ -18,7 +18,7 @@ import scala.reflect.ClassTag
 	* <li>Create a String which will form the log message, follow it with "!!" and follow that with the expression you want to log.</li>
 	* <li>Most of the time, this is all you need to do.</li>
 	* <li>If you wish to override the logging function, then declare something like the following:
-	* <code>implicit def logFunc(w: String): LogFunction = LogFunction(println)</code>
+	* <code>implicit def logFunc(w: String): LogFunction = LogFunction(p-r-i-n-t-l-n)</code> (take out the dashes, obviously).
 	* In this case, you will need to explicitly construct an instance of Flogger from your message string, such as:
 	* <code>Flogger(getString)(logFunc)</code>
 	* Follow this with !! and the expression, as usual.
@@ -54,12 +54,24 @@ object Flog {
 		/**
 			* Method to generate a log entry.
 			* Logging is performed as a side effect.
+			* Rendering of the x value is via the toLog method of the implicit Loggable[X].
+			*
+			* @param x the value to be logged.
+			* @tparam X the type of x, which must provide evidence of being Loggable.
+			* @return the value of x.
+			*/
+		def !![X: Loggable](x: => X): X = Flog.logLoggable(logFunc, message)(x)
+
+		/**
+			* Method to generate a log entry.
+			* Logging is performed as a side effect.
+			* Rendering of the x value is via the toString method.
 			*
 			* @param x the value to be logged.
 			* @tparam X the type of x.
 			* @return the value of x.
 			*/
-		def !![X](x: => X): X = Flog.log(logFunc, message)(x)
+		def !|[X](x: => X): X = Flog.logX(logFunc, message)(x)
 
 		/**
 			* Method to simply return the value of x without any logging.
@@ -84,9 +96,36 @@ object Flog {
 
 	def getLogger[T: ClassTag]: LogFunction = LogFunction(LoggerFactory.getLogger(implicitly[ClassTag[T]].runtimeClass).info)
 
-	def log[X](logFunc: LogFunction, message: => String)(x: => X): X = {
-		lazy val xx = x
-		if (enabled) logFunc(s"log: $message: $xx")
+	/**
+		* Method to generate a log message based on x, pass it to the logFunc, and return the x value.
+		* The value of x will be rendered as a String but invoking toLog on the implicit value of Loggable[X].
+		*
+		* @param logFunc the logging function.
+		* @param prefix  the message prefix.
+		* @param x       the value to be logged and returned.
+		* @tparam X the underlying type of x, which is required to provide evidence of Loggable[X].
+		* @return the value of x.
+		*/
+	def logLoggable[X: Loggable](logFunc: LogFunction, prefix: => String)(x: => X): X = {
+		lazy val xx: X = x
+		if (enabled) logFunc(s"log: $prefix: ${implicitly[Loggable[X]].toLog(xx)}")
+		xx
+	}
+
+	/**
+		* Method to generate a log message, pass it to the logFunc, and return the x value.
+		* The difference between this method and the logLoggable method is that the value of x will be rendered as a String,
+		* simply by invoking toString.
+		*
+		* @param logFunc the logging function.
+		* @param prefix  the message prefix.
+		* @param x       the value to be logged and returned.
+		* @tparam X the underlying type of x.
+		* @return the value of x.
+		*/
+	def logX[X](logFunc: LogFunction, prefix: => String)(x: => X): X = {
+		lazy val xx: X = x
+		if (enabled) logFunc(s"log: $prefix: $xx")
 		xx
 	}
 }

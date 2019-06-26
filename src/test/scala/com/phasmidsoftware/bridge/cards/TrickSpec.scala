@@ -28,7 +28,6 @@ class TrickSpec extends FlatSpec with Matchers {
 		val index = 0
 		val nothing = Trick(index, Nil)
 		val deal = Deal("test", 0L)
-		//		println(deal)
 		val play = CardPlay(deal, 0, Spades, 5)
 		val target = nothing :+ play
 		target.plays shouldBe Seq(play)
@@ -51,7 +50,7 @@ class TrickSpec extends FlatSpec with Matchers {
 		val trick1 = state1.trick
 		trick1.size shouldBe 1
 		val whist1 = state1.whist
-		whist1.deal.cards shouldBe 51
+		whist1.deal.nCards shouldBe 51
 		val openingLead = trick1.led.get
 		openingLead.priority shouldBe 10
 		openingLead.suit shouldBe Hearts
@@ -84,7 +83,7 @@ class TrickSpec extends FlatSpec with Matchers {
 		state5alternatives.size shouldBe 4
 		println(state5alternatives)
 		val state50 = state5alternatives.head
-		state50.whist.deal.cards shouldBe 47
+		state50.whist.deal.nCards shouldBe 47
 		state50.trick.index shouldBe 2
 	}
 }

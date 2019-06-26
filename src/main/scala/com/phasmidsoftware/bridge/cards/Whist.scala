@@ -95,9 +95,7 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
 object Whist {
 
 	implicit object LoggableWhist extends Loggable[Whist] with Loggables {
-		val loggable: Loggable[Whist] = toLog2(Whist.apply, Seq("deal", "openingLeader"))
-
-		def toLog(t: Whist): String = loggable.toLog(t)
+		def toLog(t: Whist): String = s"${implicitly[Loggable[Deal]].toLog(t.deal)}@${Deal.name(t.openingLeader)}"
 	}
 
 
@@ -502,12 +500,7 @@ object Holding {
 	def ranksToString(ranks: Seq[Rank]): String = if (ranks.nonEmpty) ranks.mkString("", "", "") else "-"
 
 	implicit object LoggableHolding extends Loggable[Holding] with Loggables {
-		implicit val sequenceLoggableInt: Loggable[Seq[Int]] = sequenceLoggable[Int]
-		implicit val sequenceLoggableSequence: Loggable[Seq[Sequence]] = sequenceLoggable[Sequence]
-		val applyMethodHolding: (Seq[Sequence], Suit, Seq[Int]) => Holding = Holding.apply
-		val loggableHolding: Loggable[Holding] = toLog3(applyMethodHolding, Seq("sequences", "suit", "promotions"))
-
-		def toLog(t: Holding): String = loggableHolding.toLog(t)
+		def toLog(t: Holding): String = t.neatOutput
 	}
 
 }
@@ -518,7 +511,7 @@ object Holding {
 	* @param index    the index of this hand within the deal (North = 0).
 	* @param holdings the four holdings (as a Map).
 	*/
-case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Unit] with Quittable[Hand] with Playable[Hand] with Evaluatable {
+case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Unit] with Quittable[Hand] with Playable[Hand] with Evaluatable with Validatable {
 
 	/**
 		* CONSIDER: using strength of suit as a decider between equal lengths.
@@ -597,7 +590,14 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
 		*
 		* @return the sum of the cards in the holdings
 		*/
-	lazy val cards: Int = holdings.values.map(_.cards.size).sum
+	lazy val nCards: Int = holdings.values.map(_.cards.size).sum
+
+	/**
+		* Method to get the count of the cards in this Hand.
+		*
+		* @return the sum of the cards in the holdings
+		*/
+	lazy val cards: Iterable[Card] = holdings.values.flatMap(_.cards)
 
 	/**
 		* Method to eliminate (play) a card from the given suit and sequence.
@@ -610,6 +610,21 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
 	def -(suit: Suit, priority: Int): Hand =
 		Hand(index, holdings + (suit -> (holdings(suit) - priority)))
 
+	/**
+		* Method to validate this Hand.
+		*
+		* @return true if this hand has 13 cards (clearly, this will only work when Hand is first created).
+		*/
+	def validate: Boolean = nCards == Deal.CardsPerHand
+
+	/**
+		* Method to promote this Hand, for the given suit and the given priority.
+		* Basically, this eagerly adjusts the holding by invoking promote on the holding for the given suit.
+		*
+		* @param suit     the given suit.
+		* @param priority the priority for which we want to promote the suit.
+		* @return a new eagerly promoted Hand.
+		*/
 	def promote(suit: Suit, priority: Int): Hand =
 		Hand(index, holdings + (suit -> holdings(suit).promote(priority)))
 
@@ -672,7 +687,6 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
 	private lazy val _quit = Hand(index, for ((k, v) <- holdings) yield k -> v.quit)
 
 	private lazy val _longestSuit = holdings.values.maxBy(_.length)
-
 }
 
 object Hand {

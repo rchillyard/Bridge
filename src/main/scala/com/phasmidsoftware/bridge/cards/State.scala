@@ -129,7 +129,7 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 
 	private lazy val _validate: Boolean = trick.plays.forall(_.validate)
 
-	private lazy val _isConsistent = trick.cardsPlayed + deal.cards == 52 // && validate
+	private lazy val _isConsistent = trick.cardsPlayed + deal.nCards == 52 // && validate
 }
 
 object Tricks {
@@ -138,7 +138,7 @@ object Tricks {
 	implicit object LoggableTricks extends Loggable[Tricks] with Loggables {
 		val loggable: Loggable[Tricks] = toLog2(Tricks.apply, Seq("ns", "ew"))
 
-		def toLog(t: Tricks): String = loggable.toLog(t)
+		def toLog(t: Tricks): String = s"${t.ns}:${t.ew}"
 	}
 
 }
@@ -253,13 +253,11 @@ object State {
 	//
 
 	implicit object LoggableState extends Loggable[State] with Loggables {
-
-		import Tricks._
-
-		val applyMethod: (Whist, Trick, Tricks) => State = State.apply
-		val loggable: Loggable[State] = toLog3(applyMethod, Seq("whist", "trick", "tricks"))
-
-		def toLog(t: State): String = loggable.toLog(t)
+		def toLog(t: State): String =
+			s"${implicitly[Loggable[Trick]].toLog(t.trick)} " +
+				s"${implicitly[Loggable[Tricks]].toLog(t.tricks)} " +
+				s"${t.fitness} " +
+				s"${implicitly[Loggable[Whist]].toLog(t.whist)}"
 	}
 
 	// TODO remove this.

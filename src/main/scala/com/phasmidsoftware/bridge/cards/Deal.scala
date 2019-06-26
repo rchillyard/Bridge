@@ -19,7 +19,8 @@ import scala.language.postfixOps
   * @param title    the title of this Deal.
   * @param holdings the holdings of the four Hands of this Deal.
   */
-case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends Outputable[Unit] with Quittable[Deal] with Playable[Deal] with Evaluatable {
+case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends Outputable[Unit]
+  with Quittable[Deal] with Playable[Deal] with Evaluatable with Validatable {
 
   /**
     * Method to return a sequence representing the four hands of this Deal.
@@ -55,9 +56,16 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
   def evaluate: Double = _evaluate
 
   /**
+    * Method to check this Deal.
+    *
+    * @return true if this Deal is valid.
+    */
+  def validate: Boolean = hands.forall(_.validate) && allCards
+
+  /**
     * @return the number of cards remaining in this Deal.
     */
-  lazy val cards: Int = hands map (_.cards) sum
+  lazy val nCards: Int = hands map (_.nCards) sum
 
   /**
     * Promote the given Hand in the given suit, below the given priority and return a new Deal.
@@ -86,12 +94,12 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
   /**
     * Neat output.
     */
-  lazy val neatOutput: String = s"Deal $title ($cards)\n${hands.map(_.neatOutput)}"
+  lazy val neatOutput: String = s"Deal $title ($nCards)\n${hands.map(_.neatOutput)}"
 
   /**
     * @return a String which represents this Deal, primarily for debugging purposes.
     */
-  override def toString: String = s"Deal $title ($cards)\n${hands.mkString("\n")}"
+  override def toString: String = s"Deal $title ($nCards)\n${hands.mkString("\n")}"
 
   def asPBN(map: Map[String, String], board: Int): String = {
     val result = new StringBuilder()
@@ -119,6 +127,8 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
   private def outputHand(name: String, hand: Hand): Output = (Output(s"$name:\t") :+ hand.neatOutput).insertBreak
 
   private lazy val _evaluate = hands.sliding(1, 2).flatten.map(_.evaluate).sum
+
+  private lazy val allCards: Boolean = hands.flatMap(_.cards).distinct.size == Deal.CardsPerDeal
 }
 
 object Deal {
@@ -205,16 +215,7 @@ object Deal {
   }
 
   implicit object LoggableDeal extends Loggable[Deal] with Loggables {
-    implicit val seqSeqLoggable: Loggable[Seq[Sequence]] = sequenceLoggable[Sequence]
-    implicit val seqIntLoggable: Loggable[Seq[Int]] = sequenceLoggable[Int]
-    val applyMethodHolding: (Seq[Sequence], Suit, Seq[Int]) => Holding = Holding.apply
-    val loggableHolding: Loggable[Holding] = toLog3(applyMethodHolding)
-    implicit val mapLoggable1: Loggable[Map[Suit, Holding]] = mapLoggable[Suit, Holding]()
-    implicit val mapLoggable2: Loggable[Map[Int, Map[Suit, Holding]]] = mapLoggable[Int, Map[Suit, Holding]]()
-    val applyMethodDeal: (String, Map[Int, Map[Suit, Holding]]) => Deal = Deal.apply
-    val loggableDeal: Loggable[Deal] = toLog2(applyMethodDeal, Seq("title", "holdings"))
-
-    def toLog(t: Deal): String = loggableDeal.toLog(t)
+    def toLog(t: Deal): String = s"Deal ${t.title}/${t.nCards}"
   }
 
 

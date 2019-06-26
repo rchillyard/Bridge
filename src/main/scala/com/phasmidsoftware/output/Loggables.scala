@@ -24,7 +24,6 @@ trait Loggables {
       case Nil => "[]"
       case h :: Nil => s"[${tl.toLog(h)}]"
       case h :: tail => s"[${tl.toLog(h)}, ... (${math.max(tail.size - 1, 0)}), ... ${tl.toLog(tail.last)}]"
-
     }
   }
 

@@ -91,33 +91,41 @@ class DealSpec extends FlatSpec with Matchers {
 		target.evaluate shouldBe (0.44 + 3.41) +- 0.03
 	}
 
+	it should "validate good deal" in {
+		parseDeal("N:K432.7.A432.A932 J987.QT85.96.K76 AQ6.A432.K8.QJT8 T5.KJ96.QJT75.54").validate shouldBe true
+	}
+
+	it should "not validate bad deal" in {
+		a[CardException] shouldBe thrownBy(parseDeal("N:K632.7.A432.A932 J987.QT85.96.K76 AQ6.A432.K8.QJT8 T5.KJ96.QJT75.54"))
+	}
+
 	behavior of "playAll"
 	it should "playAll a trick made up of all lowest spades" in {
 		val target = Deal("test", 0L)
-		target.cards shouldBe 52
+		target.nCards shouldBe 52
 		val hands = target.hands
 		hands.size shouldBe 4
 		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
 		val trick =
 			Trick.create(0, CardPlay(target, 0, Spades, priority1S), CardPlay(target, 1, Spades, priority2S), CardPlay(target, 2, Spades, priority3S), CardPlay(target, 3, Spades, priority4S))
 		val played: Deal = target.playAll(trick)
-		played.cards shouldBe 48
+		played.nCards shouldBe 48
 		val quitted = played.quit
-		quitted.cards shouldBe 48
+		quitted.nCards shouldBe 48
 	}
 
 	it should "playAll a trick according to strategy" in {
 		val target = Deal("test", 0L)
-		target.cards shouldBe 52
+		target.nCards shouldBe 52
 		val hands = target.hands
 		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
 
 		val trick =
 			Trick.create(0, CardPlay(target, 0, Spades, priority1S), CardPlay(target, 1, Spades, priority2S), CardPlay(target, 2, Spades, priority3S), CardPlay(target, 3, Spades, priority4S))
 		val played: Deal = target.playAll(trick)
-		played.cards shouldBe 48
+		played.nCards shouldBe 48
 		val quitted = played.quit
-		quitted.cards shouldBe 48
+		quitted.nCards shouldBe 48
 	}
 
 	behavior of "toPBN"
@@ -135,8 +143,11 @@ class DealSpec extends FlatSpec with Matchers {
 	private def parseDeal(cards: String): Deal = {
 		val parser = new PBNParser
 		val parseResult = parser.parseAll(parser.deal, cards)
-		if (parseResult.successful)
-			parseResult.get.deal
+		if (parseResult.successful) {
+			val deal = parseResult.get.deal
+			if (deal.validate) deal
+			else throw CardException(s"Unable to validate deal: ${deal.neatOutput}")
+		}
 		else
 			throw new RuntimeException(s"parser failure: " + parseResult)
 	}

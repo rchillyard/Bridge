@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.tree
 
-import com.phasmidsoftware.output.Loggable
+import com.phasmidsoftware.output.{Loggable, Loggables}
 
 
 /**
@@ -52,7 +52,7 @@ abstract class ExpandingNode[T: Expandable : Loggable](val t: T, val decided: Op
     */
   def expand(levels: Int): Option[ExpandingNode[T]] =
     if (levels <= 0) None
-    else {
+    else Some {
       import com.phasmidsoftware.output.Flog._
       def replaceExpandedChild(r: ExpandingNode[T], n: ExpandingNode[T]): ExpandingNode[T] = r.decided match {
         //				case Some(goal) => if (implicitly[Successors[U]].canDecide(n.t, !goal)) r.replace(n, n.expand(levels - 1)) else r.remove()
@@ -61,18 +61,19 @@ abstract class ExpandingNode[T: Expandable : Loggable](val t: T, val decided: Op
         case None => s"replaceExpandedChild: $t, replacement:" |! r.replace(n, n.expand(levels - 1))
       }
 
+      implicit val loggableExpandingNode: Loggable[ExpandingNode[T]] = ExpandingNode.expandingNodeLogger
+      //      implicit val loggableOption: Loggable[Option[ExpandingNode[T]]] = ExpandingNode.optionLoggable[ExpandingNode[T]]
+
       // TODO we need to pass in the currently decided state instead of None:
       implicitly[Expandable[T]].result(t, None) match {
         case Right(Nil) => // XXX no descendants? signal for this Node to be removed.
-          s"expand: ${implicitly[Loggable[T]].toLog(t)}, Right(Nil) result:" |! None
+          s"expand: ${implicitly[Loggable[T]].toLog(t)}, Right(Nil) result:" |! this // TODO clean up.
         case Right(ts) => // XXX normal situation with descendants? recursively expand them.
           val thisNodeWithSuccessors = this :+ ts
-          s"expand: ${implicitly[Loggable[T]].toLog(t)}, Right(ts) result:" |!
-          Some(thisNodeWithSuccessors.children.foldLeft(thisNodeWithSuccessors)(replaceExpandedChild))
+          s"expand: ${implicitly[Loggable[T]].toLog(t)}, Right(ts) result:" |! thisNodeWithSuccessors.children.foldLeft(thisNodeWithSuccessors)(replaceExpandedChild)
         case Left(b) => // XXX terminating condition found? mark it.
           s"expand: ${implicitly[Loggable[T]].toLog(t)}, " +
-            s"left($b) result:" |!
-          Some(decide(b))
+            s"left($b) result:" |! decide(b)
       }
     }
 
@@ -122,6 +123,20 @@ abstract class ExpandingNode[T: Expandable : Loggable](val t: T, val decided: Op
     * @return a copy of this Node but with ts as additional child values.
     */
   override def :+(ts: Seq[T]): ExpandingNode[T] = super.:+(ts).asInstanceOf[ExpandingNode[T]]
+}
+
+object ExpandingNode extends Loggables {
+
+  def expandingNodeLogger[T: Loggable]: Loggable[ExpandingNode[T]] = (t: ExpandingNode[T]) => {
+
+    val wT = implicitly[Loggable[T]].toLog(t.t)
+    val wDecided = t.decided match {
+      case Some(b) => s" (decided=$b)"
+      case None => ""
+    }
+    val wFollowers = s" with ${t.children.size}"
+    wT + wDecided + wFollowers
+  }
 }
 
 /**
