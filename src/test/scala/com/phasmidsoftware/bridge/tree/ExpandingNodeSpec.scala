@@ -93,22 +93,15 @@ class ExpandingNodeSpec extends FlatSpec with Matchers {
 
 }
 
-trait ExpandableInt extends Expandable[Int] {
-	def decide(t: Int): Option[Boolean] = if (t == 3) Some(true) else None
-
-	def canDecide(t: Int, to: Option[Int]): Boolean = true
-
-	def successors(t: Int): Seq[Int] = ???
-}
-
-case class MockNode(override val t: Int, override val decided: Option[Boolean], override val children: Seq[ExpandingNode[Int]]) extends
-	ExpandingNode[Int](t, decided, children)(new Expandable[Int] {
+case class MockNode(override val t: Int, override val decided: Option[Boolean], override val children: Seq[ExpandingNode[Int]]) extends {
+	private implicit val expandableInt: Expandable[Int] = new Expandable[Int] {
 		def decide(t: Int): Option[Boolean] = None
 
 		def canDecide(t: Int, to: Option[Int]): Boolean = true
 
 		def successors(t: Int): Seq[Int] = Seq(t + 1)
-	}, LoggableInt) {
+	}
+} with ExpandingNode[Int](t, decided, children) {
 
 	def unit(_t: Int, decide: Option[Boolean], tns: Seq[Node[Int]]): ExpandingNode[Int] = MockNode(_t, decide, tns.asInstanceOf[Seq[ExpandingNode[Int]]])
 }
@@ -138,15 +131,16 @@ object AltMockNode1 {
 	def apply(t: Int): AltMockNode1 = apply(t, Nil)
 }
 
-case class AltMockNode2(override val t: Int, override val decided: Option[Boolean], override val children: Seq[ExpandingNode[Int]]) extends
-	ExpandingNode[Int](t, decided, children)(new Expandable[Int] {
+case class AltMockNode2(override val t: Int, override val decided: Option[Boolean], override val children: Seq[ExpandingNode[Int]]) extends {
+	implicit private val expandableInt: Expandable[Int] = new Expandable[Int] {
 
 		def decide(t: Int): Option[Boolean] = None
 
 		def canDecide(t: Int, to: Option[Int]): Boolean = t < 3
 
 		def successors(t: Int): Seq[Int] = Seq(t + 1, t + 2)
-	}, LoggableInt) {
+	}
+} with ExpandingNode[Int](t, decided, children) {
 
 	def unit(_t: Int, decide: Option[Boolean], tns: Seq[Node[Int]]): ExpandingNode[Int] = AltMockNode2(_t, decide, tns.asInstanceOf[Seq[ExpandingNode[Int]]])
 }
@@ -166,15 +160,17 @@ trait ExpandableString extends Expandable[String] {
 }
 
 case class AltMockNodeS(override val t: String, override val decided: Option[Boolean], override val children: Seq[AltMockNodeS])
-	extends ExpandingNode[String](t, decided, children)(new Expandable[String] {
+	extends {
+		private implicit val expandableString: Expandable[String] = new Expandable[String] {
 
-		def canDecide(t: String, to: Option[String]): Boolean = !t.contains("1.2.3")
+			def canDecide(t: String, to: Option[String]): Boolean = !t.contains("1.2.3")
 
-		def decide(t: String): Option[Boolean] = if (t == "1.3.1.2") Some(true) else None
+			def decide(t: String): Option[Boolean] = if (t == "1.3.1.2") Some(true) else None
 
-		def successors(t: String): Seq[String] = Seq(t + ".1", t + ".2", t + ".3")
+			def successors(t: String): Seq[String] = Seq(t + ".1", t + ".2", t + ".3")
 
-	}, LoggableString) {
+		}
+	} with ExpandingNode[String](t, decided, children) {
 	def unit(t: String, decided: Option[Boolean], tns: Seq[Node[String]]): ExpandingNode[String] =
 		AltMockNodeS(t, decided, tns.asInstanceOf[Seq[AltMockNodeS]])
 

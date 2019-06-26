@@ -39,68 +39,26 @@ abstract class ExpandingNode[T: Expandable : Loggable](val t: T, val decided: Op
   def unit(_t: T, decided: Option[Boolean], tns: Seq[Node[T]]): ExpandingNode[T]
 
   /**
-    * Method to expand a branch of a tree, by taking this Node and replacing it with children nodes which are themselves recursively expanded.
+    * Method to expand a branch of a tree, by taking this ExpandingNode and replacing it with child nodes which are themselves recursively expanded.
     * The algorithm operates in a depth-first-search manner.
     *
-    * If successor(t) yields Some(Nil), it simply means that this branch will be eliminated, while other branches will continue as normal.
-    * If successor(t) yields None, we break out of the expansion and return this node with the successful node marked decided.
-    * Note, however, some siblings, uncles and aunts of the success node will remain in this.
+    * CONSIDER make this tail-recursive
     *
-    * TODO make this tail-recursive
-    *
-    * @return an Option of Node[T]
+    * @return an Option of ExpandingNode[T]
     */
   def expand(levels: Int): Option[ExpandingNode[T]] =
     if (levels <= 0) None
-    else Some {
-      import com.phasmidsoftware.output.Flog._
-      def replaceExpandedChild(r: ExpandingNode[T], n: ExpandingNode[T]): ExpandingNode[T] = r.decided match {
-        //				case Some(goal) => if (implicitly[Successors[U]].canDecide(n.t, !goal)) r.replace(n, n.expand(levels - 1)) else r.remove()
-        // TODO we need to pay attention to goal
-        case Some(goal) => s"replaceExpandedChild: $t, $goal, r:" |! r.decide(goal)
-        case None => s"replaceExpandedChild: $t, replacement:" |! r.replace(n, n.expand(levels - 1))
-      }
-
-      implicit val loggableExpandingNode: Loggable[ExpandingNode[T]] = ExpandingNode.expandingNodeLogger
-      //      implicit val loggableOption: Loggable[Option[ExpandingNode[T]]] = ExpandingNode.optionLoggable[ExpandingNode[T]]
-
+    else {
       // TODO we need to pass in the currently decided state instead of None:
       implicitly[Expandable[T]].result(t, None) match {
-        case Right(Nil) => // XXX no descendants? signal for this Node to be removed.
-          s"expand: ${implicitly[Loggable[T]].toLog(t)}, Right(Nil) result:" |! this // TODO clean up.
-        case Right(ts) => // XXX normal situation with descendants? recursively expand them.
-          val thisNodeWithSuccessors = this :+ ts
-          s"expand: ${implicitly[Loggable[T]].toLog(t)}, Right(ts) result:" |! thisNodeWithSuccessors.children.foldLeft(thisNodeWithSuccessors)(replaceExpandedChild)
-        case Left(b) => // XXX terminating condition found? mark it.
-          s"expand: ${implicitly[Loggable[T]].toLog(t)}, " +
-            s"left($b) result:" |! decide(b)
+        // XXX terminating condition found? Mark it.
+        case Left(b) => Some(decide(b))
+        // XXX no descendants? Signal for this Node to be removed.
+        case Right(Nil) => None
+        // XXX normal situation with descendants? Recursively expand them.
+        case Right(ts) => Some((this :+ ts).expandChildren(levels))
       }
     }
-
-  /**
-    * Method to replace a node of this tree optionally with the given node and to return the resulting tree.
-    *
-    * @param x   the node to be replaced.
-    * @param tno the optional node with which to replace the given node.
-    * @return a copy of this Node, but with node x replaced by
-    *         (1) if tno exists, then its value;
-    *         (2) if tno does not exist, then nothing.
-    */
-  def replace(x: ExpandingNode[T], tno: Option[ExpandingNode[T]]): ExpandingNode[T] =
-    tno match {
-      case Some(tn) => replace(x, tn)
-      // NOTE: we remove a parent who produces no children. The idea is to reduce strain on the GC.
-      case None => remove(x)
-    }
-
-
-  /**
-    * Method to mark this Node as decided (i.e. success is true or false).
-    *
-    * @param success true if the goal has been reached, false if the contra-goal has been reached.
-    * @return a new copy of this Node but with decided set to the Some(success).
-    */
-  def decide(success: Boolean): ExpandingNode[T] = unit(t, Some(success), children)
 
   override def replace(x: Node[T], y: Node[T]): ExpandingNode[T] = {
     val result = super.replace(x, y).asInstanceOf[ExpandingNode[T]]
@@ -123,6 +81,52 @@ abstract class ExpandingNode[T: Expandable : Loggable](val t: T, val decided: Op
     * @return a copy of this Node but with ts as additional child values.
     */
   override def :+(ts: Seq[T]): ExpandingNode[T] = super.:+(ts).asInstanceOf[ExpandingNode[T]]
+
+  /**
+    * Method to mark this Node as decided (i.e. success is true or false).
+    *
+    * @param success true if the goal has been reached, false if the contra-goal has been reached.
+    * @return a new copy of this Node but with decided set to the Some(success).
+    */
+  private def decide(success: Boolean): ExpandingNode[T] = unit(t, Some(success), children)
+
+  /**
+    * Method to expand the children of this node and return the expanded version of this node.
+    *
+    * @param levels the current number of levels (to terminate the recursion).
+    * @return this node but with each of its children expanded, depth-first.
+    */
+  private def expandChildren(levels: Int): ExpandingNode[T] = children.foldLeft(this)((r, n) => r.expandAndReplace(n, levels))
+
+  /**
+    * Method to replace a node of this tree optionally with the given node and to return the resulting tree.
+    *
+    * @param x   the node to be replaced.
+    * @param tno the optional node with which to replace the given node.
+    * @return a copy of this Node, but with node x replaced by
+    *         (1) if tno exists, then its value;
+    *         (2) if tno does not exist, then nothing.
+    */
+  private def replace(x: ExpandingNode[T], tno: Option[ExpandingNode[T]]): ExpandingNode[T] =
+    tno match {
+      case Some(tn) => replace(x, tn)
+      // NOTE: we remove a child that produces no children. The idea is to reduce strain on the GC.
+      case None => remove(x)
+    }
+
+  /**
+    * Method to replace a node of this tree according to the value of decided.
+    *
+    * @param x      the node to be, potentially, replaced.
+    * @param levels the current number of levels (used to terminate the recursion).
+    * @return either the value of decide(goal) where goal is the result of decided; or this tree with x replaced by its expansion.
+    */
+  private def expandAndReplace(x: ExpandingNode[T], levels: Int): ExpandingNode[T] = decided match {
+    // TODO we need to pay attention to goal
+    case Some(goal) => decide(goal)
+    case None => replace(x, x.expand(levels - 1))
+  }
+
 }
 
 object ExpandingNode extends Loggables {
@@ -185,7 +189,8 @@ trait Expandable[T] {
     * The value of the Boolean signifies whether it was a positive goal or a negative goal.
     * For example, when the T values represent states of play in Bridge,
     * a positive goal is that the protagonist (declaring side) wins a specified number of tricks, say nine.
-    * A negative goal would be when the antagonist (defending side) wins sufficient tricks to make nine impossible, i.e. when they win five tricks.
+    * A negative goal would be when the antagonist (defending side) wins sufficient tricks to make the protagonist's goal
+    * impossible, i.e. when they win five tricks.
     *
     * @param t  the value of T.
     * @param to an optional T which represents an achieved goal state
