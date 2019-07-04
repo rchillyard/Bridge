@@ -57,7 +57,6 @@ class ExpandingNodeSpec extends FlatSpec with Matchers with PrivateMethodTester 
 	}
 
 	it should "work with AltMockNodeSimple" in {
-		import com.phasmidsoftware.output.Flog._
 
 		implicit val expandableString: Expandable[String] = new Expandable[String] {
 			def successor(t: String, x: Int): String = (if (t.isEmpty) "" else t) + x
@@ -67,14 +66,12 @@ class ExpandingNodeSpec extends FlatSpec with Matchers with PrivateMethodTester 
 		implicit val goalDrivenString: GoalDriven[String] = new GoalDriven[String] {
 			private val goal = "42"
 
-			def goalAchieved(t: String): Boolean = s"goalAchieved?: $t" !! (t endsWith goal)
+			def goalAchieved(t: String): Boolean = t endsWith goal
 
-			def goalOutOfReach(t: String, so: Option[String], moves: Int): Boolean =
-				SubStringMatch.substringPrefix(moves, t, goal) > moves || (so match {
-					case Some(s) => t.length >= s.length
-					case None => false
+			def goalImpossible(t: String, moves: Int): Boolean = SubStringMatch.substringPrefix(moves, t, goal) > moves
 
-				})
+			// NOTE: we ignore the standard ordering for String
+			override def goalConditional(t: String, s: String)(implicit ev: Ordering[String]): Boolean = t.length < s.length
 		}
 		case class AltMockNodeSimple(override val t: String, override val so: Option[String], override val children: Seq[AltMockNodeSimple])
 			extends ExpandingNode[String](t, so, children) {
@@ -177,18 +174,6 @@ class ExpandingNodeSpec extends FlatSpec with Matchers with PrivateMethodTester 
 	}
 
 	behavior of "ExpandingNode"
-
-	//	it should "expandAndReplace" in {
-	//		val expandAndReplaceMethod = PrivateMethod[ExpandingNode[Int]]('expandAndReplace)
-	//		val target = MockNode(1)
-	//		trait ExpandableInt$ extends Expandable[Int] {
-	//			def successors(t: Int): Seq[Int] = Seq(t + 1)
-	//		}
-	//		implicit object ExpandableInt extends ExpandableInt$ {
-	//		}
-	//		val result = target invokePrivate expandAndReplaceMethod(target, 1)
-	//		result shouldBe ???
-	//	}
 
 	it should "replace" in {
 
@@ -317,10 +302,9 @@ case class MockNode(override val t: Int, override val so: Option[Int], override 
 	private implicit val goalDrivenInt: GoalDriven[Int] = new GoalDriven[Int] {
 		def goalAchieved(t: Int): Boolean = false
 
-		def goalOutOfReach(t: Int, so: Option[Int], moves: Int): Boolean = false
+		def goalImpossible(t: Int, moves: Int): Boolean = false
 	}
 } with ExpandingNode[Int](t, so, children) {
-
 	def unit(_t: Int, decide: Option[Int], tns: Seq[Node[Int]]): ExpandingNode[Int] = MockNode(_t, decide, tns.asInstanceOf[Seq[ExpandingNode[Int]]])
 }
 
@@ -335,7 +319,7 @@ case class AltMockNode1(override val t: Int, override val so: Option[Int], overr
 	private implicit val goalDrivenInt: GoalDriven[Int] = new GoalDriven[Int] {
 		def goalAchieved(t: Int): Boolean = t >= 3
 
-		def goalOutOfReach(t: Int, so: Option[Int], moves: Int): Boolean = false
+		def goalImpossible(t: Int, moves: Int): Boolean = false
 	}
 } with ExpandingNode[Int](t, so, children) {
 
@@ -354,10 +338,7 @@ case class AltMockNode2(override val t: Int, override val so: Option[Int], overr
 	private implicit val goalDrivenInt: GoalDriven[Int] = new GoalDriven[Int] {
 		def goalAchieved(t: Int): Boolean = t == 5
 
-		def goalOutOfReach(t: Int, so: Option[Int], moves: Int): Boolean = so match {
-			case Some(s) => t > s
-			case None => false
-		}
+		def goalImpossible(t: Int, moves: Int): Boolean = false
 	}
 } with ExpandingNode[Int](t, so, children) {
 
@@ -370,10 +351,6 @@ object AltMockNode2 {
 	def apply(t: Int): AltMockNode2 = apply(t, Nil)
 }
 
-//trait ExpandableString extends Expandable[String] {
-//	def successors(t: String): Seq[String] = ???
-//}
-
 case class AltMockNodeS(override val t: String, override val so: Option[String], override val children: Seq[AltMockNodeS])
 	extends {
 		private implicit val expandableString: Expandable[String] = new Expandable[String] {
@@ -384,15 +361,10 @@ case class AltMockNodeS(override val t: String, override val so: Option[String],
 		private implicit val goalDrivenString: GoalDriven[String] = new GoalDriven[String] {
 			def goalAchieved(t: String): Boolean = t endsWith AltMockNodeS.goal
 
-			//			def goalOutOfReach(t: String, so: Option[String], moves: Int): Boolean = so match {
-			//				case Some(s) => t.length >= s.length
-			//				case None => AltMockNodeS.impossible(t, moves)
-			//			}
-			def goalOutOfReach(t: String, so: Option[String], moves: Int): Boolean = AltMockNodeS.impossible(t, moves) || (so match {
-				case Some(s) => t.length >= s.length
-				case None => false
+			def goalImpossible(t: String, moves: Int): Boolean = AltMockNodeS.impossible(t, moves)
 
-			})
+			// We ignore the standard ordering for String
+			override def goalConditional(t: String, s: String)(implicit ev: Ordering[String]): Boolean = t.length < s.length
 		}
 	} with ExpandingNode[String](t, so, children) {
 	def unit(t: String, so: Option[String], tns: Seq[Node[String]]): ExpandingNode[String] =
@@ -410,14 +382,7 @@ object AltMockNodeS {
 
 	def impossible(t: String, moves: Int): Boolean = SubStringMatch.substringPrefix(moves, abbreviate(t), briefGoal) > moves
 
-
-	//	def apply(t: String, children: Seq[ExpandingNode[String]]): AltMockNodeS = apply(t, children)
-
 	def apply(t: String): AltMockNodeS = apply(t, None, Nil)
-
-//	implicit object ExpandableString extends ExpandableString
-//
-//	val ExpString: Expandable[String] = ExpandableString
 }
 
 object SubStringMatch {

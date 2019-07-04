@@ -274,21 +274,6 @@ case class Tricks(ns: Int, ew: Int) extends Evaluatable {
 		*/
 	def counterGoal(tricks: Int): Boolean = ew >= 14 - tricks
 
-	//	/**
-	//		* UNUSED
-	//		*
-	//		* Method to determine if this instance of Tricks satisfies the goal.
-	//		* Once the goal is reached, we stop expanding the state tree.
-	//		*
-	//		* @param nsTricks the number of NS tricks which will trigger the goal when reached.
-	//		* @param ewTricks the number of EW tricks which will trigger the goal when reached.
-	//		* @return Some(true) if nsTricks goal has been reached, Some(false) if the ewTricks goal has been reached, else None.
-	//		*/
-	//	def goal(nsTricks: Int, ewTricks: Int): Option[Boolean] =
-	//		if (ns >= nsTricks) Some(true)
-	//		else if (ew >= ewTricks) Some(false)
-	//		else None
-
 	/**
 		* @return a Double representing the value of this Tricks.
 		*/
@@ -314,9 +299,3 @@ trait Validatable {
 		*/
 	def validate: Boolean
 }
-
-//trait GoalOriented {
-//
-//	val goalAchieved: Boolean
-//
-//}

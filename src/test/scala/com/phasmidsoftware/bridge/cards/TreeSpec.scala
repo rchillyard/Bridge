@@ -4,7 +4,6 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.bridge.cards.State.StateOrdering
 import com.phasmidsoftware.bridge.tree.{Expandable, GoalDriven}
 import com.phasmidsoftware.output.{Loggable, Loggables, MockWriter, Output}
 import org.scalatest.{FlatSpec, Matchers}
@@ -18,8 +17,6 @@ class TreeSpec extends FlatSpec with Matchers {
 		implicit val seqLoggerState: Loggable[Seq[State]] = sequenceLoggable[State]
 
 		def successors(t: State): Seq[State] = t.enumeratePlays
-
-		//			s"successors on ${implicitly[Loggable[State]].toLog(t)}" |! t.enumeratePlays
 	}
 
 	class PlainEnumerationExpandable() extends Expandable[State] with Loggables {
@@ -139,10 +136,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		implicit val sg: GoalDriven[State] = new GoalDriven[State] {
 			def goalAchieved(t: State): Boolean = t.trick.plays.lastOption.exists(_.asCard == Card("HK"))
 
-			def goalOutOfReach(t: State, so: Option[State], moves: Int): Boolean = so match {
-				case Some(s) => StateOrdering.compare(s, t) <= 0
-				case None => false
-			}
+			def goalImpossible(t: State, moves: Int): Boolean = false
 		}
 		implicit val expandable: PlainEnumerationExpandable = new PlainEnumerationExpandable() {}
 		val deal = Deal("test", 2L)
@@ -163,10 +157,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		implicit val sg: GoalDriven[State] = new GoalDriven[State] {
 			def goalAchieved(t: State): Boolean = t.trick.plays.lastOption.exists(_.asCard == Card("HK"))
 
-			def goalOutOfReach(t: State, so: Option[State], moves: Int): Boolean = so match {
-				case Some(s) => StateOrdering.compare(s, t) <= 0
-				case None => false
-			}
+			def goalImpossible(t: State, moves: Int): Boolean = false
 		}
 		implicit val expandable: PlainEnumerationExpandable = new PlainEnumerationExpandable() {}
 		val deal = Deal("test", 2L)
@@ -174,9 +165,6 @@ class TreeSpec extends FlatSpec with Matchers {
 		val target = Tree(whist)
 
 		val result = target.expand(3)
-		//		result.children.size shouldBe 4
-		//				result.children foreach { s => println(s"${s.t.trick} ${s.t.tricks}") }
-		//		println(result)
 		val traverse = result.depthFirstTraverse
 		traverse.size shouldBe 2
 		val writer = MockWriter(8192)
@@ -185,19 +173,11 @@ class TreeSpec extends FlatSpec with Matchers {
 		writer.spilled shouldBe 26
 	}
 
-	ignore should "expand 4" in {
+	it should "expand 4" in {
 		implicit val sg: GoalDriven[State] = new GoalDriven[State] {
-			def goalAchieved(t: State): Boolean = {
-				t.tricks.ns >= 1
-			}
+			def goalAchieved(t: State): Boolean = t.tricks.ns >= 1
 
-			def goalOutOfReach(t: State, so: Option[State], moves: Int): Boolean = so match {
-				case Some(s) =>
-					val b = StateOrdering.compare(s, t) >= 0
-					b
-				case None =>
-					false
-			}
+			def goalImpossible(t: State, moves: Int): Boolean = false
 		}
 		implicit val expandable: PlainEnumerationExpandable = new PlainEnumerationExpandable() {}
 		val deal = Deal("test", 2L)
@@ -206,12 +186,12 @@ class TreeSpec extends FlatSpec with Matchers {
 
 		val result = target.expand(4)
 		println(result)
-		result.children.size shouldBe 4
+		result.children.size shouldBe 1
 		val writer = MockWriter(8192)
 		result.output(Output(writer)).close()
 		//		writer.spillway shouldBe "T0  (7.0) \n  T1 N:HK (6.5)"
-		writer.spilled shouldBe 26
-		result.depthFirstTraverse.size shouldBe 2
+		writer.spilled shouldBe 111
+		result.depthFirstTraverse.size shouldBe 6
 	}
 
 	ignore should "expand 5" in {
@@ -267,7 +247,7 @@ class TreeSpec extends FlatSpec with Matchers {
 
 		val result = target.expand(9)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 1229
+		states.size shouldBe 10
 	}
 
 	it should "expand 9b" in {
@@ -280,7 +260,7 @@ class TreeSpec extends FlatSpec with Matchers {
 
 		val result = target.expand(9)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 1229
+		states.size shouldBe 10
 	}
 
 	ignore should "expand 13" in {

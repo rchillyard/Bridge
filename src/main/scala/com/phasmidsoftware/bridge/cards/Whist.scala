@@ -99,7 +99,7 @@ object Whist {
 			def goalAchieved(t: State): Boolean = if (directionNS)
 				t.tricks.ns >= neededTricks else t.tricks.ew >= neededTricks
 
-			def goalOutOfReach(t: State, so: Option[State], moves: Int): Boolean = false // TODO implement me properly
+			def goalImpossible(t: State, moves: Int): Boolean = false // TODO implement me properly
 		}
 	}
 

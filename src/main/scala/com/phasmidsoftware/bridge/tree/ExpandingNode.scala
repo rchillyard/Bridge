@@ -6,7 +6,6 @@ package com.phasmidsoftware.bridge.tree
 
 import com.phasmidsoftware.output.{Loggable, Loggables}
 
-
 /**
   *
   * @param t        the value of this Node.
@@ -22,12 +21,12 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
 (val t: T, val so: Option[T], val children: Seq[ExpandingNode[T]]) extends Node[T] {
 
   // TODO try to be careful that we don't keep re-constructing nodes that are the same.
-  import com.phasmidsoftware.output.Flog._
-
-  so match {
-    case Some(x) => s"node $t has achieved goal" !! x
-    case None =>
-  }
+  //  import com.phasmidsoftware.output.Flog._
+  //
+  //  so match {
+  //    case Some(x) => s"node $t has achieved goal" !! x
+  //    case None =>
+  //  }
 
   /**
     * Method to add the given node to the children of this Node.
@@ -43,7 +42,7 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
     * Method to add the given tns to the children of this Node.
     *
     * @param tns the tns to add as additional children.
-    * @return a copy of this Node but with tns as additional childrenand the so value corresponding to this.
+    * @return a copy of this Node but with tns as additional children, and the so value corresponding to this.
     */
   override def ++(tns: Seq[Node[T]]): Node[T] = unit(t, children ++ tns)
 
@@ -90,52 +89,13 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
       None
     else
       implicitly[Expandable[T]].result(t, _so, moves) match {
-        // XXX terminating condition found? Mark it.
+        // XXX terminating condition found? Mark and return this.
         case Left(b) =>
           Some(solve(b))
-        // XXX no descendants? Signal for this Node to be removed.
-        //        case Right(Nil) => None
-        // XXX normal situation with descendants? Recursively expand them.
-        // TODO we need to fix this because if this becomes goal-satisfied, then the children need to know that.
-        // So, we shouldn't convert a state into a node until it's required.
+        // XXX normal situation with (possibly empty) descendants? Recursively expand them.
         case Right(ts) =>
           Some(expandSuccessors(ts, moves - 1, _so))
       }
-
-
-  private def expandSuccessors(ts: Seq[T], moves: Int, _so: Option[T]) = {
-    import com.phasmidsoftware.output.Flog._
-    _so match {
-      case Some(s) => s"expandSuccessors has existing goal: $ts $moves" !! s
-      case None =>
-    }
-
-    // CONSIDER refactoring as foldLeft
-
-    def getBestSolution(_sor: Option[T]) = _sor match {
-      case Some(sr) => Some(_so match {
-        case Some(ss) => if (implicitly[Ordering[T]].compare(sr, ss) < 0) sr else ss
-        case None => sr
-      })
-      case None => _so
-    }
-    //      for (sr <- r.so; ss <- _so) yield if (implicitly[Ordering[T]].compare(sr, ss)<0) sr else ss
-
-    def doExpansion(r: ExpandingNode[T], t: T): ExpandingNode[T] = unit(t, None, Nil).expand(getBestSolution(r.so), moves) match {
-      case None => r // expansion came up empty
-      case Some(n) => n.so match {
-        case Some(g) => r.solve(g) :+ n // goal achieved: add it as a child and mark result as goal achieved
-        case None => r
-      }
-    }
-
-    def inner(r: ExpandingNode[T], work: Seq[T]): ExpandingNode[T] = work match {
-      case Nil => r
-      case h :: tail => inner(doExpansion(r, h), tail)
-    }
-
-    inner(this, ts.toList)
-  }
 
   /**
     * Method to replace node x with node y in this sub-tree.
@@ -157,8 +117,6 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
     case _ => throw NodeException(s"replace cannot operate unless y is an ExpandingNode")
   }
 
-  override def remove(x: Node[T]): ExpandingNode[T] = super.remove(x).asInstanceOf[ExpandingNode[T]]
-
   /**
     * Construct a new ExpandingNode based on the given value of t and the value of so from this.
     *
@@ -176,6 +134,31 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
   override def :+(ts: Seq[T]): ExpandingNode[T] = (this ++ (ts map unit)).asInstanceOf[ExpandingNode[T]]
 
   /**
+    * Private Methods...
+    */
+
+  private def expandSuccessors(ts: Seq[T], moves: Int, _so: Option[T]) = {
+
+    def getBestSolution(_sor: Option[T]) = _sor match {
+      case Some(sr) => Some(_so match {
+        case Some(ss) => if (implicitly[Ordering[T]].compare(sr, ss) < 0) sr else ss
+        case None => sr
+      })
+      case None => _so
+    }
+
+    def doExpansion(r: ExpandingNode[T], t: T): ExpandingNode[T] = unit(t, None, Nil).expand(getBestSolution(r.so), moves) match {
+      case None => r // expansion came up empty
+      case Some(n) => n.so match {
+        case Some(g) => r.solve(g) :+ n // goal achieved: add it as a child and mark result as goal achieved
+        case None => r
+      }
+    }
+
+    ts.foldLeft[ExpandingNode[T]](this)(doExpansion)
+  }
+
+  /**
     * Method to mark this Node with an optional T (i.e. representing a goal that has been reached).
     *
     * @param success the T value corresponding to the goal reached.
@@ -189,41 +172,6 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
     case _ => unit(t, Some(success), children)
   }
 
-//  /**
-//    * Method to replace a node of this tree optionally with the given node and to return the resulting tree.
-//    *
-//    * @param x   the node to be replaced.
-//    * @param tno the optional node with which to replace the given node.
-//    * @return a copy of this Node, but with node x replaced by
-//    *         (1) if tno exists, then its value;
-//    *         (2) if tno does not exist, then nothing.
-//    */
-//  private def replace(x: ExpandingNode[T], tno: Option[ExpandingNode[T]]): ExpandingNode[T] =
-//    tno match {
-//      case Some(tn) => replace(x, tn)
-//      // NOTE: we remove a child that produces no children. The idea is to reduce strain on the GC.
-//      case None => remove(x)
-//    }
-
-//  /**
-//    * Method to replace a node of this tree by expanding it.
-//    *
-//    * @param x      the node to be, potentially, replaced.
-//    * @param moves  the number of possible moves remaining.
-//    * @return either the value of solve(goal) where goal is the result of decided; or this tree with x replaced by its expansion.
-//    */
-//  private def expandAndReplace(x: ExpandingNode[T], moves: Int): ExpandingNode[T] =
-//  // NOTE: recursive call to expand
-//    x.expand(so, moves) match {
-//      case None =>
-//        remove(x) // NOTE this should happen only when we've exceeded levels
-//      case Some(n) =>
-//        n.so match {
-//          case Some(b) => replace(x, n) // XXX replace x with n and also mark this as decided
-//          case None => remove(x)
-//        }
-//
-//    }
 }
 
 object ExpandingNode extends Loggables {
@@ -273,38 +221,53 @@ trait Expandable[T] {
     *         If the result is Right(Nil), it signifies that the given value of t holds no promise and therefore should not be further expanded.
     *         If the return is Left(T), it signifies that we have reached a solution (goal) represented by the value of T.
     */
-  def result(t: T, to: Option[T], moves: Int)(implicit ev: GoalDriven[T]): Either[T, Seq[T]] = {
-    import com.phasmidsoftware.output.Flog._
-    if (ev.goalAchieved(t)) s"goal achieved" !| Left(t)
-    else if (ev.goalOutOfReach(t, to, moves)) s"goal out of reach for $t based on $to and $moves" !| Right(Nil)
+  def result(t: T, to: Option[T], moves: Int)(implicit ev1: GoalDriven[T], ev2: Ordering[T]): Either[T, Seq[T]] = {
+    if (ev1.goalAchieved(t)) Left(t)
+    else if (ev1.goalOutOfReach(t, to, moves)) Right(Nil)
     else Right(successors(t))
-    //    val decision = if (ev.goalAchieved(t)) Some(Some(t)) else if (ev.goalOutOfReach(t, to)) Some(None) else None
-    //    decision match {
-    //      case Some(b) =>
-    //        b match {
-    //          case Some(_t) => Left(_t)
-    //          case None => Right(Nil)
-    //        }
-    //      case None =>
-    //        Right(successors(t))
-    //    }
   }
-
 }
 
 case class ExpandingNodeException(str: String) extends Exception(str)
 
 trait GoalDriven[T] {
+  /**
+    * Method to test whether a T value satisfies the goal.
+    *
+    * @param t the T value.
+    * @return true if the goal is achieved by t
+    */
   def goalAchieved(t: T): Boolean
+
+  /**
+    * Method to test whether a T value can never satisfy the goal.
+    *
+    * @param t     the T value.
+    * @param moves the number of remaining moves in which the goal might be reached.
+    * @return true if the goal can never be achieved by t or its descendants (expansions).
+    */
+  def goalImpossible(t: T, moves: Int): Boolean
+
+  /**
+    * Method to determine if it's possible for a T value to reach a "better" goal than the value, if any, of so.
+    *
+    * @param t the T value.
+    * @param s another T value which satisfies the goal (and has already been achieved by another branch of the tree).
+    * @return if t can reach a better goal than s. Typically, this will be based on the Ordering of s and t.
+    */
+  def goalConditional(t: T, s: T)(implicit ev: Ordering[T]): Boolean = ev.compare(s, t) > 0
 
   /**
     * Determine if it is impossible to reach the goal from t when an optional alternative goal (so) has already been reached.
     *
     * @param t     the value of T to test.
-    * @param so    if None, then we return false; if Some(s) then we must compare s with t to determine if t can still reach the goal.
+    * @param so    an optional alternative goal which has already been reached by another branch.
     * @param moves the number of remaining moves in which the goal might be reached.
-    * @return true if the goal is out of reach, else false.
+    * @return goalImpossible(t, moves) or, if so is Some(s) then !goalConditional(t, s).
     */
-  def goalOutOfReach(t: T, so: Option[T], moves: Int): Boolean
+  def goalOutOfReach(t: T, so: Option[T], moves: Int)(implicit ev: Ordering[T]): Boolean = goalImpossible(t, moves) || (so match {
+    case Some(s) => !goalConditional(t, s)
+    case None => false
+  })
 }
 
