@@ -88,20 +88,35 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
 	lazy val createState: State = State(this)
 }
 
+/**
+  * Trait to customize the behavior of GoalDriven for a whist/bridge game.
+  */
+trait WhistGoalDriven extends GoalDriven[State] {
+  val neededTricks: Int
+  val directionNS: Boolean
+  val totalTricks: Int
+
+  def goalAchieved(t: State): Boolean = {
+    t.tricks.decide(neededTricks, directionNS) match {
+      case Some(_) => true // We ignore the Boolean value for now.
+      case None => false
+    }
+  }
+
+  def goalImpossible(t: State, moves: Int): Boolean = moves < t.trick.movesRequired(directionNS, neededTricks, t.tricks)
+}
+
 object Whist {
 
 	implicit object LoggableWhist extends Loggable[Whist] with Loggables {
 		def toLog(t: Whist): String = s"${implicitly[Loggable[Deal]].toLog(t.deal)}@${Deal.name(t.openingLeader)}"
 	}
 
-	def goal(neededTricks: Int, directionNS: Boolean, totalTricks: Int = 13): GoalDriven[State] = {
-		new GoalDriven[State] {
-			def goalAchieved(t: State): Boolean = if (directionNS)
-				t.tricks.ns >= neededTricks else t.tricks.ew >= neededTricks
-
-			def goalImpossible(t: State, moves: Int): Boolean = false // TODO implement me properly
-		}
-	}
+  def goal(_neededTricks: Int, _directionNS: Boolean, _totalTricks: Int = Deal.TricksPerDeal): WhistGoalDriven = new WhistGoalDriven {
+    val neededTricks: Int = _neededTricks
+    val directionNS: Boolean = _directionNS
+    val totalTricks: Int = _totalTricks
+  }
 
 }
 

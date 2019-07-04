@@ -108,6 +108,31 @@ case class Trick(index: Int, plays: Seq[CardPlay]) extends Outputable[Deal] with
 				enumerateLeads(whist.deal, whist.openingLeader)
 	}
 
+	/**
+		* Determine if the declaring side still has a play left in this trick.
+		*
+		* @param directionNS true if NS is the declaring side.
+		* @return true if fewer than three cards have been played; or if the leader is None, or leader belongs to the opposition.
+		*/
+	def declaringSideStillToPlay(directionNS: Boolean): Boolean = size < 3 || (leader match {
+		case Some(x) => x % 2 == 1 ^ directionNS
+		case None => true
+	})
+
+	/**
+		* Determine the number of remaining moves that are required to build up sufficient tricks.
+		*
+		* @param directionNS  the direction of the declarer.
+		* @param neededTricks the number of tricks required for the contract.
+		* @param tricks       the current state of tricks
+		* @return a minimum number of moves that will be required.
+		*/
+	def movesRequired(directionNS: Boolean, neededTricks: Int, tricks: Tricks): Int = {
+		val movesByDeclarerThisTrick = if (declaringSideStillToPlay(directionNS)) 1 else 0
+		val additionalTricksNeeded = neededTricks - (if (directionNS) tricks.ns else tricks.ew)
+		(additionalTricksNeeded - movesByDeclarerThisTrick) * Deal.CardsPerTrick
+	}
+
 	private def enumerateLeads(deal: Deal, leader: Int): Seq[Trick] = for (q <- chooseLeads(deal, leader)) yield Trick(index + 1, Seq(q))
 
 	// TODO make private

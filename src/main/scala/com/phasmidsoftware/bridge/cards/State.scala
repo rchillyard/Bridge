@@ -244,7 +244,8 @@ case class Tricks(ns: Int, ew: Int) extends Evaluatable {
 		*
 		* @param tricks      the required number of tricks.
 		* @param directionNS true if we are requiring NS tricks, otherwise false.
-		* @return true if the required number of tricks has been reached or exceeded.
+		* @return Some(Boolean) if a decision has been reached (true if the goal has been reached, else false);
+		*         otherwise, None is returned.
 		*/
 	def decide(tricks: Int, directionNS: Boolean): Option[Boolean] = project(directionNS).decide(tricks)
 
@@ -252,7 +253,8 @@ case class Tricks(ns: Int, ew: Int) extends Evaluatable {
 		* Method to determine if the required number of tricks for the given direction have been acquired.
 		*
 		* @param tricks the required number of tricks.
-		* @return true if the required number of tricks has been reached or exceeded.
+		* @return Some(Boolean) if a decision has been reached (true if the goal has been reached, else false);
+		*         otherwise, None is returned.
 		*/
 	def decide(tricks: Int): Option[Boolean] = if (goal(tricks)) Some(true)
 	else if (counterGoal(tricks)) Some(false)
@@ -272,7 +274,7 @@ case class Tricks(ns: Int, ew: Int) extends Evaluatable {
 		* @param tricks the number of NS tricks required.
 		* @return true if EW has at least 14-tricks tricks.
 		*/
-	def counterGoal(tricks: Int): Boolean = ew >= 14 - tricks
+	def counterGoal(tricks: Int): Boolean = ew >= Deal.TricksPerDeal + 1 - tricks
 
 	/**
 		* @return a Double representing the value of this Tricks.
