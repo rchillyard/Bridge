@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.bridge.tree.{Expandable, ExpandingNode, Node, NodeException}
+import com.phasmidsoftware.bridge.tree._
 import com.phasmidsoftware.output.{Output, Outputable}
 
 import scala.language.postfixOps
@@ -24,7 +24,7 @@ case class Tree(root: StateNode) extends Outputable[Unit] {
 		* @return a StateNode.
 		*/
   def expand(levels: Int = Deal.CardsPerDeal): StateNode =
-    root.expand(levels) match {
+		root.expand(None, levels) match {
 			case Some(n) => n.asInstanceOf[StateNode]
 			case None => throw NodeException(s"unable to enumerate $levels plays for tree headed by ${root.state}")
 	}
@@ -60,7 +60,7 @@ object Tree {
 		* @param state the given State.
 		* @return a new Tree based on the state as its root.
 		*/
-  def apply(state: State)(implicit ev: Expandable[State]): Tree = apply(StateNode(state, None, Nil))
+	def apply(state: State)(implicit ev1: Expandable[State], ev2: GoalDriven[State]): Tree = apply(StateNode(state, None, Nil))
 
 	/**
 		* Method to create a Tree from a given Whist.
@@ -68,7 +68,7 @@ object Tree {
 		* @param whist the game.
 		* @return a new Tree based on the given game.
 		*/
-  def apply(whist: Whist)(implicit ev: Expandable[State]): Tree = apply(State(whist))
+	def apply(whist: Whist)(implicit ev1: Expandable[State], ev2: GoalDriven[State]): Tree = apply(State(whist))
 
 }
 
@@ -76,30 +76,24 @@ object Tree {
 	* This represents a node in the deal analysis tree.
 	*
 	* @param state     a Trick/Deal combination: the trick is in general incomplete: each node represents a different play.
-	* @param decided   true if this is a decided State, i.e. a decision has been reached.
+	* @param so        an optional indication of the solution represented by this sub-tree.
 	* @param followers the children of this node, i.e. the nodes which will follow.
 	*/
-case class StateNode(state: State, override val decided: Option[Boolean], followers: Seq[StateNode])(implicit ev: Expandable[State])
-	extends ExpandingNode[State](state, decided, followers) {
+case class StateNode(state: State, override val so: Option[State], followers: Seq[StateNode])(implicit ev1: Expandable[State], ev2: GoalDriven[State])
+	extends ExpandingNode[State](state, so, followers) {
 
 	/**
-		* Make a new version of this Node which is decided.
 		*
-		* @return a copy of this StateNode but decided.
-		*/
-	//	override def decide(success: Boolean): StateNode = super.decide(success).asInstanceOf[StateNode]
-
-	/**
 		* Method to form a Node from a T.
 		*
 		* CONSIDER rename decided
 		*
-		* @param t       the given value of T.
-		* @param decided an optional Boolean
-		* @param tns     the nodes which will be the children of the result.
+		* @param t   the given value of T.
+		* @param so  an optional indication of the solution represented by this sub-tree.
+		* @param tns the nodes which will be the children of the result.
 		* @return a new Node based on t and tns.
 		*/
-	def unit(t: State, decided: Option[Boolean], tns: Seq[Node[State]]): StateNode = StateNode(t, decided, tns.asInstanceOf[Seq[StateNode]])
+	def unit(t: State, so: Option[State], tns: Seq[Node[State]]): StateNode = StateNode(t, so, tns.asInstanceOf[Seq[StateNode]])
 
 	/**
 		* Method to form a Node from a State.
@@ -123,7 +117,7 @@ case class StateNode(state: State, override val decided: Option[Boolean], follow
 		* @param node the node to add as a child.
 		* @return a copy of this Node but with node as an additional child.
 		*/
-	override def :+(node: Node[State]): Node[State] = super.:+(node).asInstanceOf[StateNode]
+	override def :+(node: Node[State]): StateNode = super.:+(node).asInstanceOf[StateNode]
 
 	/**
 		* Method to add the given x-value to the children of this Node.
@@ -131,7 +125,7 @@ case class StateNode(state: State, override val decided: Option[Boolean], follow
 		* @param x the x value to be turned into a Node which is then :+'d to this Node.
 		* @return a copy of this Node but with x as an additional child value.
 		*/
-	override def :+(x: State): Node[State] = super.:+(x).asInstanceOf[StateNode]
+	override def :+(x: State): StateNode = super.:+(x).asInstanceOf[StateNode]
 
 	/**
 		* Method to replace a node of this tree with the given node and to return the resulting tree.

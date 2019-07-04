@@ -328,13 +328,13 @@ class WhistSpec extends FlatSpec with Matchers {
 	}
 
 	behavior of "double dummy"
-	it should "analyzeDoubleDummy2" in {
+  ignore should "analyzeDoubleDummy2" in {
 		val target = Deal("test", 2L)
 		//		target.output(Output(new PrintWriter(System.out))).close()
 		val whist = Whist(target, 3)
 		whist.analyzeDoubleDummy(9, directionNS = true) shouldBe Some(true)
 	}
-	it should "analyzeDoubleDummy0" in {
+  ignore should "analyzeDoubleDummy0" in {
 		val target = Deal("test", 0L)
 		//		target.output(Output(new PrintWriter(System.out))).close()
 		val whist = Whist(target, 0)

@@ -142,6 +142,8 @@ trait Node[T] extends Outputable[Unit] {
 
 	/**
 		* Method to perform depth-first-search on this Node.
+    *
+    * TODO rework this in terms of dfs2.
 		*
 		* @param z an initial (zero) value of Z.
 		* @param g a function to combine a Z and a T into a Z.
@@ -154,7 +156,18 @@ trait Node[T] extends Outputable[Unit] {
 		*/
 	lazy val depthFirstTraverse: List[T] = dfs(List[T]())((z, t) => t +: z)
 
-	/**
+  /**
+    * Method to perform depth-first-search on this Node.
+    *
+    * @param z an initial (zero) value of Z.
+    * @param g a function to combine a Z and a Node[T] into a Z.
+    * @tparam Z the underlying type of
+    */
+  def dfs2[Z](z: Z)(g: (Z, Node[T]) => Z): Z = children.foldLeft(g(z, this))((r, tn) => tn.dfs2(r)(g))
+
+  lazy val leaves: List[T] = dfs2(List[T]())((z, tn) => if (tn.children.isEmpty) z :+ tn.t else z)
+
+  /**
 		* Method to output this object (and, recursively, all of its children).
 		*
 		* @param output the output to append to.

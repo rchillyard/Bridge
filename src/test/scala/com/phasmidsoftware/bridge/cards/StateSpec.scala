@@ -82,12 +82,14 @@ class StateSpec extends FlatSpec with Matchers {
 
 	it should "toString" in {
 		val target = State.create(whist, trick0 :+ play0, tricks0)
-		target.toString shouldBe "State(Whist(Deal test (51)\n{S: 9[5]} (clean)\n{H: Q[2], 9[5], 432[10]} (clean)\n{D: 6[8], 4[10]} (clean)\n{C: T[4], 65[8], 2[12]} (clean)\n{S: K[1], 7[7], 4[10], 2[12]} 9\n{H: A[0], 7[7]} (clean)\n{D: T9[4], 3[11]} (clean)\n{C: A[0], QJ[2], 7[7]} (clean)\n{S: A[0], JT[3], 8[6], 6[8]} 9\n{H: K[1], T[4], 8[6]} (clean)\n{D: K[1], 8[6], 2[12]} (clean)\n{C: K[1], 3[11]} (clean)\n{S: Q[2], 3[11]} 9\n{H: J[3], 65[8]} (clean)\n{D: A[0], QJ[2], 7[7], 5[9]} (clean)\n{C: 98[5], 4[10]} (clean),0),T1 {Play: 0 S5},0:0)"
+		target.toString shouldBe "State(Whist(Deal test (51),0),T1 {Play: 0 S5},0:0)"
 	}
 
 	it should "neatOutput" in {
 		val target = State.create(whist, trick0 :+ play0, tricks0)
-		target.neatOutput shouldBe "State: T1 {Play: 0 S5} 0:0 3.8 Deal test (51)\nList(S9 HQ9432 D64 CT652, SK742 HA7 DT93 CAQJ7, SAJT86 HKT8 DK82 CK3, SQ3 HJ65 DAQJ75 C984)"
+		target.neatOutput shouldBe
+			"State: T1 {Play: 0 S5} 0:0 3.8 Deal test (51)\nList(S9 HQ9432 D64 CT652," +
+				" SK742 HA7 DT93 CAQJ7, SAJT86 HKT8 DK82 CK3, SQ3 HJ65 DAQJ75 C984)"
 	}
 
 	it should "isConsistent" in {

@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.bridge.tree.Expandable
+import com.phasmidsoftware.bridge.tree.{Expandable, GoalDriven}
 import com.phasmidsoftware.output.{Loggable, Loggables, Output, Outputable}
 
 import scala.language.implicitConversions
@@ -54,23 +54,19 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
 		*
 		* @param tricks      the number of tricks required.
 		* @param directionNS if true then the direction we care about is NS else EW.
-		* @return an optional Boolean which is Some(true) if the required number of tricks are taken by declarer's direction;
-		*         and is Some(false) if the defenders made that number of tricks impossible;
-		*         and is None if no decision was able to be made.
+		* @return an optional State which indicates the first "solution" found.
+		*         It may represent success or failure on the part of the protagonists.
+		*         If the result is None, it means that no solution of any sort was found.
 		*/
-	def analyzeDoubleDummy(tricks: Int, directionNS: Boolean): Option[Boolean] = {
+	def analyzeDoubleDummy(tricks: Int, directionNS: Boolean): Option[State] = {
+		implicit val sg: GoalDriven[State] = Whist.goal(tricks, directionNS)
 		implicit val se: Expandable[State] = new Expandable[State] {
-			def decide(t: State): Option[Boolean] = t.tricks.decide(tricks, directionNS)
-
-			def canDecide(t: State, to: Option[State]): Boolean = true // TODO this right
-
+			val goalDriven: GoalDriven[State] = implicitly[GoalDriven[State]]
 			def successors(t: State): Seq[State] = t.enumeratePlays
 		}
 		val tree = Tree(this)
-		val node = if (directionNS) tree.enumerateNoTrumpPlaysNS(tricks) else tree.enumerateNoTrumpPlaysEW(tricks)
-		// TODO remove
-		//						node.depthFirstTraverse foreach (	s => println(s"${s.trick} ${s.tricks}") )
-		node.decided
+		val node = tree.expand()
+		node.so
 	}
 
 	/**
@@ -98,6 +94,14 @@ object Whist {
 		def toLog(t: Whist): String = s"${implicitly[Loggable[Deal]].toLog(t.deal)}@${Deal.name(t.openingLeader)}"
 	}
 
+	def goal(neededTricks: Int, directionNS: Boolean, totalTricks: Int = 13): GoalDriven[State] = {
+		new GoalDriven[State] {
+			def goalAchieved(t: State): Boolean = if (directionNS)
+				t.tricks.ns >= neededTricks else t.tricks.ew >= neededTricks
+
+			def goalOutOfReach(t: State, so: Option[State], moves: Int): Boolean = false // TODO implement me properly
+		}
+	}
 
 }
 

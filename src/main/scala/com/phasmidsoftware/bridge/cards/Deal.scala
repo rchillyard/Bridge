@@ -99,7 +99,9 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
   /**
     * @return a String which represents this Deal, primarily for debugging purposes.
     */
-  override def toString: String = s"Deal $title ($nCards)\n${hands.mkString("\n")}"
+  override def toString: String = s"Deal $title ($nCards)"
+
+  //  override def toString: String = s"Deal $title ($nCards)\n${hands.mkString("\n")}"
 
   def asPBN(map: Map[String, String], board: Int): String = {
     val result = new StringBuilder()

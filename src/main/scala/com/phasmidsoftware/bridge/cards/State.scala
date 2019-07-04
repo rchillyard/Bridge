@@ -22,23 +22,6 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 	// TODO remove this.
 	//	State.count += 1
 
-	//	/**
-	//		* UNUSED
-	//		*
-	//		* The goal method for this State.
-	//		*
-	//		* @param directionNS  true if the direction of the declarer is NS.
-	//		* @param declarerGoal the declarer's goal in terms of tricks--once declarer reaches this goal OR...
-	//		*                     the opponents make this goal impossible, then the goal is achieved.
-	//		* @param tricksToPlay the total number of tricks to play, usually the value of Deal.TricksPerDeal, i.e. 13.
-	//		* @return true if the goal has been reached.
-	//		*/
-	//	def goal(directionNS: Boolean, declarerGoal: Int, tricksToPlay: Int): Option[Boolean] = {
-	//		val tuple = declarerGoal -> (tricksToPlay + 1 - declarerGoal)
-	//		val f = (tricks.goal _).tupled
-	//		f(if (directionNS) tuple else tuple.swap)
-	//	}
-
 	/**
 		* Method to enumerate all of the possible states that could be children of the Node enclosing this State.
 		*
@@ -161,24 +144,6 @@ object State {
 		*/
 	def apply(whist: Whist): State = apply(whist, Trick.empty)
 
-	//	/**
-	//		* UNUSED
-	//		*
-	//		* Method to generate a goal function of type State => Boolean.
-	//		* The function required depends on the three parameters passed in, i.e. it closes on these three parameters.
-	//		*
-	//		* @param directionNS  true if the direction of the declarer is NS.
-	//		* @param declarerGoal the declarer's goal in terms of tricks--once declarer reaches this goal OR...
-	//		*                     the opponents make this goal impossible, then the goal is achieved.
-	//		* @param tricksToPlay the total number of tricks to play, usually the value of Deal.TricksPerDeal, i.e. 13.
-	//		* @return true if the goal has been reached.
-	//		*/
-	//	def goalFunction(directionNS: Boolean, declarerGoal: Int, tricksToPlay: Int = Deal.TricksPerDeal): State => Option[Boolean] = { s =>
-	//		val result: Option[Boolean] = (s.goal _).tupled((directionNS, declarerGoal, tricksToPlay))
-	//		if (result.nonEmpty) println(s"$s: $directionNS, $declarerGoal, $tricksToPlay: ${result.get}")
-	//		result
-	//	}
-
 	/**
 		* Method to create a new State based on the outcome of the current trick.
 		* If the current trick is complete then we create a new State based on:
@@ -212,45 +177,16 @@ object State {
 		override def fitness(x: State): Double = x.tricks.ns + x.deal.evaluate
 	}
 
-	//	trait Goal[T] {
-	//
-	//		def goalAchieved(t: T): Boolean
-	//	}
-
-	//	/**
-	//		* Trait to capture the behavior of an Expandable State.
-	//		*/
-	//	trait ExpandableState extends Expandable[State] {
-	//		/**
-	//			* Method to determine if a decision has been reached based on the given value of t.
-	//			* In such a case, expansion should terminate (not necessarily immediately).
-	//			*
-	//			* @param t the value of t to consider.
-	//			* @return if non-deciding, then None is returned.
-	//			*         Otherwise Some(b) where b indicates a decision of success or failure.
-	//			*/
-	//		def decide(t: State): Option[Boolean] = ??? // TODO implement me
-	//
-	//		/**
-	//			* Method to yield the successors (i.e. children) of the underlying type T for purposes of node expansion.
-	//			*
-	//			* @param t the value of T.
-	//			* @return a Seq[T] containing the successors (children) of T.
-	//			*/
-	//		def successors(t: State): Seq[State] = t.enumeratePlays
-	//
-	//		/**
-	//			* Method to determine if a decision can be reached based on the given value of t.
-	//			*
-	//			* @param t  the value of t to consider.
-	//			* @param to true if we are looking for a positive result; otherwise false.
-	//			* @return true if it's mathematically possible to yield a result.
-	//			*/
-	//		def canDecide(t: State, to: Option[State]): Boolean = false
-	//	}
-	//
-	//	implicit object ExpandableState extends ExpandableState
-	//
+  implicit object StateOrdering extends Ordering[State] {
+    /**
+      * Compare two States.
+      *
+      * @param x first State.
+      * @param y second State.
+      * @return positive number if y occurs after x in the sequence of moves.
+      */
+    def compare(x: State, y: State): Int = y.cardsPlayed - x.cardsPlayed
+  }
 
 	implicit object LoggableState extends Loggable[State] with Loggables {
 		def toLog(t: State): String =
@@ -302,6 +238,8 @@ case class Tricks(ns: Int, ew: Int) extends Evaluatable {
 	def project(directionNS: Boolean): Tricks = if (directionNS) this else Tricks(ew, ns)
 
 	/**
+    * NOT USED
+    *
 		* Method to determine if the required number of tricks for the given direction have been acquired.
 		*
 		* @param tricks      the required number of tricks.
@@ -377,8 +315,8 @@ trait Validatable {
 	def validate: Boolean
 }
 
-trait GoalOriented {
-
-	val goalAchieved: Boolean
-
-}
+//trait GoalOriented {
+//
+//	val goalAchieved: Boolean
+//
+//}
