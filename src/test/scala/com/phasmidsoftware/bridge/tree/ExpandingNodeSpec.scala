@@ -7,6 +7,7 @@ package com.phasmidsoftware.bridge.tree
 import java.util.regex.Pattern
 
 import com.phasmidsoftware.output.Loggable.{LoggableInt, LoggableString}
+import com.phasmidsoftware.output.Output
 import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
 
 //noinspection ScalaStyle
@@ -55,6 +56,44 @@ class ExpandingNodeSpec extends FlatSpec with Matchers with PrivateMethodTester 
 		}
 	}
 
+	it should "work with AltMockNodeSimple" in {
+		import com.phasmidsoftware.output.Flog._
+
+		implicit val expandableString: Expandable[String] = new Expandable[String] {
+			def successor(t: String, x: Int): String = (if (t.isEmpty) "" else t) + x
+
+			def successors(t: String): Seq[String] = for (x <- 4 to 1 by -1) yield successor(t, x)
+		}
+		implicit val goalDrivenString: GoalDriven[String] = new GoalDriven[String] {
+			private val goal = "42"
+
+			def goalAchieved(t: String): Boolean = s"goalAchieved?: $t" !! (t endsWith goal)
+
+			def goalOutOfReach(t: String, so: Option[String], moves: Int): Boolean =
+				SubStringMatch.substringPrefix(moves, t, goal) > moves || (so match {
+					case Some(s) => t.length >= s.length
+					case None => false
+
+				})
+		}
+		case class AltMockNodeSimple(override val t: String, override val so: Option[String], override val children: Seq[AltMockNodeSimple])
+			extends ExpandingNode[String](t, so, children) {
+			def unit(t: String, so: Option[String], tns: Seq[Node[String]]): ExpandingNode[String] = AltMockNodeSimple(t, so, tns.asInstanceOf[Seq[AltMockNodeSimple]])
+		}
+		val target = AltMockNodeSimple("", None, Nil)
+		val expansion: Option[Node[String]] = target.expand(None, 2)
+
+		expansion match {
+			case Some(n) =>
+				n.output(Output(System.out)).insertBreak.close()
+				println(n.leaves)
+				n.leaves.size shouldBe 1
+				n.leaves.head shouldBe "42"
+				n.depthFirstTraverse.size shouldBe 3
+			case None => fail("None returned")
+		}
+	}
+
 	it should "work with result n(AltNodeS) (4)" in {
 		val target = AltMockNodeS("")
 		val expansion: Option[Node[String]] = target.expand(None, 4)
@@ -71,11 +110,11 @@ class ExpandingNodeSpec extends FlatSpec with Matchers with PrivateMethodTester 
 		val expansion: Option[Node[String]] = target.expand(None, 5)
 		expansion match {
 			case Some(n) =>
+				n.output(Output(System.out)).insertBreak.close()
 				println(n.leaves)
-				// CONSIDER we should find the first two, but the other two should never be reached
-				n.leaves.size shouldBe 4
-				n.leaves shouldBe List("1.1.3.1.2", "1.3.1.2", "2.1.3.1.2", "3.1.3.1.2")
-				n.depthFirstTraverse.size shouldBe 19
+				n.leaves.size shouldBe 2
+				n.leaves shouldBe List("1.1.3.1.2", "1.3.1.2")
+				n.depthFirstTraverse.size shouldBe 9
 			case None => fail("None returned")
 		}
 	}
@@ -343,14 +382,17 @@ case class AltMockNodeS(override val t: String, override val so: Option[String],
 			def successors(t: String): Seq[String] = for (x <- 1 to 3) yield successor(t, x)
 		}
 		private implicit val goalDrivenString: GoalDriven[String] = new GoalDriven[String] {
-			def goalAchieved(t: String): Boolean = {
-				t contains AltMockNodeS.goal
-			}
+			def goalAchieved(t: String): Boolean = t endsWith AltMockNodeS.goal
 
-			def goalOutOfReach(t: String, so: Option[String], moves: Int): Boolean = so match {
+			//			def goalOutOfReach(t: String, so: Option[String], moves: Int): Boolean = so match {
+			//				case Some(s) => t.length >= s.length
+			//				case None => AltMockNodeS.impossible(t, moves)
+			//			}
+			def goalOutOfReach(t: String, so: Option[String], moves: Int): Boolean = AltMockNodeS.impossible(t, moves) || (so match {
 				case Some(s) => t.length >= s.length
-				case None => AltMockNodeS.impossible(t, moves)
-			}
+				case None => false
+
+			})
 		}
 	} with ExpandingNode[String](t, so, children) {
 	def unit(t: String, so: Option[String], tns: Seq[Node[String]]): ExpandingNode[String] =
@@ -366,14 +408,7 @@ object AltMockNodeS {
 
 	private val briefGoal = abbreviate(goal)
 
-	def impossible(t: String, levels: Int): Boolean = {
-		val briefT = abbreviate(t)
-
-		def inner(w: String, r: Int): Int =
-			if (w.isEmpty || (briefT endsWith w)) r else inner(w.substring(0, w.length - 1), r + 1)
-
-		inner(briefGoal, 0) > levels
-	}
+	def impossible(t: String, moves: Int): Boolean = SubStringMatch.substringPrefix(moves, abbreviate(t), briefGoal) > moves
 
 
 	//	def apply(t: String, children: Seq[ExpandingNode[String]]): AltMockNodeS = apply(t, children)
@@ -383,4 +418,22 @@ object AltMockNodeS {
 //	implicit object ExpandableString extends ExpandableString
 //
 //	val ExpString: Expandable[String] = ExpandableString
+}
+
+object SubStringMatch {
+	/**
+		* Method to determine if the candidate String can become a super-string of goal by the addition of up to max more characters.
+		*
+		* @param max       the maximum number of additional characters that can be added to the candidate.
+		* @param candidate the current value of candidate.
+		* @param goal      the goal string which should end a completed candidate string.
+		* @return the number of (appropriate) characters required to complete the candidate.
+		*/
+	def substringPrefix(max: Int, candidate: String, goal: String): Int = {
+		def inner(w: String, r: Int): Int =
+			if (w.isEmpty || (candidate endsWith w)) r
+			else inner(w.substring(0, w.length - 1), r + 1)
+
+		inner(goal, 0)
+	}
 }

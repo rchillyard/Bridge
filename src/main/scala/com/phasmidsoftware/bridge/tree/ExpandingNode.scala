@@ -35,7 +35,7 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
     * CONSIDER: adding the node at the head of the list of children.
     *
     * @param node the node to add as a child.
-    * @return a copy of this Node but with node as an additional child.
+    * @return a copy of this Node but with node as an additional child, and the so value corresponding to this.
     */
   override def :+(node: Node[T]): ExpandingNode[T] = unit(t, children :+ node)
 
@@ -43,7 +43,7 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
     * Method to add the given tns to the children of this Node.
     *
     * @param tns the tns to add as additional children.
-    * @return a copy of this Node but with tns as additional children.
+    * @return a copy of this Node but with tns as additional childrenand the so value corresponding to this.
     */
   override def ++(tns: Seq[Node[T]]): Node[T] = unit(t, children ++ tns)
 
@@ -51,7 +51,7 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
     * Method to add the given x-value to the children of this Node.
     *
     * @param x the x value to be turned into a Node which is then :+'d to this Node.
-    * @return a copy of this Node but with x as an additional child value.
+    * @return a copy of this Node but with x as an additional child value, and the so value corresponding to this.
     */
   override def :+(x: T): ExpandingNode[T] = this :+ unit(x)
 
@@ -61,7 +61,7 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
     *
     * @param _t  the given value of T.
     * @param tns the nodes which will be the children of the result.
-    * @return a new Node based on t and tns.
+    * @return a new Node based on t and tns, and the so value corresponding to this.
     */
   def unit(_t: T, tns: Seq[Node[T]]): ExpandingNode[T] = unit(_t, so, tns)
 
@@ -104,7 +104,24 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
 
 
   private def expandSuccessors(ts: Seq[T], moves: Int, _so: Option[T]) = {
-    def doExpansion(r: ExpandingNode[T], h: T): ExpandingNode[T] = unit(h, so, Nil).expand(_so, moves) match {
+    import com.phasmidsoftware.output.Flog._
+    _so match {
+      case Some(s) => s"expandSuccessors has existing goal: $ts $moves" !! s
+      case None =>
+    }
+
+    // CONSIDER refactoring as foldLeft
+
+    def getBestSolution(_sor: Option[T]) = _sor match {
+      case Some(sr) => Some(_so match {
+        case Some(ss) => if (implicitly[Ordering[T]].compare(sr, ss) < 0) sr else ss
+        case None => sr
+      })
+      case None => _so
+    }
+    //      for (sr <- r.so; ss <- _so) yield if (implicitly[Ordering[T]].compare(sr, ss)<0) sr else ss
+
+    def doExpansion(r: ExpandingNode[T], t: T): ExpandingNode[T] = unit(t, None, Nil).expand(getBestSolution(r.so), moves) match {
       case None => r // expansion came up empty
       case Some(n) => n.so match {
         case Some(g) => r.solve(g) :+ n // goal achieved: add it as a child and mark result as goal achieved
@@ -167,7 +184,7 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
   private def solve(success: T) = so match {
     case Some(x) =>
       if (x == success) this
-      else if (implicitly[Ordering[T]].compare(x, success) < 0) unit(t, Some(success), children)
+      else if (implicitly[Ordering[T]].compare(x, success) < 0) unit(t, Some(success), children) // TODO check
       else this
     case _ => unit(t, Some(success), children)
   }
