@@ -6,6 +6,7 @@ package com.phasmidsoftware.bridge.cards
 
 import org.scalatest.{FlatSpec, Matchers}
 
+//noinspection ScalaStyle
 class TrickSpec extends FlatSpec with Matchers {
 
 	behavior of "Trick"
@@ -55,7 +56,7 @@ class TrickSpec extends FlatSpec with Matchers {
 		openingLead.priority shouldBe 10
 		openingLead.suit shouldBe Hearts
 		openingLead.hand shouldBe 0
-		openingLead.asCard shouldBe Card("H4")
+		openingLead.asCard shouldBe Card("H2")
 		val trick2alternatives = trick1.enumerateSubsequentPlays(whist1)
 		trick2alternatives.size shouldBe 2
 		val state2alternatives = whist1.makeStates(state1.tricks, trick2alternatives)

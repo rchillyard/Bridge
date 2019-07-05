@@ -75,7 +75,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		ss.size shouldBe 4
 		ss.head should matchPattern { case State(_, _, _) => }
 		ss.head.trick.toString shouldBe "T0 {Play: 0 H2}"
-		ss.tail.head.trick.toString shouldBe "T0 {Play: 0 H5}"
+		ss.tail.head.trick.toString shouldBe "T0 {Play: 0 H4}"
 		ss.init.last.trick.toString shouldBe "T0 {Play: 0 H9}"
 		ss.last.trick.toString shouldBe "T0 {Play: 0 HK}"
 	}
@@ -95,7 +95,7 @@ class TreeSpec extends FlatSpec with Matchers {
 				ss.size shouldBe 4
 				ss.head should matchPattern { case State(_, _, _) => }
 				ss.head.trick.toString shouldBe "T1 {Play: 0 H2}"
-				ss.tail.head.trick.toString shouldBe "T1 {Play: 0 H5}"
+				ss.tail.head.trick.toString shouldBe "T1 {Play: 0 H4}"
 				ss.init.last.trick.toString shouldBe "T1 {Play: 0 H9}"
 				ss.last.trick.toString shouldBe "T1 {Play: 0 HK}"
 			case _ => fail("no winner")
@@ -111,7 +111,7 @@ class TreeSpec extends FlatSpec with Matchers {
 		val state = State(whist, trick)
 		val ss = state.enumerateFollows
 		ss.size shouldBe 2
-		ss.head.trick.toString shouldBe "T1 {Play: 0 SK, Play: 1 SQ}"
+		ss.head.trick.toString shouldBe "T1 {Play: 0 SK, Play: 1 SJ}"
 		ss.last.trick.toString shouldBe "T1 {Play: 0 SK, Play: 1 S4}"
 	}
 

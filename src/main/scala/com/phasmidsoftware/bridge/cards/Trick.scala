@@ -209,7 +209,7 @@ case class CardPlay(deal: Deal, hand: Int, suit: Suit, priority: Int) extends Or
 		*/
 	lazy val asCard: Card =
 		deal.hands(hand).holdings(suit).sequence(priority) match {
-		case Some(s) => s.head
+			case Some(s) => s.last
 		case None =>
 			throw CardException(s"CardPlay (deal=${deal.title}, hand=$hand, suit=$suit, priority=$priority) cannot find actual card.")
 	}

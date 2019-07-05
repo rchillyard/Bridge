@@ -58,15 +58,13 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
 		*         It may represent success or failure on the part of the protagonists.
 		*         If the result is None, it means that no solution of any sort was found.
 		*/
-	def analyzeDoubleDummy(tricks: Int, directionNS: Boolean): Option[State] = {
+	def analyzeDoubleDummy(tricks: Int, directionNS: Boolean): Option[Boolean] = {
 		implicit val sg: GoalDriven[State] = Whist.goal(tricks, directionNS)
-		implicit val se: Expandable[State] = new Expandable[State] {
-			val goalDriven: GoalDriven[State] = implicitly[GoalDriven[State]]
-			def successors(t: State): Seq[State] = t.enumeratePlays
-		}
+		implicit val se: Expandable[State] = (t: State) => t.enumeratePlays
 		val tree = Tree(this)
 		val node = tree.expand()
-		node.so
+		node.output(Output(System.out)).insertBreak.close()
+		node.so flatMap (sn => sn.tricks.decide(tricks, directionNS))
 	}
 
 	/**
@@ -162,6 +160,12 @@ case class Sequence(priority: Int, cards: Seq[Card]) extends Evaluatable {
 		* @return the highest card of the sequence.
 		*/
 	lazy val head: Card = cards.head
+
+	/**
+		* @return the lowest card of the sequence.
+		*         This is the one that gets (arbitrarily) played when a sequence is used.
+		*/
+	lazy val last: Card = cards.last
 
 	/**
 		* Method to promote this sequence by one.
@@ -275,7 +279,8 @@ trait Quittable[X] {
 	* @param suit       the suit of this holding.
 	* @param promotions a list of promotions that should be applied on quitting a trick.
 	*/
-case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = Nil) extends Outputable[Unit] with Quittable[Holding] with Evaluatable {
+case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = Nil)
+	extends Outputable[Unit] with Quittable[Holding] with Evaluatable with Removable {
 
 	require(isVoid || maybeSuit.get == suit)
 
@@ -560,10 +565,11 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
 		*/
 	def play(cardPlay: CardPlay): Hand = {
 		val priority = cardPlay.priority
-		if (cardPlay.hand == index)
+		val result = if (cardPlay.hand == index)
 			this - (cardPlay.suit, priority)
 		else
-			promote(cardPlay.suit, priority)
+			this
+		result promote(cardPlay.suit, priority)
 	}
 
 	/**
@@ -620,6 +626,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
 
 	/**
 		* Method to eliminate (play) a card from the given suit and sequence.
+		* This method is called by the play method of Hand IF the hand matches.
 		*
 		* @param suit     the suit.
 		* @param priority the priority of the sequence from which we take a card.
@@ -832,4 +839,16 @@ trait Evaluatable {
 		* @return a Double
 		*/
 	def evaluate: Double
+}
+
+trait Removable {
+	/**
+		* Method to remove an element of the appropriate priority from a Removable.
+		*
+		* CONSIDER renaming this and also adding a suit parameter so that Hand can define it.
+		*
+		* @param priority the priority.
+		* @return a new Removable without an element of the given priority.
+		*/
+	def -(priority: Int): Removable
 }

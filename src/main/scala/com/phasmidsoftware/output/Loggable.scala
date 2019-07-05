@@ -52,4 +52,10 @@ object Loggable {
 
   implicit object LoggableLong extends LoggableLong
 
+  trait LoggableUnit extends Loggable[Unit] {
+    def toLog(t: Unit): String = ""
+  }
+
+  implicit object LoggableUnit extends LoggableUnit
+
 }
