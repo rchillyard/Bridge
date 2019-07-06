@@ -129,7 +129,6 @@ class TreeSpec extends FlatSpec with Matchers {
 		writer.spillway shouldBe "T0  (7.0)"
 		val traverse = result.depthFirstTraverse
 		traverse.size shouldBe 1
-		//		traverse foreach { s => println(s"${s.trick} ${s.tricks}") }
 	}
 
 	it should "expand 2" in {
@@ -185,7 +184,6 @@ class TreeSpec extends FlatSpec with Matchers {
 		val target = Tree(whist)
 
 		val result = target.expand(4)
-		println(result)
 		result.children.size shouldBe 1
 		val writer = MockWriter(8192)
 		result.output(Output(writer)).close()
@@ -263,7 +261,6 @@ class TreeSpec extends FlatSpec with Matchers {
 		states.size shouldBe 10
 	}
 
-	// NOTE: there is something very strange about this test: the same cards (eg. HA) are played more than once.
 	it should "expand 13" in {
 		val deal = Deal("test", 2L)
 		val whist = Whist(deal, 0)
@@ -275,7 +272,6 @@ class TreeSpec extends FlatSpec with Matchers {
 		val result = target.expand(13)
 		val states: Seq[State] = result.depthFirstTraverse
 		states.size shouldBe 14
-		states foreach { s => println(s"${s.trick} ${s.tricks}") }
 	}
 
 }

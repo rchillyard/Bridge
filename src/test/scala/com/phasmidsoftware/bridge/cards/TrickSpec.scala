@@ -82,7 +82,6 @@ class TrickSpec extends FlatSpec with Matchers {
 		val state40: State = state4alternatives.head
 		val state5alternatives = state40.enumeratePlays
 		state5alternatives.size shouldBe 4
-		println(state5alternatives)
 		val state50 = state5alternatives.head
 		state50.whist.deal.nCards shouldBe 47
 		state50.trick.index shouldBe 2

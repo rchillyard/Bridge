@@ -102,21 +102,18 @@ class DealSpec extends FlatSpec with Matchers {
 	behavior of "playAll"
 	it should "playAll a trick made up of all highest spades" in {
 		val target = Deal("test", 0L)
-		println(target.neatOutput)
 		target.nCards shouldBe 52
 		val hands = target.hands
 		hands.size shouldBe 4
-		for (h <- hands) for ((s, x) <- h.holdings) for (y <- x.sequences) println(s"$s: $y")
+		//		for (h <- hands) for ((s, x) <- h.holdings) for (y <- x.sequences) println(s"$s: $y")
 		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.head.priority)
 		val trick =
 			Trick.create(0, CardPlay(target, 0, Spades, priority1S), CardPlay(target, 1, Spades, priority2S), CardPlay(target, 2, Spades, priority3S), CardPlay(target, 3, Spades, priority4S))
-		println(trick)
 		val played: Deal = target.playAll(trick)
 		played.nCards shouldBe 48
 		val quitted = played.quit
 		quitted.nCards shouldBe 48
-		println(quitted.neatOutput)
-		for ((h, i) <- quitted.hands.zipWithIndex) for ((s, x) <- h.holdings) println(s"$i: $s, $x")
+		//		for ((h, i) <- quitted.hands.zipWithIndex) for ((s, x) <- h.holdings) println(s"$i: $s, $x")
 	}
 
 	it should "playAll a trick made up of all lowest spades" in {

@@ -9,6 +9,7 @@ import org.scalatest.{FlatSpec, Matchers}
 
 import scala.io.Source
 
+//noinspection ScalaStyle
 class AnalysisSpec extends FlatSpec with Matchers {
 
   private val so = Option(getClass.getResourceAsStream("westwood_20190625_1.pbn")) map (Source.fromInputStream(_))
@@ -16,42 +17,43 @@ class AnalysisSpec extends FlatSpec with Matchers {
   private val pbn: PBN = py.get
 
   behavior of "double dummy analysis"
-  ignore should "analyze deal 0" in {
+  it should "analyze deal 0" in {
     val game = pbn.head
     analyzeMakableContracts(game)
   }
 
-  ignore should "analyze deal 1" in {
+  it should "analyze deal 1" in {
     val game = pbn(1)
     analyzeMakableContracts(game)
   }
 
+  // FIXME figure out why this test does not run, or at least why it runs slowly
   ignore should "analyze deal 2" in {
     val game = pbn(2)
     analyzeMakableContracts(game)
   }
 
-  ignore should "analyze deal 3" in {
+  it should "analyze deal 3" in {
     val game = pbn(3)
     analyzeMakableContracts(game)
   }
 
-  ignore should "analyze deal 4" in {
+  it should "analyze deal 4" in {
     val game = pbn(4)
     analyzeMakableContracts(game)
   }
 
-  ignore should "analyze deal 5" in {
+  it should "analyze deal 5" in {
     val game = pbn(5)
     analyzeMakableContracts(game)
   }
 
-  ignore should "analyze deal 6" in {
+  it should "analyze deal 6" in {
     val game = pbn(6)
     analyzeMakableContracts(game)
   }
 
-  ignore should "analyze deal 7" in {
+  it should "analyze deal 7" in {
     val game = pbn.last
     analyzeMakableContracts(game)
   }
@@ -67,7 +69,7 @@ class AnalysisSpec extends FlatSpec with Matchers {
         val leader = Hand.next(declarer)
         val tricks = n.toInt
         println(s"analyzeDoubleDummy: tricks=$tricks, declarer=$l, leader=$leader")
-        println(Whist(deal, leader).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0))
+        Whist(deal, leader).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0) shouldBe Some(true)
     }
   }
 }

@@ -7,7 +7,6 @@ package com.phasmidsoftware.bridge.tree
 import java.util.regex.Pattern
 
 import com.phasmidsoftware.output.Loggable.{LoggableInt, LoggableString}
-import com.phasmidsoftware.output.Output
 import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
 
 //noinspection ScalaStyle
@@ -82,8 +81,7 @@ class ExpandingNodeSpec extends FlatSpec with Matchers with PrivateMethodTester 
 
 		expansion match {
 			case Some(n) =>
-				n.output(Output(System.out)).insertBreak.close()
-				println(n.leaves)
+				//				n.output(Output(System.out)).insertBreak.close()
 				n.leaves.size shouldBe 1
 				n.leaves.head shouldBe "42"
 				n.depthFirstTraverse.size shouldBe 3
@@ -107,8 +105,8 @@ class ExpandingNodeSpec extends FlatSpec with Matchers with PrivateMethodTester 
 		val expansion: Option[Node[String]] = target.expand(None, 5)
 		expansion match {
 			case Some(n) =>
-				n.output(Output(System.out)).insertBreak.close()
-				println(n.leaves)
+				//				n.output(Output(System.out)).insertBreak.close()
+				//				println(n.leaves)
 				n.leaves.size shouldBe 2
 				n.leaves shouldBe List("1.1.3.1.2", "1.3.1.2")
 				n.depthFirstTraverse.size shouldBe 9

@@ -113,7 +113,6 @@ class WhistSpec extends FlatSpec with Matchers {
 		val state0 = State(whist00)
 		val states: Seq[State] = state0.enumeratePlays
 		states.size shouldBe 3
-		//		states foreach { s => println(s"${s.trick} ${s.tricks}") }
 	}
 
 	it should "enumeratePlays to two levels" in {
@@ -124,7 +123,6 @@ class WhistSpec extends FlatSpec with Matchers {
 		states1.size shouldBe 3
 		val states2: Seq[State] = for (p <- states1; q <- p.enumeratePlays) yield q
 		states2.size shouldBe 6
-		//		states2 foreach { s => println(s"${s.trick} ${s.tricks}") }
 	}
 
 	it should "enumeratePlays to three levels" in {
@@ -137,7 +135,6 @@ class WhistSpec extends FlatSpec with Matchers {
 		states2.size shouldBe 6
 		val states3: Seq[State] = for (p <- states2; q <- p.enumeratePlays) yield q
 		states3.size shouldBe 18
-		//		states3 foreach { s => println(s"${s.trick} ${s.tricks}") }
 	}
 
 	it should "enumeratePlays to four levels" in {
@@ -152,7 +149,6 @@ class WhistSpec extends FlatSpec with Matchers {
 		states3.size shouldBe 18
 		val states4: Seq[State] = for (p <- states3; q <- p.enumeratePlays) yield q
 		states4.size shouldBe 36
-		//		states4 foreach { s => println(s"${s.trick} ${s.tricks}") }
 	}
 
 	it should "enumeratePlays to five levels" in {
@@ -169,22 +165,17 @@ class WhistSpec extends FlatSpec with Matchers {
 		states4.size shouldBe 36
 		val states5: Seq[State] = for (p <- states4; q <- p.enumeratePlays) yield q
 		states5.size shouldBe 139
-		//		states5 foreach { s => println(s"${s.trick} ${s.tricks}") }
 	}
 
 	behavior of "double dummy"
 	it should "analyzeDoubleDummy2" in {
 		val target = Deal("test", 2L)
-		//		target.output(Output(new PrintWriter(System.out))).close()
 		val whist = Whist(target, 3)
-		println(target.neatOutput)
 		whist.analyzeDoubleDummy(9, directionNS = true) shouldBe Some(true)
 	}
-  ignore should "analyzeDoubleDummy0" in {
+	it should "analyzeDoubleDummy0" in {
 		val target = Deal("test", 0L)
-		//		target.output(Output(new PrintWriter(System.out))).close()
 		val whist = Whist(target, 0)
-		// TODO CHECK THIS
-		whist.analyzeDoubleDummy(9, directionNS = false) shouldBe Some(false)
+		whist.analyzeDoubleDummy(9, directionNS = false) shouldBe Some(true)
 	}
 }

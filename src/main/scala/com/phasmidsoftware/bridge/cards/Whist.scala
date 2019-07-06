@@ -63,7 +63,7 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
 		implicit val se: Expandable[State] = (t: State) => t.enumeratePlays
 		val tree = Tree(this)
 		val node = tree.expand()
-		node.output(Output(System.out)).insertBreak.close()
+		//		node.output(Output(System.out)).insertBreak.close()
 		node.so flatMap (sn => sn.tricks.decide(tricks, directionNS))
 	}
 
@@ -454,6 +454,8 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 
 	private lazy val realSequences = sequences filter (_.cards.lengthCompare(1) > 0)
 
+	//noinspection ScalaUnusedSymbol
+	// NOTE: never called
 	private def canWin(priorPlays: Seq[CardPlay]): Boolean = if (priorPlays.nonEmpty && !isVoid) priorPlays.min.priority > sequences.head.priority else true
 
 	private lazy val maybeSuit: Option[Suit] = cards.headOption map (_.suit)
@@ -850,5 +852,6 @@ trait Removable {
 		* @param priority the priority.
 		* @return a new Removable without an element of the given priority.
 		*/
+	//noinspection ScalaStyle
 	def -(priority: Int): Removable
 }

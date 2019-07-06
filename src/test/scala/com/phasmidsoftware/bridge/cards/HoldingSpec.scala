@@ -123,7 +123,6 @@ class HoldingSpec extends FlatSpec with Matchers {
   it should "-" in {
     val target = Holding.apply(Seq(SJT, Sequence(Seq(Card("S3"), Card("S2")))), Spades)
     val played1 = (target - 11).promote(11).quit
-    println(played1)
     played1.size shouldBe 2
     played1.sequences.head shouldBe Sequence(3, Seq(Card("SJ"), Card("ST")))
     played1.sequences.last shouldBe Sequence(11, Seq(Card("S3")))

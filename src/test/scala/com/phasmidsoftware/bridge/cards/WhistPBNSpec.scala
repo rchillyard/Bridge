@@ -10,48 +10,49 @@ import org.scalatest.{FlatSpec, Matchers}
 import scala.io.Source
 import scala.util.Try
 
+//noinspection ScalaStyle
 class WhistPBNSpec extends FlatSpec with Matchers {
 
   private val py: Try[PBN] = PBNParser.parsePBN(Source.fromResource("com/phasmidsoftware/bridge/director/LEXINGTON 2016.2.9.PBN"))
   private val pbn: PBN = py.get
 
   behavior of "double dummy analysis and PBN parser"
-  ignore should "analyze deal 0" in {
+  it should "analyze deal 0" in {
     val game = pbn.head
     analyzeMakableContracts(game)
   }
 
-  ignore should "analyze deal 1" in {
+  it should "analyze deal 1" in {
     val game = pbn(1)
     analyzeMakableContracts(game)
   }
 
-  ignore should "analyze deal 2" in {
+  it should "analyze deal 2" in {
     val game = pbn(2)
     analyzeMakableContracts(game)
   }
 
-  ignore should "analyze deal 3" in {
+  it should "analyze deal 3" in {
     val game = pbn(3)
     analyzeMakableContracts(game)
   }
 
-  ignore should "analyze deal 4" in {
+  it should "analyze deal 4" in {
     val game = pbn(4)
     analyzeMakableContracts(game)
   }
 
-  ignore should "analyze deal 5" in {
+  it should "analyze deal 5" in {
     val game = pbn(5)
     analyzeMakableContracts(game)
   }
 
-  ignore should "analyze deal 6" in {
+  it should "analyze deal 6" in {
     val game = pbn(6)
     analyzeMakableContracts(game)
   }
 
-  ignore should "analyze deal 7" in {
+  it should "analyze deal 7" in {
     val game = pbn.last
     analyzeMakableContracts(game)
   }
