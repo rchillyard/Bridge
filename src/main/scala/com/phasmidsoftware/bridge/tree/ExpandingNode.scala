@@ -21,12 +21,6 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
 (val t: T, val so: Option[T], val children: Seq[ExpandingNode[T]]) extends Node[T] {
 
   // TODO try to be careful that we don't keep re-constructing nodes that are the same.
-  //  import com.phasmidsoftware.output.Flog._
-  //
-  //  so match {
-  //    case Some(x) => s"node $t has achieved goal" !! x
-  //    case None =>
-  //  }
 
   /**
     * Method to add the given node to the children of this Node.
@@ -53,7 +47,6 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
     * @return a copy of this Node but with x as an additional child value, and the so value corresponding to this.
     */
   override def :+(x: T): ExpandingNode[T] = this :+ unit(x)
-
 
   /**
     * Method to form a Node from a T with the given children and with so based on the value in this.
@@ -84,18 +77,19 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
     * @param moves the number of possible moves remaining.
     * @return an Option of ExpandingNode[T].
     */
-  def expand(_so: Option[T], moves: Int): Option[ExpandingNode[T]] =
-    if (moves < 0)
-      None
-    else
-      implicitly[Expandable[T]].result(t, _so, moves) match {
-        // XXX terminating condition found? Mark and return this.
-        case Left(b) =>
-          Some(solve(b))
-        // XXX normal situation with (possibly empty) descendants? Recursively expand them.
-        case Right(ts) =>
-          Some(expandSuccessors(ts, moves - 1, _so))
-      }
+  def expand(_so: Option[T], moves: Int): Option[ExpandingNode[T]] = if (moves < 0)
+    None
+  else {
+    implicitly[Expandable[T]].result(t, _so, moves) match {
+      // XXX terminating condition found? Mark and return this.
+      case Left(b) =>
+        Some(solve(b))
+      // XXX normal situation with (possibly empty) descendants? Recursively expand them.
+      // CONSIDER we should eliminate a node that has no expansion, but it doesn't really seem to matter.
+      case Right(Nil) => Some(this)
+      case Right(ts) => Some(expandSuccessors(ts, moves - 1, _so))
+    }
+  }
 
   /**
     * Method to replace node x with node y in this sub-tree.
@@ -221,11 +215,10 @@ trait Expandable[T] {
     *         If the result is Right(Nil), it signifies that the given value of t holds no promise and therefore should not be further expanded.
     *         If the return is Left(T), it signifies that we have reached a solution (goal) represented by the value of T.
     */
-  def result(t: T, to: Option[T], moves: Int)(implicit ev1: GoalDriven[T], ev2: Ordering[T]): Either[T, Seq[T]] = {
+  def result(t: T, to: Option[T], moves: Int)(implicit ev1: GoalDriven[T], ev2: Ordering[T]): Either[T, Seq[T]] =
     if (ev1.goalAchieved(t)) Left(t)
     else if (ev1.goalOutOfReach(t, to, moves)) Right(Nil)
     else Right(successors(t))
-  }
 }
 
 case class ExpandingNodeException(str: String) extends Exception(str)

@@ -71,13 +71,13 @@ class TreeSpec extends FlatSpec with Matchers {
 		val state = State(whist)
 		// NOTE: Figure out all the possible leads from the North's longest and strongest suit.
 		// Bear in mind that we consider all cards from a "sequence" equivalent.
-		val ss: Seq[State] = state.enumerateLeads(0, 0)
+		val ss: Seq[State] = state.enumerateLeads(0, 1)
 		ss.size shouldBe 4
 		ss.head should matchPattern { case State(_, _, _) => }
-		ss.head.trick.toString shouldBe "T0 {Play: 0 H2}"
-		ss.tail.head.trick.toString shouldBe "T0 {Play: 0 H4}"
-		ss.init.last.trick.toString shouldBe "T0 {Play: 0 H9}"
-		ss.last.trick.toString shouldBe "T0 {Play: 0 HK}"
+		ss.head.trick.toString shouldBe "T1 {Play: 0 H2}"
+		ss.tail.head.trick.toString shouldBe "T1 {Play: 0 H4}"
+		ss.init.last.trick.toString shouldBe "T1 {Play: 0 H9}"
+		ss.last.trick.toString shouldBe "T1 {Play: 0 HK}"
 	}
 
 	it should "enumerateLeads 2" in {
@@ -271,7 +271,7 @@ class TreeSpec extends FlatSpec with Matchers {
 
 		val result = target.expand(13)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 14
+		states.size shouldBe 13
 	}
 
 }

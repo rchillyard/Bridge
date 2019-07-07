@@ -94,12 +94,10 @@ trait WhistGoalDriven extends GoalDriven[State] {
   val directionNS: Boolean
   val totalTricks: Int
 
-  def goalAchieved(t: State): Boolean = {
-    t.tricks.decide(neededTricks, directionNS) match {
-      case Some(_) => true // We ignore the Boolean value for now.
-      case None => false
-    }
-  }
+	def goalAchieved(t: State): Boolean = t.tricks.decide(neededTricks, directionNS) match {
+		case Some(_) => true // We ignore the Boolean value for now.
+		case None => false
+	}
 
   def goalImpossible(t: State, moves: Int): Boolean = moves < t.trick.movesRequired(directionNS, neededTricks, t.tricks)
 }
@@ -202,6 +200,9 @@ case class Sequence(priority: Int, cards: Seq[Card]) extends Evaluatable {
 
 	private def canCombine(s: Sequence) = priority + length == s.priority
 
+	/**
+		* NOTE: this gets more and more optimistic as more tricks are turned.
+		*/
 	private lazy val _evaluate = cards.length * math.pow(0.5, priority)
 }
 
@@ -245,8 +246,13 @@ object Sequence {
 		override def compare(x: Sequence, y: Sequence): Int = x.priority - y.priority
 	}
 
+	/**
+		* An loggable for a Sequence.
+		* Lower values of priority precede higher values.
+		*/
 	implicit object LoggableSequence extends Loggable[Sequence] with Loggables {
 		implicit val cardSequenceLoggable: Loggable[Seq[Card]] = sequenceLoggable[Card]
+		// NOTE: that, for this particular apply method, we have to specify the fields we need.
 		val loggableSequence: Loggable[Sequence] = toLog2(Sequence.apply, Seq("priority", "cards"))
 
 		def toLog(t: Sequence): String = loggableSequence.toLog(t)
@@ -306,6 +312,11 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 		* @return the all of the cards in this Holding.
 		*/
 	lazy val cards: Seq[Card] = for (s <- sequences; c <- s.cards) yield c
+
+	/**
+		* @return the effective number of cards.
+		*/
+	lazy val nCards: Int = cards.size
 
 	/**
 		* NOTE: this is only very approximately correct and is used as a heuristic.
@@ -580,34 +591,30 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
 		* @param trick the current state of the Trick.
 		* @return a sequence of card plays.
 		*/
-	def discard(trick: Trick): Seq[CardPlay] = {
+	def discard(deal: Deal, trick: Trick): Seq[CardPlay] = {
 		def suitsMatch(k: Suit) = trick.suit match {
 			case Some(`k`) => true;
 			case _ => false
 		}
 
-		trick.plays.lastOption.map(_.deal) match {
-			case Some(deal) =>
 				for {
 					// NOTE: first get the holdings from the other suits in order of length
 					h <- holdings.flatMap { case (k, v) => if (suitsMatch(k)) None else Some(v) }.toSeq.sortWith(_.length < _.length)
 					ps <- h.choosePlays(deal, index, Duck, None)
 				} yield ps
-			case None => throw CardException("cannot discard from a trick which is not started.")
-		}
 	}
 
 	/**
 		* Choose the plays for this Hand, based on the prior plays of the given trick.
 		*
+		* @param deal  the deal from which the plays will be made.
 		* @param trick the prior plays to the current trick.
 		* @return a Seq[CardPlay].
 		*/
-	def choosePlays(trick: Trick): Seq[CardPlay] =
+	def choosePlays(deal: Deal, trick: Trick): Seq[CardPlay] =
 		if (trick.started) {
-			val deal = trick.plays.last.deal
 			val holding = holdings(trick.suit.get)
-			if (holding.isVoid) discard(trick)
+			if (holding.isVoid) discard(deal, trick)
 			else holding.choosePlays(deal, index, trick)
 		}
 		else throw CardException("choosePlays called with empty trick")
@@ -617,7 +624,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
 		*
 		* @return the sum of the cards in the holdings
 		*/
-	lazy val nCards: Int = holdings.values.map(_.cards.size).sum
+	lazy val nCards: Int = holdings.values.map(_.nCards).sum
 
 	/**
 		* Method to get the count of the cards in this Hand.
@@ -769,6 +776,7 @@ object Hand {
 		*/
 	def sameSide(hand: Int, other: Int): Boolean = (other - hand) % 2 == 0
 
+	implicit val z: Loggable[Hand] = (t: Hand) => t.neatOutput
 }
 
 /**

@@ -27,8 +27,7 @@ class AnalysisSpec extends FlatSpec with Matchers {
     analyzeMakableContracts(game)
   }
 
-  // FIXME figure out why this test does not run, or at least why it runs slowly
-  ignore should "analyze deal 2" in {
+  it should "analyze deal 2" in {
     val game = pbn(2)
     analyzeMakableContracts(game)
   }
@@ -48,8 +47,8 @@ class AnalysisSpec extends FlatSpec with Matchers {
     analyzeMakableContracts(game)
   }
 
-  it should "analyze deal 6" in {
-    val game = pbn(6)
+  ignore should "analyze deal 16" in {
+    val game = pbn(15)
     analyzeMakableContracts(game)
   }
 

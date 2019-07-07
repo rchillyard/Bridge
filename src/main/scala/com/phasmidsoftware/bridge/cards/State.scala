@@ -19,9 +19,6 @@ import scala.language.postfixOps
 	*/
 case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[Unit] with Validatable {
 
-	// TODO remove this.
-	//	State.count += 1
-
 	/**
 		* Method to enumerate all of the possible states that could be children of the Node enclosing this State.
 		*
@@ -31,7 +28,7 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 
 	//	TODO make private
 	lazy val enumerateFollows: Seq[State] = trick.next match {
-		case Some(t) => whist.makeStates(tricks, for (p <- deal.hands(t).choosePlays(trick)) yield trick :+ p)
+		case Some(t) => whist.makeStates(tricks, for (p <- deal.hands(t).choosePlays(deal, trick)) yield trick :+ p)
 		case None => throw CardException(s"State: $this cannot be followed")
 	}
 
@@ -67,7 +64,6 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 
 	/**
 		* NOTE: this is used only in unit tests
-		*
 		*
 		* Method to validate this State.
 		*
@@ -123,7 +119,6 @@ object Tricks {
 
 		def toLog(t: Tricks): String = s"${t.ns}:${t.ew}"
 	}
-
 }
 
 
@@ -197,9 +192,6 @@ object State {
 				s"${t.fitness} " +
 				s"${implicitly[Loggable[Whist]].toLog(t.whist)}"
 	}
-
-	// TODO remove this.
-	//	var count = 0
 }
 
 /**

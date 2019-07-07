@@ -88,6 +88,11 @@ case class Name(name: String) {
 }
 
 trait Value {
+	def asString: String = this match {
+		case StringValue(w) => w
+		case _ => throw PBNException(s"value: $this is not a StringValue")
+	}
+
 	def toInt: Int = this match {
 		case StringValue(w) =>
 			val intR = """(-?\d+)""".r

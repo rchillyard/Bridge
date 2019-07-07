@@ -98,15 +98,7 @@ case class Trick(index: Int, plays: Seq[CardPlay]) extends Outputable[Deal] with
 		*         (1) the current trick if we are following;
 		*         (2) a new trick if we are leading.
 		*/
-	def enumerateSubsequentPlays(whist: Whist): Seq[Trick] = winner match {
-		case Some(Winner(p, true)) =>
-			enumerateLeads(p.deal, p.hand)
-		case _ =>
-			if (started)
-				for (q <- last.deal.hands(Hand.next(last.hand)).choosePlays(this)) yield this :+ q
-			else
-				enumerateLeads(whist.deal, whist.openingLeader)
-	}
+	def enumerateSubsequentPlays(whist: Whist): Seq[Trick] = enumerateSubsequentPlays(whist.deal, whist.openingLeader)
 
 	/**
 		* Determine if the declaring side still has a play left in this trick.
@@ -131,6 +123,16 @@ case class Trick(index: Int, plays: Seq[CardPlay]) extends Outputable[Deal] with
 		val movesByDeclarerThisTrick = if (declaringSideStillToPlay(directionNS)) 1 else 0
 		val additionalTricksNeeded = neededTricks - (if (directionNS) tricks.ns else tricks.ew)
 		(additionalTricksNeeded - movesByDeclarerThisTrick) * Deal.CardsPerTrick
+	}
+
+	private def enumerateSubsequentPlays(deal: Deal, leader: Int) = winner match {
+		case Some(Winner(p, true)) =>
+			enumerateLeads(deal, p.hand)
+		case _ =>
+			if (started)
+				for (q <- deal.hands(Hand.next(last.hand)).choosePlays(deal, this)) yield this :+ q
+			else
+				enumerateLeads(deal, leader)
 	}
 
 	private def enumerateLeads(deal: Deal, leader: Int): Seq[Trick] = for (q <- chooseLeads(deal, leader)) yield Trick(index + 1, Seq(q))
@@ -222,7 +224,7 @@ case class CardPlay(deal: Deal, hand: Int, suit: Suit, priority: Int) extends Or
 object CardPlay {
 
 	implicit object LoggableCardPlay extends Loggable[CardPlay] with Loggables {
-		val loggable: Loggable[CardPlay] = toLog4(CardPlay.apply)
+		val loggable: Loggable[CardPlay] = toLog4(CardPlay.apply, Seq("deal", "hand", "suit", "priority"))
 
 		def toLog(t: CardPlay): String = loggable.toLog(t)
 	}
@@ -241,7 +243,6 @@ object Trick {
 	implicit object LoggableTrick extends Loggable[Trick] with Loggables {
 		def toLog(t: Trick): String = s"T${t.index} ${t.plays.mkString("{", ", ", "}")}"
 	}
-
 
 }
 

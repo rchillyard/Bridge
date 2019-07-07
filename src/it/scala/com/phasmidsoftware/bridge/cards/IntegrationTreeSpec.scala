@@ -1,7 +1,9 @@
 package com.phasmidsoftware.bridge.cards
 
+import com.phasmidsoftware.bridge.tree.{Expandable, GoalDriven}
 import org.scalatest.{FlatSpec, Matchers}
 
+//noinspection ScalaStyle
 class IntegrationTreeSpec extends FlatSpec with Matchers {
 
 	def success(n: StateNode): Boolean = false
@@ -11,13 +13,21 @@ class IntegrationTreeSpec extends FlatSpec with Matchers {
 	private val deal2 = Deal("test", 2L)
 	private val whist = Whist(deal2, 0)
 
+	implicit val whistGoal: GoalDriven[State] = Whist.goal(1, _directionNS = true, 1)
+
+	class PlainEnumerationExpandable() extends Expandable[State] {
+		def successors(t: State): Seq[State] = t.enumeratePlays
+	}
+
+	implicit val se: Expandable[State] = new PlainEnumerationExpandable()
+
 	it should "go to level 12" in {
-		Tree(whist).expand(12).depthFirstTraverse.size shouldBe 23021
+		Tree(whist).expand(12).depthFirstTraverse.size shouldBe 6
 	}
 
 	// NOTE: the following test actually works but it takes a long time!
-	ignore should "go to level 16" in {
-		Tree(whist).expand(16).depthFirstTraverse.size shouldBe 730493
+	it should "go to level 16" in {
+		Tree(whist).expand(16).depthFirstTraverse.size shouldBe 6
 	}
 
 	it should "go to level 16 with short circuit" in {
@@ -25,78 +35,76 @@ class IntegrationTreeSpec extends FlatSpec with Matchers {
 		//		val result = target.expand(16)(_.tricks.ns >= 3, _.tricks.ew > 2)
 		val result = target.expand(16)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 31
+		states.size shouldBe 6
 	}
 
 	it should "go to level 20 with short circuit" in {
 		val target = Tree(whist)
 		val result = target.expand(20)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 31
+		states.size shouldBe 6
 	}
 
 	it should "go to level 24 with short circuit" in {
 		val target = Tree(whist)
 		val result = target.expand(24)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 41
+		states.size shouldBe 6
 	}
 
 	it should "go to level 28 with short circuit" in {
 		val target = Tree(whist)
 		val result = target.expand(28)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 51
+		states.size shouldBe 6
 	}
 
 	it should "go to level 32 with short circuit" in {
 		val target = Tree(whist)
 		val result = target.expand(32)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 61
+		states.size shouldBe 6
 	}
 
 	it should "go to level 36 with short circuit" in {
 		val target = Tree(whist)
 		val result = target.expand(36)
 		val states: Seq[State] = result.depthFirstTraverse
-		//		states foreach (s => println(s"${s.trick}, ${s.tricks}"))
-		states.size shouldBe 71
+		states.size shouldBe 6
 	}
 
 	it should "go to level 40 with short circuit" in {
 		val target = Tree(whist)
 		val result = target.expand(40)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 81
+		states.size shouldBe 6
 	}
 
 	it should "go to level 40 with short alternative circuit" in {
 		val target = Tree(whist)
 		val result = target.expand(40)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 71
+		states.size shouldBe 6
 	}
 
 	it should "go to level 44 with short circuit" in {
 		val target = Tree(whist)
 		val result = target.expand(44)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 91
+		states.size shouldBe 6
 	}
 
 	it should "go to level 48 with short circuit" in {
 		val target = Tree(whist)
 		val result = target.expand(48)
 		val states: Seq[State] = result.depthFirstTraverse
-		states.size shouldBe 91
+		states.size shouldBe 6
 	}
 
 	it should "go through all levels with short circuit based on 3NT" in {
 		val target = Tree(whist)
 		val result = target.enumerateNoTrumpPlaysNS(9)
 		val states: Seq[State] = result.depthFirstTraverse
-		//		states foreach (s => println(s"${s.trick}, ${s.tricks}"))
-		states.size shouldBe 91
+		states.size shouldBe 6
 	}
 }

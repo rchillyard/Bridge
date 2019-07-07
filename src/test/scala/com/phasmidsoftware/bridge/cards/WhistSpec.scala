@@ -90,14 +90,14 @@ class WhistSpec extends FlatSpec with Matchers {
 		//		state0.isConsistent shouldBe true
 		val hands = deal0.hands
 		val Seq(priority1S, priority2S, _, _) = hands map (_.holdings(Spades).sequences.last.priority)
-		val trick1 = Trick.create(0, CardPlay(deal0, 0, Spades, priority1S))
+		val trick1 = Trick.create(1, CardPlay(deal0, 0, Spades, priority1S))
 		val state1 = state0.next(trick1)
 		state1.deal.nCards shouldBe 51
 		//		state1.isConsistent shouldBe true
 		state1.trick.isComplete shouldBe false
 		state1.trick shouldBe trick1
 		state1.deal should not be deal0
-		val trick2 = Trick.create(0, CardPlay(deal0, 0, Spades, priority1S), CardPlay(deal0, 1, Spades, priority2S))
+		val trick2 = Trick.create(1, CardPlay(deal0, 0, Spades, priority1S), CardPlay(deal0, 1, Spades, priority2S))
 		val state2 = state1.next(trick2)
 		state2.deal.nCards shouldBe 50
 		//		state2.isConsistent shouldBe true
@@ -164,7 +164,7 @@ class WhistSpec extends FlatSpec with Matchers {
 		val states4: Seq[State] = for (p <- states3; q <- p.enumeratePlays) yield q
 		states4.size shouldBe 36
 		val states5: Seq[State] = for (p <- states4; q <- p.enumeratePlays) yield q
-		states5.size shouldBe 139
+		states5.size shouldBe 134
 	}
 
 	behavior of "double dummy"

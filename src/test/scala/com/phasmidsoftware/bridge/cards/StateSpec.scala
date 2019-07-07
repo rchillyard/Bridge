@@ -7,6 +7,7 @@ package com.phasmidsoftware.bridge.cards
 import com.phasmidsoftware.output.{MockWriter, Output}
 import org.scalatest.{FlatSpec, Matchers}
 
+//noinspection ScalaStyle
 class StateSpec extends FlatSpec with Matchers {
 
 	behavior of "StateSpec"
@@ -136,7 +137,7 @@ class StateSpec extends FlatSpec with Matchers {
 
 	it should "enumerateLeads" in {
 		val target = State(whist)
-		val leads: Seq[State] = target.enumerateLeads(north, 0)
+    val leads: Seq[State] = target.enumerateLeads(north, 1)
 		leads.size shouldBe 3
 		leads.head.trick.plays.size shouldBe 1
 		leads.head.trick.plays.head shouldBe CardPlay(deal, north, Hearts, 10)

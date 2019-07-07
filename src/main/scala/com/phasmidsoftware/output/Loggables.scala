@@ -5,6 +5,7 @@
 package com.phasmidsoftware.output
 
 import scala.reflect.ClassTag
+import scala.util.{Failure, Success, Try}
 
 /**
   * Trait to define methods for rendering instances of case classes (with their various parameters),
@@ -47,8 +48,31 @@ trait Loggables {
     * @return a Loggable[ Option[T] ].
     */
   def optionLoggable[T: Loggable]: Loggable[Option[T]] = {
-    case Some(t) => s"Some(${implicitly[Loggable[T]].toLog(t)})"
-    case None => "None"
+    case Some(t: T@unchecked) => s"Some(${implicitly[Loggable[T]].toLog(t)})"
+    case _ => "None"
+  }
+
+  /**
+    * Method to return a Loggable[ Either[T,U] ].
+    *
+    * @tparam T the underlying type of the first parameter of the input to the render method.
+    * @return a Loggable[ Either[T,U] ].
+    */
+  def eitherLoggable[T: Loggable, U: Loggable]: Loggable[Either[T, U]] = {
+    case Left(_t: T@unchecked) => s"Left(${implicitly[Loggable[T]].toLog(_t)})"
+    case Right(u: U@unchecked) => s"Right(${implicitly[Loggable[U]].toLog(u)})"
+    case x => s"<problem with logging Either: $x"
+  }
+
+  /**
+    * Method to return a Loggable[ Try[T] ].
+    *
+    * @tparam T the underlying type of the first parameter of the input to the render method.
+    * @return a Loggable[ Option[T] ].
+    */
+  def tryLoggable[T: Loggable]: Loggable[Try[T]] = {
+    case Success(_t) => s"Success(${implicitly[Loggable[T]].toLog(_t)})"
+    case Failure(x) => s"Failure(${x.getLocalizedMessage})"
   }
 
   /**
@@ -140,7 +164,7 @@ trait Loggables {
   def toLog4[P0: Loggable, P1: Loggable, P2: Loggable, P3: Loggable, T <: Product : ClassTag]
     (construct: (P0, P1, P2, P3) => T, fields: Seq[String] = Nil): Loggable[T] = (t: T) => {
     val Array(p0, p1, p2, p3) = fields match {
-      case Nil => Reflection.extractFieldNames(implicitly[ClassTag[T]], "toLog3")
+      case Nil => Reflection.extractFieldNames(implicitly[ClassTag[T]], "toLog4")
       case ps => ps.toArray
     }
     t.productPrefix + mapLoggable[String, String]("()").toLog(Map(
