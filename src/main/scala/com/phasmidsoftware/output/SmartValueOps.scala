@@ -4,49 +4,86 @@
 
 package com.phasmidsoftware.output
 
-import java.io.{PrintStream, PrintWriter, Writer}
-
 import org.slf4j.Logger
 
+/**
+  * Object SmartValueOps
+  *
+  * This object defines an implicit class SmartValue which can be used to wrap any value and provide some cross-cutting methods,
+  * for example, logging, invariant testing (like assertion), etc.
+  *
+  *
+  */
 object SmartValueOps {
 
-  private var isEnabled: Boolean = true
-
-  def setEnabled(b: Boolean): Unit = { isEnabled = b }
-
   /**
-    * This is pattern which, if found in a message, will be substituted for.
+    * Implicit class SmartValue.
+    * If you try to invoke one of SmartValue's methods then, provided that the class is in scope, you will get a SmartValue implicitly.
+    *
+    * @param x the value to be wrapped by SmartValue.
+    * @tparam X the underlying type of the SmartValue.
     */
-  private val brackets: String = "{}"
-
   implicit class SmartValue[X](x: X) {
 
-    def invariant(p: X=>Boolean): X = Pipe[X](and(not(p),isEnabled), raiseException(buildMessage(x, "Invariant proved false for {}")))(x)
+    /**
+      * Method to raise an exception (as a side-effect) in the case that p(x) yields false AND invariantsEnabled is true.
+      *
+      * @param p the predicate which, if false, will trigger an exception (if invariantsEnabled is also true).
+      * @return a Pipe[X] which is also the identity[X] function.
+      */
+    def invariant(p: X => Boolean): X = Pipe[X](raiseException(buildMessage(x, "Invariant proved false for {}")), p).not.and(_ => invariantsEnabled)(x)
 
-    def invariant(p: X=>Boolean, logger: Logger, msg: String): X = Pipe[X](and(not(p),isEnabled), doLog(logger, msg))(x)
+    private def raiseException(msg: String): X => Unit = x => throw SmartValueOpsException(buildMessage(x, msg))
 
-    def invariant(p: X=>Boolean, msg: String): X = Pipe[X](and(not(p),isEnabled), doPrint(msg))(x)
+    /**
+      * Method to log a warning message (as a side-effect) in the case that p(x) yields false AND invariantsEnabled is true.
+      *
+      * @param p      the predicate which, if false, will trigger an exception (if invariantsEnabled is also true).
+      * @param logger the logger to which any messages will be appended.
+      * @param msg    the message to be logged (the value of X is either appended to this message or, if the message contains "{}" then it will be substituted for {}).
+      * @return a Pipe[X] which is also the identity[X] function.
+      */
+    def invariant(p: X => Boolean, logger: Logger, msg: String): X = Pipe[X](doLog(logger, msg), p).not.and(_ => invariantsEnabled)(x)
 
-    private def raiseException(msg: String): X => Unit = x => throw InvariantException(buildMessage(x, msg))
-
-    private def doLog(logger: Logger, msg: String): X => Unit = x => logger.warn(buildMessage(x, msg), x)
-
-    //noinspection ScalaStyle
-    private def doPrint(msg: String): X => Unit = x => Console.println(buildMessage(x, msg))
-
-    private def doOutput(output: Output, msg: String): X => Unit = x => output :+ msg
+    private def doLog(logger: Logger, msg: String): X => Unit = x => logger.warn(buildMessage(x, msg))
 
     private def buildMessage(x: X, msg: String): String = {
       val s = if (msg contains brackets) msg else msg + ": " + brackets
       s.replace(brackets, x.toString)
     }
 
-    private def not(p: X => Boolean): X => Boolean = x => !p(x)
+    /**
+      * Method to print to the Console a message (as a side-effect) in the case that p(x) yields false AND invariantsEnabled is true.
+      *
+      * @param p   the predicate which, if false, will trigger an exception (if invariantsEnabled is also true).
+      * @param msg the message to be logged (the value of X is either appended to this message or, if the message contains "{}" then it will be substituted for {}).
+      * @return a Pipe[X] which is also the identity[X] function.
+      */
+    def invariant(p: X => Boolean, msg: String): X = Pipe[X](doPrint(msg), p).not.and(_ => invariantsEnabled)(x)
 
-    private def and(p: X => Boolean, b: Boolean): X => Boolean = x => b && p(x)
+    //noinspection ScalaStyle
+    private def doPrint(msg: String): X => Unit = x => Console.println(buildMessage(x, msg))
   }
 
+  /**
+    * Method to turn invariants on or off.
+    *
+    * @param b the boolean value to be assigned to invariantsEnabled.
+    */
+  def setInvariantsEnabled(b: Boolean): Unit = {
+    invariantsEnabled = b
+  }
+
+  /**
+    * This is a pattern which, if found in a message, will be substituted for.
+    */
+  private val brackets: String = "{}"
+
+  /**
+    * This is the boolean which controls whether invariant testing is enabled.
+    */
+  private var invariantsEnabled: Boolean = true
 
 }
 
-
+case class SmartValueOpsException(msg: String) extends Exception(s"SmartValueOps exception: $msg")
