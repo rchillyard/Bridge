@@ -28,7 +28,7 @@ class PipeSpec extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "apply 1" in {
-    val target = Pipe (tee = {x: Int => logger.warn(s"warning re: $x") })
+    val target = Pipe(tee = { x: Int => logger.warn(s"warning re: $x") })
     target(1) shouldBe 1
     logger.toString shouldBe "PipeSpec: Warn: warning re: 1\n"
   }
@@ -48,7 +48,7 @@ class PipeSpec extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "log an exception" in {
-    val target = Pipe[Int](x => throw new Exception("x"))
+    val target = Pipe[Int](_ => throw new Exception("x"))
     target(1) shouldBe 1
     logger.toString shouldBe "PipeSpec: Warn: Pipe.apply(): an exception was thrown in either predicate or tee threw an exception: x\n"
   }
@@ -83,13 +83,13 @@ class PipeSpec extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "andThen" in {
     val outputStream = new StringBuilderOutputStream()
-    Console.withOut(outputStream)(Pipe (tee = { x: Int => println(s"Hello: $x") }).andThen(_*2)(1)) shouldBe 2
+    Console.withOut(outputStream)(Pipe(tee = { x: Int => println(s"Hello: $x") }).andThen(_ * 2)(1)) shouldBe 2
     outputStream.toString shouldBe "Hello: 1\n"
   }
 
   it should "compose" in {
     val outputStream = new StringBuilderOutputStream()
-    Console.withOut(outputStream)(Pipe[Int] (tee = { x: Int => println(s"Hello: $x") }).compose{x: Int => x*2}(1)) shouldBe 2
+    Console.withOut(outputStream)(Pipe[Int](tee = { x: Int => println(s"Hello: $x") }).compose { x: Int => x * 2 }(1)) shouldBe 2
     outputStream.toString shouldBe "Hello: 2\n"
   }
 
@@ -97,12 +97,16 @@ class PipeSpec extends FlatSpec with Matchers with BeforeAndAfterEach {
 
 object PipeSpec {
   private def hello(x: Int): Unit = println(s"Hello: $x")
+
   private def positive(x: Int): Boolean = x > 0
+
   private def isEven(x: Int): Boolean = x % 2 == 0
 }
 
 class StringBuilderOutputStream() extends OutputStream {
   val sb = new StringBuilder()
+
   def write(b: Int): Unit = sb.append(b.toChar)
+
   override def toString: String = sb.toString
 }

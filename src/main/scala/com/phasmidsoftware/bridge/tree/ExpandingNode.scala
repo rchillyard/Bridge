@@ -91,26 +91,27 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
   def expand(_so: Option[T], moves: Int): Option[ExpandingNode[T]] = {
     s"expand: t=${implicitly[Loggable[T]].toLog(t)}; so=$so; # children=${children.size}; _so=${_so}; moves=$moves" !!
       (if (moves < 0)
-      None
-      else if (implicitly[Expandable[T]].runaway(t))
-        {Console.println(s"expand: runaway condition detected for $t"); None}
+        None
+      else if (implicitly[Expandable[T]].runaway(t)) {
+        Console.println(s"expand: runaway condition detected for $t"); None
+      }
       else {
         import com.phasmidsoftware.output.Flog._
-        implicit val y = new Loggables {}.listLoggable[T]
-        implicit val z = new Loggables {}.eitherLoggable[T, List[T]]
+        implicit val y: Loggable[List[T]] = new Loggables {}.listLoggable[T]
+        implicit val z: Loggable[Either[T, List[T]]] = new Loggables {}.eitherLoggable[T, List[T]]
         s"result" !! implicitly[Expandable[T]].result(t, _so, moves) match {
-        // XXX terminating condition found? Mark and return this.
-        case Left(b) =>
-          Some(solve(b))
-        // XXX normal situation with (possibly empty) descendants? Recursively expand them.
-        // CONSIDER we should eliminate a node that has no expansion, but it doesn't really seem to matter.
-        case Right(Nil) => Some(this)
-        case Right(ts) =>
-          val z: List[T] = ts.distinct
-          if (z.size!=ts.size) println("non-distinct states")
-          import com.phasmidsoftware.output.SmartValueOps._
-          Some(expandSuccessors(ts.invariant(z => z.distinct.size==z.size), moves - 1, _so))
-      }
+          // XXX terminating condition found? Mark and return this.
+          case Left(b) =>
+            Some(solve(b))
+          // XXX normal situation with (possibly empty) descendants? Recursively expand them.
+          // CONSIDER we should eliminate a node that has no expansion, but it doesn't really seem to matter.
+          case Right(Nil) => Some(this)
+          case Right(ts) =>
+            val z: List[T] = ts.distinct
+            if (z.size != ts.size) println("non-distinct states")
+            import com.phasmidsoftware.output.SmartValueOps._
+            Some(expandSuccessors(ts.invariant(z => z.distinct.size == z.size), moves - 1, _so))
+        }
       })
   }
 
@@ -231,8 +232,8 @@ trait Expandable[T] {
     * A negative goal would be when the antagonist (defending side) wins sufficient tricks to make the protagonist's goal
     * impossible, i.e. when they win five tricks.
     *
-    * @param t  the value of T.
-    * @param to an optional T which represents an achieved goal state.
+    * @param t     the value of T.
+    * @param to    an optional T which represents an achieved goal state.
     * @param moves the number of possible moves remaining in which to achieve the goal.
     * @return an Either of T or List[T].
     *         If the return is Right(List(...)) then the content of the option is the list of (new) children.
@@ -245,14 +246,14 @@ trait Expandable[T] {
       case _ => t.toString
     }
     if (ev1.goalAchieved(t)) Left(t).debug(s"$sT Left")
-    else
-      if (ev1.goalOutOfReach(t, to, moves)) Right(Nil).debug(s"$sT Right(Nil)")
-      else Right(successors(t)).debug(s"$sT Right($t)")
+    else if (ev1.goalOutOfReach(t, to, moves)) Right(Nil).debug(s"$sT Right(Nil)")
+    else Right(successors(t)).debug(s"$sT Right($t)")
   }
 
   /**
     * Method to check whether the value of T indicates a runaway condition.
-    * @param t  the value of T.
+    *
+    * @param t the value of T.
     * @return true if running away, else false.
     */
   def runaway(t: T): Boolean = false // NOTE: if your application takes a very long time expanding, you might want to set this to true on some condition

@@ -34,7 +34,9 @@ trait Loggables {
     * @tparam T the underlying type of the first parameter of the input to the render method.
     * @return a Loggable[ Vector[T] ]
     */
-  def vectorLoggable[T: Loggable]: Loggable[Vector[T]] = { case v: Vector[T] => listLoggable[T].toLog(v.toList) }
+  def vectorLoggable[T: Loggable]: Loggable[Vector[T]] = {
+    case v: Vector[T] => listLoggable[T].toLog(v.toList)
+  }
 
   /**
     * Method to return a Loggable[ Map[K, T] ].
@@ -144,7 +146,7 @@ trait Loggables {
     * @return a Loggable[T].
     */
   def toLog3[P0: Loggable, P1: Loggable, P2: Loggable, T <: Product : ClassTag]
-    (construct: (P0, P1, P2) => T, fields: Seq[String] = Nil): Loggable[T] = (t: T) => {
+  (construct: (P0, P1, P2) => T, fields: Seq[String] = Nil): Loggable[T] = (t: T) => {
     val Array(p0, p1, p2) = fields match {
       case Nil => Reflection.extractFieldNames(implicitly[ClassTag[T]], "toLog3")
       case ps => ps.toArray
@@ -171,7 +173,7 @@ trait Loggables {
     * @return a Loggable[T].
     */
   def toLog4[P0: Loggable, P1: Loggable, P2: Loggable, P3: Loggable, T <: Product : ClassTag]
-    (construct: (P0, P1, P2, P3) => T, fields: Seq[String] = Nil): Loggable[T] = (t: T) => {
+  (construct: (P0, P1, P2, P3) => T, fields: Seq[String] = Nil): Loggable[T] = (t: T) => {
     val Array(p0, p1, p2, p3) = fields match {
       case Nil => Reflection.extractFieldNames(implicitly[ClassTag[T]], "toLog4")
       case ps => ps.toArray

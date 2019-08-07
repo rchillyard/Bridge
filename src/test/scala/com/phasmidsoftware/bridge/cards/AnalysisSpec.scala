@@ -13,6 +13,7 @@ import scala.io.Source
 //noinspection ScalaStyle
 class AnalysisSpec extends FlatSpec with Matchers {
 
+  State.count = 0
   private val so = Option(getClass.getResourceAsStream("westwood_20190625_1.pbn")) map (Source.fromInputStream(_))
   private val py: Option[PBN] = for (s <- so; p <- PBNParser.parsePBN(s).toOption) yield p
   private val pbn: PBN = py.get

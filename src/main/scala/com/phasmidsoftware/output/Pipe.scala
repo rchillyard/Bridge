@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.output
 
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.Logger
 
 import scala.util.control.NonFatal
 
@@ -15,11 +15,11 @@ import scala.util.control.NonFatal
   * In the default situation where logExceptions is true, Pipe guarantees that non-fatal exceptions in tee or predicate will not interrupt the flow--
   * instead, such exceptions will be logged.
   *
-  * @param predicate a filter function (X=>Boolean) which causes tee to be invoked only when the X input value satisfies the predicate (defaults to always true).
-  * @param tee       the sampling function (X=>Unit) which operates as a side-effect (defaults to a no-op), and which is called only if the predicate evaluates to true.
-  *                  @param logExceptions if set to true (the default), the Pipe will throw an exception only if it's fatal--otherwise, it will log it.
-  *                                       if set to false, any thrown exception will be wrapped in a new PipeException which is thrown.
-  *                                       @param logger (implicit) the logger which should be used if necessary.
+  * @param predicate     a filter function (X=>Boolean) which causes tee to be invoked only when the X input value satisfies the predicate (defaults to always true).
+  * @param tee           the sampling function (X=>Unit) which operates as a side-effect (defaults to a no-op), and which is called only if the predicate evaluates to true.
+  * @param logExceptions if set to true (the default), the Pipe will throw an exception only if it's fatal--otherwise, it will log it.
+  *                      if set to false, any thrown exception will be wrapped in a new PipeException which is thrown.
+  * @param logger        (implicit) the logger which should be used if necessary.
   * @tparam X the input and output type of the apply function of the pipe.
   */
 case class Pipe[X](predicate: X => Boolean = Pipe.always, tee: X => Unit = Pipe.noop _, logExceptions: Boolean = true)(implicit logger: Logger) extends (X => X) {
@@ -30,7 +30,7 @@ case class Pipe[X](predicate: X => Boolean = Pipe.always, tee: X => Unit = Pipe.
     *
     * @param x the given value of x.
     * @return the same value of x but after invoking the side-effect defined by tee.
-    *         @throws PipeException if predicate(x) or tee(x) throws a non-fatal exception, AND if logExceptions = false.
+    * @throws PipeException if predicate(x) or tee(x) throws a non-fatal exception, AND if logExceptions = false.
     */
   override def apply(x: X): X = {
     lazy val exceptionMessage = "Pipe.apply(): an exception was thrown in either predicate or tee"

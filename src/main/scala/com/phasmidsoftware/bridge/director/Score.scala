@@ -45,7 +45,7 @@ object Score extends App {
 
     def getResultsForDirection(k: Preamble, r: Result, top: Int): Output = {
       def resultDetails(s: (Int, (Rational[Int], Int))): Output =
-        Output(s"${s._1} : ${Score.mpsAsString(s._2._1, top)} : ${Score.mpsAsPercentage(s._2._1, s._2._2)} : ${k.getNames(r.isNS, s._1)}").insertBreak
+        Output(s"${s._1} : ${Score.mpsAsString(s._2._1, top)} : ${Score.mpsAsPercentage(s._2._1, s._2._2)} : ${k.getNames(r.isNS, s._1)}").insertBreak()
 
       Output.foldLeft(r.cards.toSeq.sortBy(_._2._1).reverse)()(_ ++ resultDetails(_))
     }
@@ -53,7 +53,7 @@ object Score extends App {
     def getResults(k: Preamble, r: Result): Output =
       Output(s"Results for direction: ${if (r.isNS) "N/S" else "E/W"}").insertBreak ++ getResultsForDirection(k, r, r.top)
 
-    implicit val separator: Output = Output.empty.insertBreak
+    implicit val separator: Output = Output.empty.insertBreak()
 
     def eventResults(e: Event, k: Preamble, rs: Seq[Result]): Output = {
       val z = for (r <- rs) yield getResults(k, r)

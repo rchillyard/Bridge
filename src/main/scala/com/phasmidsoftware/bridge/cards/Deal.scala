@@ -101,8 +101,6 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     */
   override def toString: String = s"Deal $title ($nCards)"
 
-  //  override def toString: String = s"Deal $title ($nCards)\n${hands.mkString("\n")}"
-
   def asPBN(map: Map[String, String], board: Int): String = {
     val result = new StringBuilder()
     for ((k, v) <- map) result.append(s"""[$k "$v"]\n""")
@@ -126,7 +124,7 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
 
   private lazy val _quit = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.quit))
 
-  private def outputHand(name: String, hand: Hand): Output = (Output(s"$name:\t") :+ hand.neatOutput).insertBreak
+  private def outputHand(name: String, hand: Hand): Output = (Output(s"$name:\t") :+ hand.neatOutput).insertBreak()
 
   private lazy val _evaluate = hands.sliding(1, 2).flatten.map(_.evaluate).sum
 
@@ -182,8 +180,6 @@ object Deal {
     val firstIndex = start match { case "N" => 0; case "E" => 1; case "S" => 2; case "W" => 3 }
     val hSss: Seq[Seq[(Suit, Holding)]] = for (ws <- wss) yield for ((w, x) <- ws zip Seq(Spades, Hearts, Diamonds, Clubs)) yield x -> Holding(x, w)
     val hands = for ((hHs, i) <- hSss zipWithIndex) yield Hand(Hand.next(firstIndex, i), hHs.toMap)
-    // NOTE: at this point, the hands are correct.
-    //  But it seems that code in Deal assumes that North is always first.
     val (nonNorth, north) = hands.splitAt(4 - firstIndex)
     Deal(title, north ++ nonNorth)
   }
@@ -210,7 +206,7 @@ object Deal {
     */
   def name(hand: Int): String = Seq("N", "E", "S", "W")(hand)
 
-  def toPBN(writer: Writer, map: Map[String, String], boards: Seq[Deal]): Unit = {
+  def writePBN(writer: Writer, map: Map[String, String], boards: Seq[Deal]): Unit = {
     writer.append("% PBN 2.1\n% EXPORT\n")
     for ((d, i) <- boards.zipWithIndex) writer.append(d.asPBN(map, i + 1))
     writer.flush()

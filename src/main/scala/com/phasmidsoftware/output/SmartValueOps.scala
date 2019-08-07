@@ -16,6 +16,7 @@ import org.slf4j.{Logger, LoggerFactory}
 object SmartValueOps {
 
   implicit lazy val logger: Logger = LoggerFactory.getLogger(getClass)
+
   import LazyLogger.LazyLoggerSlf4j
 
   /**
@@ -145,7 +146,6 @@ object SmartValueOps {
     */
   private val brackets: String = "{}"
 }
-
 
 
 case class SmartValueOpsException(msg: String) extends Exception(s"SmartValueOps exception: $msg")

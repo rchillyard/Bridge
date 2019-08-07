@@ -19,7 +19,7 @@ import scala.language.implicitConversions
 case class Card(suit: Suit, rank: Rank) {
   lazy val priority: Int = rank.priority
 
-	override def toString: String = s"$suit$rank" // XXX Bridge order (not Poker)
+  override def toString: String = s"$suit$rank" // XXX Bridge order (not Poker)
 }
 
 /**
@@ -112,18 +112,18 @@ object Suit {
 }
 
 /**
-	* Trait defining the priority: the number of objects which precede this object in the ordering.
-	*/
+  * Trait defining the priority: the number of objects which precede this object in the ordering.
+  */
 trait Priority {
-	/**
-		* The priority of this object.
-		* For Rank, Ace: 0, King: 1, Deuce: 2.
-		* TODO check the following:
-		* For Suit, Spades: 0, Clubs: 3.
-		*
-		* @return
-		*/
-	def priority: Int
+  /**
+    * The priority of this object.
+    * For Rank, Ace: 0, King: 1, Deuce: 2.
+    * TODO check the following:
+    * For Suit, Spades: 0, Clubs: 3.
+    *
+    * @return
+    */
+  def priority: Int
 }
 
 /**
@@ -209,26 +209,26 @@ object Rank {
     case _ => throw CardException(s"$s is not a rank")
   }
 
-	/**
-		* Method to yield a Rank from a priority value.
-		* 0 should yield Ace, 2 should yield Deuce.
-		*
-		* TODO this appears not to be used.
-		*
-		* @param priority the given priority
-		* @return a Rank.
-		*/
-	def fromPriority(priority: Int): Rank = apply(lowestPriority - priority)
+  /**
+    * Method to yield a Rank from a priority value.
+    * 0 should yield Ace, 2 should yield Deuce.
+    *
+    * TODO this appears not to be used.
+    *
+    * @param priority the given priority
+    * @return a Rank.
+    */
+  def fromPriority(priority: Int): Rank = apply(lowestPriority - priority)
 
   /**
     * The priority of a Ten: 4
     */
   val honorPriority: Int = Ten.priority
 
-	/**
-		* The priority of the fictional zero card: 14
-		*/
-	val lowestPriority: Int = 14
+  /**
+    * The priority of the fictional zero card: 14
+    */
+  val lowestPriority: Int = 14
 
   implicit object LoggableSuit extends Loggable[Suit] with Loggables {
     def toLog(t: Suit): String = t.toString

@@ -17,7 +17,7 @@ class IntegrationAnalysisSpec extends FlatSpec with Matchers {
   private val pbn: PBN = py.get
 
   behavior of "double dummy analysis"
-  it should "analyze all deals" in {
+  ignore should "analyze all deals" in {
     for (game <- pbn) analyzeMakableContracts(game)
   }
 
