@@ -10,7 +10,7 @@ import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 class PipeSpec extends FlatSpec with Matchers with BeforeAndAfterEach {
 
-  private val logger: MockLogger = MockLogger("PipeSpec", "Warn")
+  implicit val logger: MockLogger = MockLogger("PipeSpec", "Warn")
 
   override def beforeEach() {
     logger.clear()
@@ -22,30 +22,40 @@ class PipeSpec extends FlatSpec with Matchers with BeforeAndAfterEach {
   behavior of "Pipe"
 
   it should "apply 0" in {
-    Pipe()(1) shouldBe 1
+    val target: Pipe[Int] = Pipe[Int]()
+    target(1) shouldBe 1
     logger.toString shouldBe ""
   }
 
   it should "apply 1" in {
-    Pipe { x: Int => logger.warn(s"warning re: $x") }(1) shouldBe 1
+    val target = Pipe (tee = {x: Int => logger.warn(s"warning re: $x") })
+    target(1) shouldBe 1
     logger.toString shouldBe "PipeSpec: Warn: warning re: 1\n"
   }
 
   it should "apply 2" in {
     val outputStream = new StringBuilderOutputStream()
-    Console.withOut(outputStream)(Pipe (PipeSpec.hello)(1)) shouldBe 1
+    val target = Pipe(tee = PipeSpec.hello)
+    Console.withOut(outputStream)(target(1)) shouldBe 1
     outputStream.toString shouldBe "Hello: 1\n"
   }
 
   it should "apply 3" in {
     val outputStream = new StringBuilderOutputStream()
-    Console.withOut(outputStream)(Pipe (PipeSpec.hello, PipeSpec.positive)(1)) shouldBe 1
+    val target = Pipe(tee = PipeSpec.hello, predicate = PipeSpec.positive)
+    Console.withOut(outputStream)(target(1)) shouldBe 1
     outputStream.toString shouldBe "Hello: 1\n"
+  }
+
+  it should "log an exception" in {
+    val target = Pipe[Int](x => throw new Exception("x"))
+    target(1) shouldBe 1
+    logger.toString shouldBe "PipeSpec: Warn: Pipe.apply(): an exception was thrown in either predicate or tee threw an exception: x\n"
   }
 
   it should "not" in {
     val outputStream = new StringBuilderOutputStream()
-    val pipe = Pipe(PipeSpec.hello, PipeSpec.positive).not
+    val pipe = Pipe(tee = PipeSpec.hello, predicate = PipeSpec.positive).not
     Console.withOut(outputStream)(pipe(1)) shouldBe 1
     Console.withOut(outputStream)(pipe(-1)) shouldBe -1
     outputStream.toString shouldBe "Hello: -1\n"
@@ -53,7 +63,7 @@ class PipeSpec extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "and" in {
     val outputStream = new StringBuilderOutputStream()
-    val pipe = Pipe(PipeSpec.hello, PipeSpec.positive).and(PipeSpec.isEven)
+    val pipe = Pipe(tee = PipeSpec.hello, predicate = PipeSpec.positive).and(PipeSpec.isEven)
     Console.withOut(outputStream)(pipe(-1)) shouldBe -1
     Console.withOut(outputStream)(pipe(1)) shouldBe 1
     Console.withOut(outputStream)(pipe(-2)) shouldBe -2
@@ -63,7 +73,7 @@ class PipeSpec extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "or" in {
     val outputStream = new StringBuilderOutputStream()
-    val pipe = Pipe(PipeSpec.hello, PipeSpec.positive).or(PipeSpec.isEven)
+    val pipe = Pipe(tee = PipeSpec.hello, predicate = PipeSpec.positive).or(PipeSpec.isEven)
     Console.withOut(outputStream)(pipe(-1)) shouldBe -1
     Console.withOut(outputStream)(pipe(1)) shouldBe 1
     Console.withOut(outputStream)(pipe(-2)) shouldBe -2
@@ -73,13 +83,13 @@ class PipeSpec extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "andThen" in {
     val outputStream = new StringBuilderOutputStream()
-    Console.withOut(outputStream)(Pipe { x: Int => println(s"Hello: $x") }.andThen(_*2)(1)) shouldBe 2
+    Console.withOut(outputStream)(Pipe (tee = { x: Int => println(s"Hello: $x") }).andThen(_*2)(1)) shouldBe 2
     outputStream.toString shouldBe "Hello: 1\n"
   }
 
   it should "compose" in {
     val outputStream = new StringBuilderOutputStream()
-    Console.withOut(outputStream)(Pipe[Int] { x: Int => println(s"Hello: $x") }.compose{x: Int => x*2}(1)) shouldBe 2
+    Console.withOut(outputStream)(Pipe[Int] (tee = { x: Int => println(s"Hello: $x") }).compose{x: Int => x*2}(1)) shouldBe 2
     outputStream.toString shouldBe "Hello: 2\n"
   }
 

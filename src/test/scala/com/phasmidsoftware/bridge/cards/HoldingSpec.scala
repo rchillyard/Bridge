@@ -15,7 +15,7 @@ class HoldingSpec extends FlatSpec with Matchers {
   private val SJT = Sequence(Seq(Card("SJ"), Card("ST")))
 
   it should "apply(Int,Seq[Card])" in {
-    val target = Sequence(0, Seq(Card("SA"), Card("SK")))
+    val target = Sequence(0, List(Card("SA"), Card("SK")))
     target.priority shouldBe 0
     target.length shouldBe 2
   }
@@ -45,7 +45,7 @@ class HoldingSpec extends FlatSpec with Matchers {
   it should "A++K" in {
     val target1 = Sequence(Seq(Card("SA")))
     val target2 = Sequence(Seq(Card("SK")))
-    target1 ++ target2 shouldBe Sequence(0, Seq(Card("SA"), Card("SK")))
+    target1 ++ target2 shouldBe Sequence(0, List(Card("SA"), Card("SK")))
   }
 
   it should "A++Q" in {
@@ -57,7 +57,7 @@ class HoldingSpec extends FlatSpec with Matchers {
   it should "A++Q (promoted)" in {
     val target1 = Sequence(Seq(Card("SA")))
     val target2 = Sequence(Seq(Card("SQ")))
-    target1 ++ target2.promote shouldBe Sequence(0, Seq(Card("SA"), Card("SQ")))
+    target1 ++ target2.promote shouldBe Sequence(0, List(Card("SA"), Card("SQ")))
   }
 
   it should "evaluate" in {
@@ -68,7 +68,7 @@ class HoldingSpec extends FlatSpec with Matchers {
   behavior of "Holding"
 
   it should "apply" in {
-    val target = Holding.apply(Seq(SAK, Sequence(Seq(Card("S3"), Card("S2")))), Spades)
+    val target = Holding.apply(List(SAK, Sequence(List(Card("S3"), Card("S2")))), Spades)
     target.sequences.size shouldBe 2
     target.suit shouldBe Spades
   }
@@ -76,7 +76,7 @@ class HoldingSpec extends FlatSpec with Matchers {
   it should "create" in {
     val holding = Holding.create(Seq(Ace, King, Ten, Nine, Seven, Five, Four), Spades)
     holding.sequences.size shouldBe 4
-    holding.sequences.head shouldBe Sequence(0, Seq(Card("SA"), Card("SK")))
+    holding.sequences.head shouldBe Sequence(0, List(Card("SA"), Card("SK")))
   }
 
   it should "form string" in {
@@ -87,51 +87,51 @@ class HoldingSpec extends FlatSpec with Matchers {
   }
 
   it should "promote (1)" in {
-    val target = Holding.apply(Seq(SAK, Sequence(Seq(Card("S3"), Card("S2")))), Spades)
+    val target = Holding(List(SAK, Sequence(Seq(Card("S3"), Card("S2")))), Spades)
     val promoted = target.promote(5).quit
     promoted.size shouldBe 2
     promoted.cards.size shouldBe 4
-    promoted.sequences.head shouldBe Sequence(0, Seq(Card("SA"), Card("SK")))
-    promoted.sequences.last shouldBe Sequence(10, Seq(Card("S3"), Card("S2")))
+    promoted.sequences.head shouldBe Sequence(0, List(Card("SA"), Card("SK")))
+    promoted.sequences.last shouldBe Sequence(10, List(Card("S3"), Card("S2")))
   }
 
   it should "promote (2)" in {
-    val target = Holding.apply(Seq(SAK, SJT), Spades)
+    val target = Holding(List(SAK, SJT), Spades)
     val promoted = target.promote(2).quit
     promoted.size shouldBe 1
-    promoted.sequences.head shouldBe Sequence(0, Seq(Card("SA"), Card("SK"), Card("SJ"), Card("ST")))
+    promoted.sequences.head shouldBe Sequence(0, List(Card("SA"), Card("SK"), Card("SJ"), Card("ST")))
   }
 
   it should "promote (3)" in {
-    val target = Holding.apply(Seq(SJT, Sequence(Seq(Card("S3"), Card("S2")))), Spades)
+    val target = Holding(List(SJT, Sequence(Seq(Card("S3"), Card("S2")))), Spades)
     val promoted = target.promote(2).quit
     promoted.size shouldBe 2
-    promoted.sequences.head shouldBe Sequence(2, Seq(Card("SJ"), Card("ST")))
-    promoted.sequences.last shouldBe Sequence(10, Seq(Card("S3"), Card("S2")))
+    promoted.sequences.head shouldBe Sequence(2, List(Card("SJ"), Card("ST")))
+    promoted.sequences.last shouldBe Sequence(10, List(Card("S3"), Card("S2")))
   }
 
   it should "promote (4)" in {
-    val target = Holding.apply(Seq(SAK, SJT), Spades)
+    val target = Holding(List(SAK, SJT), Spades)
     val promoted = target.promote(2)
     promoted.promotions.size shouldBe 1
     promoted.promotions shouldBe Seq(2)
     val quitted = promoted.quit
     quitted.size shouldBe 1
-    quitted.sequences.head shouldBe Sequence(0, Seq(Card("SA"), Card("SK"), Card("SJ"), Card("ST")))
+    quitted.sequences.head shouldBe Sequence(0, List(Card("SA"), Card("SK"), Card("SJ"), Card("ST")))
   }
 
   it should "-" in {
-    val target = Holding.apply(Seq(SJT, Sequence(Seq(Card("S3"), Card("S2")))), Spades)
+    val target = Holding(List(SJT, Sequence(Seq(Card("S3"), Card("S2")))), Spades)
     val played1 = (target - 11).promote(11).quit
     played1.size shouldBe 2
-    played1.sequences.head shouldBe Sequence(3, Seq(Card("SJ"), Card("ST")))
-    played1.sequences.last shouldBe Sequence(11, Seq(Card("S3")))
+    played1.sequences.head shouldBe Sequence(3, List(Card("SJ"), Card("ST")))
+    played1.sequences.last shouldBe Sequence(11, List(Card("S3")))
   }
 
 
   it should "evaluate" in {
-    Holding(Seq(SAK, Sequence(Seq(Card("S3"), Card("S2")))), Spades).evaluate shouldBe 2.0 +- 0.005
-    Holding(Seq(SAK, SJT), Spades).evaluate shouldBe 3.0 +- 0.1
+    Holding(List(SAK, Sequence(Seq(Card("S3"), Card("S2")))), Spades).evaluate shouldBe 2.0 +- 0.005
+    Holding(List(SAK, SJT), Spades).evaluate shouldBe 3.0 +- 0.1
   }
 
   it should "apply fourth best lead strategy" in {
@@ -154,7 +154,7 @@ class HoldingSpec extends FlatSpec with Matchers {
     val leads: Seq[CardPlay] = holding.choosePlays(deal, 0, FourthBest, None)
     leads.size shouldBe 3
     val lead: CardPlay = leads.head
-    val trick0 = Trick(1, Seq(lead))
+    val trick0 = Trick(1, List(lead), None)
     val wo = trick0.winner
     wo should matchPattern { case Some(Winner(`lead`, false)) => }
     // Ace play?
@@ -171,7 +171,7 @@ class HoldingSpec extends FlatSpec with Matchers {
     val leads: Seq[CardPlay] = holding.choosePlays(deal, 0, FourthBest, None)
     leads.size shouldBe 3
     val lead = leads.head
-    val trick0 = Trick(1, Seq(lead))
+    val trick0 = Trick(1, List(lead), None)
     val wo = trick0.winner
     wo should matchPattern { case Some(Winner(`lead`, false)) => }
     val holding1 = hand1.holdings(trick0.suit.get)

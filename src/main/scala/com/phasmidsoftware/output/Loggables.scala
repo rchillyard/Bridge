@@ -19,7 +19,7 @@ trait Loggables {
     * @tparam T the underlying type of the first parameter of the input to the render method.
     * @return a Loggable[ Seq[T] ]
     */
-  def sequenceLoggable[T: Loggable]: Loggable[Seq[T]] = (ts: Seq[T]) => {
+  def listLoggable[T: Loggable]: Loggable[List[T]] = (ts: List[T]) => {
     val tl = implicitly[Loggable[T]]
     ts match {
       case Nil => "[]"
@@ -27,6 +27,14 @@ trait Loggables {
       case h :: tail => s"[${tl.toLog(h)}, ... (${math.max(tail.size - 1, 0)}), ... ${tl.toLog(tail.last)}]"
     }
   }
+
+  /**
+    * Method to return a Loggable[ Vector[T] ].
+    *
+    * @tparam T the underlying type of the first parameter of the input to the render method.
+    * @return a Loggable[ Vector[T] ]
+    */
+  def vectorLoggable[T: Loggable]: Loggable[Vector[T]] = { case v: Vector[T] => listLoggable[T].toLog(v.toList) }
 
   /**
     * Method to return a Loggable[ Map[K, T] ].
@@ -60,6 +68,7 @@ trait Loggables {
     */
   def eitherLoggable[T: Loggable, U: Loggable]: Loggable[Either[T, U]] = {
     case Left(_t: T@unchecked) => s"Left(${implicitly[Loggable[T]].toLog(_t)})"
+    case Right(u: Vector[T]@unchecked) => val lv = new Loggables {}.vectorLoggable[T]; s"Right(${lv.toLog(u)})"
     case Right(u: U@unchecked) => s"Right(${implicitly[Loggable[U]].toLog(u)})"
     case x => s"<problem with logging Either: $x"
   }

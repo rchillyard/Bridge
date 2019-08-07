@@ -81,7 +81,7 @@ object Tree {
 	* @param so        an optional indication of the solution represented by this sub-tree.
 	* @param followers the children of this node, i.e. the nodes which will follow.
 	*/
-case class StateNode(state: State, override val so: Option[State], followers: Seq[StateNode])(implicit ev1: Expandable[State], ev2: GoalDriven[State])
+case class StateNode(state: State, override val so: Option[State], followers: List[StateNode])(implicit ev1: Expandable[State], ev2: GoalDriven[State])
 	extends ExpandingNode[State](state, so, followers) {
 
 	/**
@@ -95,7 +95,7 @@ case class StateNode(state: State, override val so: Option[State], followers: Se
 		* @param tns the nodes which will be the children of the result.
 		* @return a new Node based on t and tns.
 		*/
-	def unit(t: State, so: Option[State], tns: Seq[Node[State]]): StateNode = StateNode(t, so, tns.asInstanceOf[Seq[StateNode]])
+	def unit(t: State, so: Option[State], tns: Seq[Node[State]]): StateNode = StateNode(t, so, tns.asInstanceOf[List[StateNode]])
 
 	/**
 		* Method to form a Node from a State.
@@ -104,6 +104,15 @@ case class StateNode(state: State, override val so: Option[State], followers: Se
 		* @return a new Node based on t, but with no children.
 		*/
 	override def unit(t: State): StateNode = super.unit(t).asInstanceOf[StateNode]
+
+	/**
+		* NOTE: not sure why we need this now but didn't before.
+		*
+		* @param t   the given value of T.
+		* @param tns the nodes which will be the children of the result.
+		* @return a new Node based on t and tns.
+		*/
+	def unit(t: State, tns: Seq[Node[State]]): StateNode = unit(t, None, tns).asInstanceOf[StateNode]
 
 	/**
 		* Method to add the given tree nodes to the children of this Node.
@@ -155,6 +164,7 @@ case class StateNode(state: State, override val so: Option[State], followers: Se
 		* @return a copy of this StateNode, but with appendee appended to node
 		*/
 	override def append(node: Node[State], state: State): StateNode = super.append(node, state).asInstanceOf[StateNode]
+
 }
 
 

@@ -81,26 +81,26 @@ class SmartValueOpsSpec extends FlatSpec with Matchers with BeforeAndAfterEach {
   behavior of "logging"
 
   it should "debug 1" in {
-    val logger = MockLogger("SmartValue")
-    (Math.PI * 2).debug("the value of Pi is", logger) shouldBe Math.PI * 2
+    implicit val logger: MockLogger = MockLogger("SmartValue")
+    (Math.PI * 2).debug("the value of Pi is") shouldBe Math.PI * 2
     logger.toString shouldBe "SmartValue: DEBUG: the value of Pi is: 6.283185307179586\n"
   }
 
   it should "debug 2" in {
-    val logger = MockLogger("SmartValue")
-    (Math.PI * 2).debug("{} is the value of Pi", logger) shouldBe Math.PI * 2
+    implicit val logger: MockLogger = MockLogger("SmartValue")
+    (Math.PI * 2).debug("{} is the value of Pi") shouldBe Math.PI * 2
     logger.toString shouldBe "SmartValue: DEBUG: 6.283185307179586 is the value of Pi\n"
   }
 
   it should "info" in {
-    val logger = MockLogger("SmartValue", "INFO")
-    (Math.PI * 2).info("the value of Pi is", logger) shouldBe Math.PI * 2
+    implicit val logger: MockLogger = MockLogger("SmartValue", "INFO")
+    (Math.PI * 2).info("the value of Pi is") shouldBe Math.PI * 2
     logger.toString shouldBe "SmartValue: INFO: the value of Pi is: 6.283185307179586\n"
   }
 
   it should "warn" in {
-    val logger = MockLogger("SmartValue", "WARN")
-    (Math.PI * 2).warn("the value of Pi is", logger) shouldBe Math.PI * 2
+    implicit val logger: MockLogger = MockLogger("SmartValue", "WARN")
+    (Math.PI * 2).warn("the value of Pi is") shouldBe Math.PI * 2
     logger.toString shouldBe "SmartValue: WARN: the value of Pi is: 6.283185307179586\n"
   }
 

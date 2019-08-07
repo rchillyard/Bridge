@@ -22,8 +22,8 @@ class LoggablesSpec extends FlatSpec with Matchers with Loggables {
   }
 
   it should "sequenceLoggable" in {
-    val target = sequenceLoggable[Int]
-    target.toLog(Seq(42, 99, 101)) shouldBe "[42, ... (1), ... 101]"
+    val target = listLoggable[Int]
+    target.toLog(List(42, 99, 101)) shouldBe "[42, ... (1), ... 101]"
   }
 
   it should "valueToLog" in {

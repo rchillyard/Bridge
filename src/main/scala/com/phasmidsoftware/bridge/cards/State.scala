@@ -19,31 +19,20 @@ import scala.language.postfixOps
 	*/
 case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[Unit] with Validatable {
 
+	 val sequence: Int = State.getSequence
+
 	/**
 		* Method to enumerate all of the possible states that could be children of the Node enclosing this State.
 		*
 		* @return a sequence of States.
 		*/
-	def enumeratePlays: Seq[State] = _enumeratePlays
+	def enumeratePlays: List[State] = _enumeratePlays
 
 	//	TODO make private
-	lazy val enumerateFollows: Seq[State] = trick.next match {
+	lazy val enumerateFollows: List[State] = trick.next match {
 		case Some(t) => whist.makeStates(tricks, for (p <- deal.hands(t).choosePlays(deal, trick)) yield trick :+ p)
 		case None => throw CardException(s"State: $this cannot be followed")
 	}
-
-	//	TODO make private
-	def enumerateLeads(leader: Int, index: Int): Seq[State] =
-		whist.makeStates(tricks, enumerateLeadsAsTricks(leader, index))
-
-	//	TODO make private
-	// CONSIDER desugaring the body
-	def enumerateLeadsAsTricks(leader: Int, index: Int): Seq[Trick] =
-		for (p <- chooseLeads(leader)) yield Trick(index, Seq(p))
-
-	// TODO make private
-	def chooseLeads(leader: Int): Seq[CardPlay] =
-		deal.hands(leader).longestSuit.choosePlays(deal, leader, FourthBest, None)
 
 	/**
 		* NOTE: this is used only in unit tests
@@ -93,7 +82,9 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 		*
 		* @return a compact String
 		*/
-	def neatOutput: String = s"State: $trick $tricks $fitness ${deal.neatOutput}"
+	def neatOutput: String = s"""State: Trick History: "${trick.history.mkString("",", ","")}" $tricks $fitness ${deal.neatOutput}"""
+
+//	override def toString: String = super.toString
 
 	/**
 		* Invokes output on the trick, passing it Some(deal) and appending the fitness in parentheses.
@@ -115,7 +106,7 @@ object Tricks {
 	val zero = Tricks(0, 0)
 
 	implicit object LoggableTricks extends Loggable[Tricks] with Loggables {
-		val loggable: Loggable[Tricks] = toLog2(Tricks.apply, Seq("ns", "ew"))
+		val loggable: Loggable[Tricks] = toLog2(Tricks.apply, List("ns", "ew"))
 
 		def toLog(t: Tricks): String = s"${t.ns}:${t.ew}"
 	}
@@ -123,6 +114,9 @@ object Tricks {
 
 
 object State {
+	var count: Int = 0
+	def getSequence = { count = count + 1; count}
+
 	/**
 		* Method to create an initial state based on a deal.
 		*
@@ -187,7 +181,8 @@ object State {
 
 	implicit object LoggableState extends Loggable[State] with Loggables {
 		def toLog(t: State): String =
-			s"${implicitly[Loggable[Trick]].toLog(t.trick)} " +
+			s"${t.trick.history.mkString("",", ","")} " +
+//				s"${implicitly[Loggable[Trick]].toLog(t.trick)} " +
 				s"${implicitly[Loggable[Tricks]].toLog(t.tricks)} " +
 				s"${t.fitness} " +
 				s"${implicitly[Loggable[Whist]].toLog(t.whist)}"

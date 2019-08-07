@@ -4,7 +4,10 @@
 
 package com.phasmidsoftware.bridge.tree
 
+import com.phasmidsoftware.bridge.cards.State
 import com.phasmidsoftware.output.{Loggable, Loggables}
+
+import scala.collection.mutable
 
 /**
   *
@@ -18,7 +21,7 @@ import com.phasmidsoftware.output.{Loggable, Loggables}
   *           Loggable.
   */
 abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
-(val t: T, val so: Option[T], val children: Seq[ExpandingNode[T]]) extends Node[T] {
+(val t: T, val so: Option[T], val children: List[ExpandingNode[T]]) extends Node[T] {
 
   // TODO try to be careful that we don't keep re-constructing nodes that are the same.
 
@@ -55,7 +58,7 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
     * @param tns the nodes which will be the children of the result.
     * @return a new Node based on t and tns, and the so value corresponding to this.
     */
-  def unit(_t: T, tns: Seq[Node[T]]): ExpandingNode[T] = unit(_t, so, tns)
+  def unit(_t: T, tns: List[Node[T]]): ExpandingNode[T] = unit(_t, so, tns)
 
   /**
     * Method to form a Node from a T.
@@ -67,28 +70,48 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
     */
   def unit(_t: T, _so: Option[T], tns: Seq[Node[T]]): ExpandingNode[T]
 
+  import com.phasmidsoftware.output.Flog._
+
+  implicit val expandingNodeLogger: Loggable[ExpandingNode[T]] = ExpandingNode.expandingNodeLogger[T]
+  implicit val optionTLogger: Loggable[Option[T]] = new Loggables {}.optionLoggable[T]
+  implicit val optionExpandingNodeLogger: Loggable[Option[ExpandingNode[T]]] = new Loggables {}.optionLoggable[ExpandingNode[T]]
+
   /**
-    * Method to expand a branch of a tree, by taking this ExpandingNode and replacing it with child nodes which are themselves recursively expanded.
+    * Method to expand a branch of a tree, by taking this ExpandingNode and (potentially) adding child nodes which are themselves recursively expanded.
     * The algorithm operates in a depth-first-search manner.
     *
     * CONSIDER make this tail-recursive
     *
     * @param _so   the currently satisfied goal.
     * @param moves the number of possible moves remaining.
-    * @return an Option of ExpandingNode[T].
+    * @return an Option of ExpandingNode[T]:
+    *         None => we have run out of moves
+    *         Some(n) => n is either this but marked as solved; or this with expanded children added.
     */
-  def expand(_so: Option[T], moves: Int): Option[ExpandingNode[T]] = if (moves < 0)
-    None
-  else {
-    implicitly[Expandable[T]].result(t, _so, moves) match {
-      // XXX terminating condition found? Mark and return this.
-      case Left(b) =>
-        Some(solve(b))
-      // XXX normal situation with (possibly empty) descendants? Recursively expand them.
-      // CONSIDER we should eliminate a node that has no expansion, but it doesn't really seem to matter.
-      case Right(Nil) => Some(this)
-      case Right(ts) => Some(expandSuccessors(ts, moves - 1, _so))
-    }
+  def expand(_so: Option[T], moves: Int): Option[ExpandingNode[T]] = {
+    s"expand: t=${implicitly[Loggable[T]].toLog(t)}; so=$so; # children=${children.size}; _so=${_so}; moves=$moves" !!
+      (if (moves < 0)
+      None
+      else if (implicitly[Expandable[T]].runaway(t))
+        {Console.println(s"expand: runaway condition detected for $t"); None}
+      else {
+        import com.phasmidsoftware.output.Flog._
+        implicit val y = new Loggables {}.listLoggable[T]
+        implicit val z = new Loggables {}.eitherLoggable[T, List[T]]
+        s"result" !! implicitly[Expandable[T]].result(t, _so, moves) match {
+        // XXX terminating condition found? Mark and return this.
+        case Left(b) =>
+          Some(solve(b))
+        // XXX normal situation with (possibly empty) descendants? Recursively expand them.
+        // CONSIDER we should eliminate a node that has no expansion, but it doesn't really seem to matter.
+        case Right(Nil) => Some(this)
+        case Right(ts) =>
+          val z: List[T] = ts.distinct
+          if (z.size!=ts.size) println("non-distinct states")
+          import com.phasmidsoftware.output.SmartValueOps._
+          Some(expandSuccessors(ts.invariant(z => z.distinct.size==z.size), moves - 1, _so))
+      }
+      })
   }
 
   /**
@@ -131,7 +154,7 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
     * Private Methods...
     */
 
-  private def expandSuccessors(ts: Seq[T], moves: Int, _so: Option[T]) = {
+  private def expandSuccessors(ts: List[T], moves: Int, _so: Option[T]) = {
 
     def getBestSolution(_sor: Option[T]) = _sor match {
       case Some(sr) => Some(_so match {
@@ -142,7 +165,7 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
     }
 
     def doExpansion(r: ExpandingNode[T], t: T): ExpandingNode[T] = unit(t, None, Nil).expand(getBestSolution(r.so), moves) match {
-      case None => r // expansion came up empty
+      case None => r // expansion came up empty // CONSIDER should we return node based on t here?
       case Some(n) => n.so match {
         case Some(g) => r.solve(g) :+ n // goal achieved: add it as a child and mark result as goal achieved
         case None => r
@@ -165,7 +188,6 @@ abstract class ExpandingNode[T: Expandable : GoalDriven : Ordering : Loggable]
       else this
     case _ => unit(t, Some(success), children)
   }
-
 }
 
 object ExpandingNode extends Loggables {
@@ -193,9 +215,11 @@ trait Expandable[T] {
     * Method to yield the successors (i.e. children) of the underlying type T for purposes of node expansion.
     *
     * @param t the value of T.
-    * @return a Seq[T] containing the successors (children) of T.
+    * @return a List[T] containing the successors (children) of T.
     */
-  def successors(t: T): Seq[T]
+  def successors(t: T): List[T]
+
+  import com.phasmidsoftware.output.SmartValueOps._
 
   /**
     * Method to yield the result (i.e. children) of the underlying type T.
@@ -210,15 +234,33 @@ trait Expandable[T] {
     * @param t  the value of T.
     * @param to an optional T which represents an achieved goal state.
     * @param moves the number of possible moves remaining in which to achieve the goal.
-    * @return an Either of T or Seq[T].
-    *         If the return is Right(Seq(...)) then the content of the option is the list of (new) children.
+    * @return an Either of T or List[T].
+    *         If the return is Right(List(...)) then the content of the option is the list of (new) children.
     *         If the result is Right(Nil), it signifies that the given value of t holds no promise and therefore should not be further expanded.
     *         If the return is Left(T), it signifies that we have reached a solution (goal) represented by the value of T.
     */
-  def result(t: T, to: Option[T], moves: Int)(implicit ev1: GoalDriven[T], ev2: Ordering[T]): Either[T, Seq[T]] =
-    if (ev1.goalAchieved(t)) Left(t)
-    else if (ev1.goalOutOfReach(t, to, moves)) Right(Nil)
-    else Right(successors(t))
+  def result(t: T, to: Option[T], moves: Int)(implicit ev1: GoalDriven[T], ev2: Ordering[T]): Either[T, List[T]] = {
+    val sT = t match {
+      case s: State => s.neatOutput
+      case _ => t.toString
+    }
+    if (ev1.goalAchieved(t)) Left(t).debug(s"$sT Left")
+    else
+      if (ev1.goalOutOfReach(t, to, moves)) Right(Nil).debug(s"$sT Right(Nil)")
+      else Right(successors(t)).debug(s"$sT Right($t)")
+  }
+
+  /**
+    * Method to check whether the value of T indicates a runaway condition.
+    * @param t  the value of T.
+    * @return true if running away, else false.
+    */
+  def runaway(t: T): Boolean = false // NOTE: if your application takes a very long time expanding, you might want to set this to true on some condition
+}
+
+object Expandable {
+
+  def cache[T]: mutable.HashMap[(T, Option[T], Int), Either[T, List[T]]] = mutable.HashMap[(T, Option[T], Int), Either[T, List[T]]]()
 }
 
 case class ExpandingNodeException(str: String) extends Exception(str)

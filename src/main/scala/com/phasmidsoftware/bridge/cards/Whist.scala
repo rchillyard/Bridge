@@ -7,6 +7,7 @@ package com.phasmidsoftware.bridge.cards
 import com.phasmidsoftware.bridge.tree.{Expandable, GoalDriven}
 import com.phasmidsoftware.output.{Loggable, Loggables, Output, Outputable}
 
+import scala.collection.mutable
 import scala.language.implicitConversions
 
 /**
@@ -37,7 +38,7 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
 		* @param ts     a sequence of Trick instances.
 		* @return a sequence of State objects corresponding to the values of ts.
 		*/
-	def makeStates(tricks: Tricks, ts: Seq[Trick]): Seq[State] = ts.map(t => State.create(this, t, tricks))
+	def makeStates(tricks: Tricks, ts: List[Trick]): List[State] = ts.map(t => State.create(this, t, tricks))
 
 	/**
 		* Play a card from this Playable object.
@@ -60,10 +61,40 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
 		*/
 	def analyzeDoubleDummy(tricks: Int, directionNS: Boolean): Option[Boolean] = {
 		implicit val sg: GoalDriven[State] = Whist.goal(tricks, directionNS)
-		implicit val se: Expandable[State] = (t: State) => t.enumeratePlays
+//		implicit val se: Expandable[State] = (t: State) => t.enumeratePlays
+implicit val se: Expandable[State] = new Expandable[State] {
+			def successors(t: State): List[State] = t.enumeratePlays
+
+	// TODO remove this cache. It does NOT speed things up--it's only to try to determine infinite loop
+	val cache: mutable.HashMap[(State, Option[State], Int), Either[State, List[State]]] = Expandable.cache[State]
+	cache.clear()
+
+	override def result(t: State, to: Option[State], moves: Int)(implicit ev1: GoalDriven[State], ev2: Ordering[State]): Either[State, List[State]] =
+		{
+			import com.phasmidsoftware.output.SmartValueOps._
+			import State.LoggableState._
+			val zo = cache.get((t, to, moves))
+			zo match {
+				case Some(z) =>
+					val q = cache.keys.find(x => x == (t, to, moves))
+					z.debug(s"cache found $t")
+					Right(Nil)
+				case None =>
+						val z = super.result(t, to, moves)(ev1, ev2)
+						cache.put((t, to, moves), z)
+						z
+			}
+		}
+
+	override def runaway(t: State): Boolean = {
+		import com.phasmidsoftware.output.Flog._
+		"Examining: " !! t
+		t.asInstanceOf[State].sequence > 200000
+	}
+}
 		val tree = Tree(this)
 		val node = tree.expand()
-		//		node.output(Output(System.out)).insertBreak.close()
+				node.output(Output(System.out)).insertBreak.close()
 		node.so flatMap (sn => sn.tricks.decide(tricks, directionNS))
 	}
 
@@ -125,7 +156,7 @@ object Whist {
 	* @param priority the number of higher-ranking cards in the suit.
 	* @param cards    the cards.
 	*/
-case class Sequence(priority: Int, cards: Seq[Card]) extends Evaluatable {
+case class Sequence(priority: Int, cards: List[Card]) extends Evaluatable {
 
 	require(cards.nonEmpty)
 
@@ -180,7 +211,7 @@ case class Sequence(priority: Int, cards: Seq[Card]) extends Evaluatable {
 		* @param ss a sequence of Sequences.
 		* @return a new sequence of Sequences.
 		*/
-	def merge(ss: Seq[Sequence]): Seq[Sequence] = if (ss.nonEmpty && ss.last.canCombine(this)) ss.init :+ (ss.last ++ this) else ss :+ this
+	def merge(ss: List[Sequence]): List[Sequence] = if (ss.nonEmpty && ss.last.canCombine(this)) ss.init :+ (ss.last ++ this) else ss :+ this
 
 	/**
 		* Method to concatenate two Sequences.
@@ -213,7 +244,7 @@ object Sequence {
 		* @param cs the list of Cards (must be non-empty).
 		* @return a new Sequence.
 		*/
-	def apply(cs: Seq[Card]): Sequence = apply(cs.head.priority, cs)
+	def apply(cs: Seq[Card]): Sequence = apply(cs.head.priority, cs.toList)
 
 	/**
 		* @return true if the top card of the sequence with the given priority is at least a ten.
@@ -251,9 +282,9 @@ object Sequence {
 		* Lower values of priority precede higher values.
 		*/
 	implicit object LoggableSequence extends Loggable[Sequence] with Loggables {
-		implicit val cardSequenceLoggable: Loggable[Seq[Card]] = sequenceLoggable[Card]
+		implicit val cardSequenceLoggable: Loggable[List[Card]] = listLoggable[Card]
 		// NOTE: that, for this particular apply method, we have to specify the fields we need.
-		val loggableSequence: Loggable[Sequence] = toLog2(Sequence.apply, Seq("priority", "cards"))
+		val loggableSequence: Loggable[Sequence] = toLog2(Sequence.apply, List("priority", "cards"))
 
 		def toLog(t: Sequence): String = loggableSequence.toLog(t)
 	}
@@ -285,7 +316,7 @@ trait Quittable[X] {
 	* @param suit       the suit of this holding.
 	* @param promotions a list of promotions that should be applied on quitting a trick.
 	*/
-case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = Nil)
+case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] = Nil)
 	extends Outputable[Unit] with Quittable[Holding] with Evaluatable with Removable {
 
 	require(isVoid || maybeSuit.get == suit)
@@ -311,7 +342,7 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 	/**
 		* @return the all of the cards in this Holding.
 		*/
-	lazy val cards: Seq[Card] = for (s <- sequences; c <- s.cards) yield c
+	lazy val cards: List[Card] = for (s <- sequences; c <- s.cards) yield c
 
 	/**
 		* @return the effective number of cards.
@@ -336,7 +367,7 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 		* @param trick the current state of this trick (i.e. the prior plays).
 		* @return a sequence of all possible plays, starting with the ones most suited to the appropriate strategy.
 		*/
-	def choosePlays(deal: Deal, hand: Int, trick: Trick): Seq[CardPlay] = {
+	def choosePlays(deal: Deal, hand: Int, trick: Trick): List[CardPlay] = {
 		def suitMatches(x: Strategy) = trick.suit match {
 			case Some(`suit`) => x;
 			case _ => Discard
@@ -363,7 +394,7 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 		* @param currentWinner the play currently winning the trick.
 		* @return a sequence of CardPlay objects.
 		*/
-	def choosePlays(deal: Deal, hand: Int, strategy: Strategy, currentWinner: Option[Winner]): Seq[CardPlay] = {
+	def choosePlays(deal: Deal, hand: Int, strategy: Strategy, currentWinner: Option[Winner]): List[CardPlay] = {
 		val priorityToBeat = (currentWinner map (_.priorityToBeat(hand))).getOrElse(Rank.lowestPriority)
 
 		def f(play: CardPlay, index: Int): Int = applyStrategy(play, strategy, index, priorityToBeat)
@@ -403,7 +434,7 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 		*/
 	//noinspection ScalaStyle
 	def -(priority: Int): Holding = {
-		val sos: Seq[Option[Sequence]] = for (s <- sequences) yield if (s.priority == priority) s.truncate else Some(s)
+		val sos: List[Option[Sequence]] = for (s <- sequences) yield if (s.priority == priority) s.truncate else Some(s)
 		Holding(sos.flatten, suit, promotions)
 	}
 
@@ -457,8 +488,8 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 			Sequence(sequence.priority - promotion, sequence.cards)
 		}
 
-		val ss: Seq[Sequence] = sequences map applyPromotions
-		Holding(ss.foldLeft[Seq[Sequence]](Nil)((r, s) => s.merge(r)), suit, Nil)
+		val ss: List[Sequence] = sequences map applyPromotions
+		Holding(ss.foldLeft[List[Sequence]](Nil)((r, s) => s.merge(r)), suit, Nil)
 	}
 
 	private lazy val hasHonorSequence: Boolean = realSequences exists (_.isHonor)
@@ -467,7 +498,7 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
 
 	//noinspection ScalaUnusedSymbol
 	// NOTE: never called
-	private def canWin(priorPlays: Seq[CardPlay]): Boolean = if (priorPlays.nonEmpty && !isVoid) priorPlays.min.priority > sequences.head.priority else true
+	private def canWin(priorPlays: List[CardPlay]): Boolean = if (priorPlays.nonEmpty && !isVoid) priorPlays.min.priority > sequences.head.priority else true
 
 	private lazy val maybeSuit: Option[Suit] = cards.headOption map (_.suit)
 
@@ -501,7 +532,7 @@ object Holding {
 		val cards = ranks map (rank => Card(suit, rank))
 		val cXsXm = (for ((c, i) <- cards.zipWithIndex) yield i - c.priority -> c).groupBy(_._1)
 		val ss = cXsXm.values map (cXs => Sequence(cXs.map(_._2)))
-		apply(ss.toSeq.sorted, suit, Nil)
+		apply(ss.toList.sorted, suit, Nil)
 	}
 
 	/**
@@ -511,7 +542,7 @@ object Holding {
 		* @param ranks the Ranks.
 		* @return a new Holding.
 		*/
-	def apply(suit: Suit, ranks: String): Holding = create(Card.parser.parseRanks(ranks), suit)
+	def apply(suit: Suit, ranks: String): Holding = create(Card.parser.parseRanks(ranks).toList, suit)
 
 	/**
 		* Implicit converter from a String to a Holding.
@@ -519,7 +550,7 @@ object Holding {
 		* @param s the String made up of (abbreviated) suit and ranks.
 		* @return a new Holding.
 		*/
-	implicit def parseHolding(s: String): Holding = create(Card.parser.parseRanks(s.tail), Suit(s.head))
+	implicit def parseHolding(s: String): Holding = create(Card.parser.parseRanks(s.tail).toList, Suit(s.head))
 
 	/**
 		* An ordering for Ranks.
@@ -591,7 +622,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
 		* @param trick the current state of the Trick.
 		* @return a sequence of card plays.
 		*/
-	def discard(deal: Deal, trick: Trick): Seq[CardPlay] = {
+	def discard(deal: Deal, trick: Trick): List[CardPlay] = {
 		def suitsMatch(k: Suit) = trick.suit match {
 			case Some(`k`) => true;
 			case _ => false
@@ -599,7 +630,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
 
 				for {
 					// NOTE: first get the holdings from the other suits in order of length
-					h <- holdings.flatMap { case (k, v) => if (suitsMatch(k)) None else Some(v) }.toSeq.sortWith(_.length < _.length)
+					h <- holdings.flatMap { case (k, v) => if (suitsMatch(k)) None else Some(v) }.toList.sortWith(_.length < _.length)
 					ps <- h.choosePlays(deal, index, Duck, None)
 				} yield ps
 	}
@@ -609,9 +640,9 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
 		*
 		* @param deal  the deal from which the plays will be made.
 		* @param trick the prior plays to the current trick.
-		* @return a Seq[CardPlay].
+		* @return a List[CardPlay].
 		*/
-	def choosePlays(deal: Deal, trick: Trick): Seq[CardPlay] =
+	def choosePlays(deal: Deal, trick: Trick): List[CardPlay] =
 		if (trick.started) {
 			val holding = holdings(trick.suit.get)
 			if (holding.isVoid) discard(deal, trick)
@@ -687,7 +718,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
 		implicit object SuitOrdering extends Ordering[Suit] {
 			override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
 		}
-		val keys = holdings.keys.toSeq.sorted.reverse
+		val keys = holdings.keys.toList.sorted.reverse
 		output ++ (for (k <- keys) yield holdings(k).output(output.copy))
 	}
 
@@ -696,7 +727,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
 		implicit object SuitOrdering extends Ordering[Suit] {
 			override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
 		}
-		val keys = holdings.keys.toSeq.sorted.reverse
+		val keys = holdings.keys.toList.sorted.reverse
 		s"""${(for (k <- keys) yield s"${holdings(k)}").mkString("", "\n", "")}"""
 	}
 
@@ -710,7 +741,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
 		implicit object SuitOrdering extends Ordering[Suit] {
 			override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
 		}
-		val keys = holdings.keys.toSeq.sorted.reverse
+		val keys = holdings.keys.toList.sorted.reverse
 		(for (k <- keys) yield holdings(k).neatOutput).mkString(" ")
 	}
 
@@ -734,9 +765,9 @@ object Hand {
 		* @param cs    cards
 		* @return a Hand.
 		*/
-	def apply(deal: Deal, index: Int, cs: Seq[Card]): Hand = Hand(index, createHoldings(cs))
+	def apply(deal: Deal, index: Int, cs: List[Card]): Hand = Hand(index, createHoldings(cs))
 
-	def createHoldings(cs: Seq[Card]): Map[Suit, Holding] = for ((suit, cards) <- cs.groupBy(c => c.suit)) yield (suit, Holding.create(suit, cards))
+	def createHoldings(cs: List[Card]): Map[Suit, Holding] = for ((suit, cards) <- cs.groupBy(c => c.suit)) yield (suit, Holding.create(suit, cards))
 
 	/**
 		* Create a Hand from a set of Strings representing Holdings.

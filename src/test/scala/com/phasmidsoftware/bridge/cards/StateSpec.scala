@@ -119,12 +119,13 @@ class StateSpec extends FlatSpec with Matchers {
 		an[CardException] should be thrownBy target.enumerateFollows
 	}
 
-	it should "chooseLeads" in {
-		val target = State(whist)
-		val leads: Seq[CardPlay] = target.chooseLeads(north)
-		leads.size shouldBe 3
-		leads.head shouldBe CardPlay(deal, north, Hearts, 10)
-	}
+	// TESTING method which no longer exists
+//	it should "chooseLeads" in {
+//		val target = State(whist)
+//		val leads: Seq[CardPlay] = target.chooseLeads(north)
+//		leads.size shouldBe 3
+//		leads.head shouldBe CardPlay(deal, north, Hearts, 10)
+//	}
 
 	it should "enumeratePlays" in {
 		val target = State(whist)
@@ -134,13 +135,34 @@ class StateSpec extends FlatSpec with Matchers {
 		plays.head.trick.plays.head shouldBe CardPlay(deal, north, Hearts, 10)
 	}
 
-
-	it should "enumerateLeads" in {
-		val target = State(whist)
-    val leads: Seq[State] = target.enumerateLeads(north, 1)
-		leads.size shouldBe 3
-		leads.head.trick.plays.size shouldBe 1
-		leads.head.trick.plays.head shouldBe CardPlay(deal, north, Hearts, 10)
+	it should "get complex neat output" in {
+		val deal = Deal("test", 0L)
+		val whist0 = Whist(deal, 0)
+		val state0 = State(whist0)
+		val states = state0.enumeratePlays
+		val state1 = states.head
+		val trick1 = state1.trick
+		val whist1 = state1.whist
+		val trick2alternatives = trick1.enumerateSubsequentPlays(whist1)
+		val state2alternatives = whist1.makeStates(state1.tricks, trick2alternatives)
+		val state20 = state2alternatives.head
+		val state3alternatives: Seq[State] = state20.enumeratePlays
+		val state30 = state3alternatives.head
+		val state4alternatives = state30.enumeratePlays
+		val state40: State = state4alternatives.head
+		val state5alternatives = state40.enumeratePlays
+		val target = state5alternatives.head
+		target.neatOutput shouldBe """State: T1 {Play: 0 H2, Play: 1 H7, Play: 2 HT, Play: 3 HJ}, T2 {Play: 3 D5} 0:1 4.0 Deal test (47)
+																 |List(S95 HQ943 D64 CT652, SK742 HA DT93 CAQJ7, SAJT86 HK8 DK82 CK3, SQ3 H65 DAQJ7 C984)""".stripMargin
 	}
+
+	// TESTING method which no longer exists
+//	it should "enumerateLeads" in {
+//		val target = State(whist)
+//    val leads: Seq[State] = target.enumerateLeads(north, 1)
+//		leads.size shouldBe 3
+//		leads.head.trick.plays.size shouldBe 1
+//		leads.head.trick.plays.head shouldBe CardPlay(deal, north, Hearts, 10)
+//	}
 
 }

@@ -7,3 +7,5 @@ target/
 \.idea/
 
 hand1\.pbn
+
+logs/

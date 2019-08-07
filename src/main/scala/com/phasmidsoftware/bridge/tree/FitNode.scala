@@ -29,7 +29,7 @@ trait Fitness[X] {
   * @param children the children nodes of this Node.
   * @tparam X the underlying type of the nodes, for which there must be evidence of Fitness.
   */
-abstract class FitNode[X: Fitness](val t: X, val decided: Option[Boolean], val children: Seq[Node[X]]) extends Node[X] with Ordered[FitNode[X]] {
+abstract class FitNode[X: Fitness](val t: X, val decided: Option[Boolean], val children: List[Node[X]]) extends Node[X] with Ordered[FitNode[X]] {
 
   /**
     * Compare this node with that node as far as fitness is concerned.

@@ -94,7 +94,7 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
   /**
     * Neat output.
     */
-  lazy val neatOutput: String = s"Deal $title ($nCards)\n${hands.map(_.neatOutput)}"
+  lazy val neatOutput: String = s"Deal $title ($nCards) ${hands.map(_.neatOutput)}"
 
   /**
     * @return a String which represents this Deal, primarily for debugging purposes.
@@ -176,7 +176,7 @@ object Deal {
     * @return a new Deal.
     */
   def fromCards(title: String, cs: Seq[Card]): Deal =
-    new Deal(title, (for ((cs, index) <- cs.grouped(CardsPerHand).zipWithIndex) yield index -> Hand.createHoldings(cs)).toMap)
+    new Deal(title, (for ((cs, index) <- cs.grouped(CardsPerHand).zipWithIndex) yield index -> Hand.createHoldings(cs.toList)).toMap)
 
   def fromHandStrings(title: String, start: String, wss: Seq[Seq[String]]): Deal = {
     val firstIndex = start match { case "N" => 0; case "E" => 1; case "S" => 2; case "W" => 3 }

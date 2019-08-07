@@ -17,7 +17,7 @@ class ExpandingNodeSpec extends FlatSpec with Matchers with PrivateMethodTester 
 	it should "work 1" in {
 		val target = MockNode(1)
 		trait ExpandableInt$ extends Expandable[Int] {
-			def successors(t: Int): Seq[Int] = Seq(t + 1)
+			def successors(t: Int): List[Int] = List(t + 1)
 		}
 		implicit object ExpandableInt extends ExpandableInt$ {
 		}
@@ -31,7 +31,7 @@ class ExpandingNodeSpec extends FlatSpec with Matchers with PrivateMethodTester 
 	it should "work with success condition (number 3 reached)" in {
 		val target = AltMockNode1(1)
 		trait SuccessorsInt extends Expandable[Int] {
-			def successors(t: Int): Seq[Int] = Seq(t + 1, t + 2)
+			def successors(t: Int): List[Int] = List(t + 1, t + 2)
 		}
 		implicit object SuccessorsInt extends SuccessorsInt {
 		}
@@ -60,21 +60,22 @@ class ExpandingNodeSpec extends FlatSpec with Matchers with PrivateMethodTester 
 		implicit val expandableString: Expandable[String] = new Expandable[String] {
 			def successor(t: String, x: Int): String = (if (t.isEmpty) "" else t) + x
 
-			def successors(t: String): Seq[String] = for (x <- 4 to 1 by -1) yield successor(t, x)
+			def successors(t: String): List[String] = (for (x <- 4 to 1 by -1) yield successor(t, x)).toList
 		}
 		implicit val goalDrivenString: GoalDriven[String] = new GoalDriven[String] {
 			private val goal = "42"
 
-			def goalAchieved(t: String): Boolean = t endsWith goal
+			def goalAchieved(t: String): Boolean =
+				t endsWith goal
 
 			def goalImpossible(t: String, moves: Int): Boolean = SubStringMatch.substringPrefix(moves, t, goal) > moves
 
 			// NOTE: we ignore the standard ordering for String
 			override def goalConditional(t: String, s: String)(implicit ev: Ordering[String]): Boolean = t.length < s.length
 		}
-		case class AltMockNodeSimple(override val t: String, override val so: Option[String], override val children: Seq[AltMockNodeSimple])
+		case class AltMockNodeSimple(override val t: String, override val so: Option[String], override val children: List[AltMockNodeSimple])
 			extends ExpandingNode[String](t, so, children) {
-			def unit(t: String, so: Option[String], tns: Seq[Node[String]]): ExpandingNode[String] = AltMockNodeSimple(t, so, tns.asInstanceOf[Seq[AltMockNodeSimple]])
+			def unit(t: String, so: Option[String], tns: Seq[Node[String]]): ExpandingNode[String] = AltMockNodeSimple(t, so, tns.asInstanceOf[List[AltMockNodeSimple]])
 		}
 		val target = AltMockNodeSimple("", None, Nil)
 		val expansion: Option[Node[String]] = target.expand(None, 2)
@@ -117,16 +118,16 @@ class ExpandingNodeSpec extends FlatSpec with Matchers with PrivateMethodTester 
 	behavior of "dfs"
 	it should "work for sum" in {
 		val three = MockNode(3)
-		val two = MockNode(2, Seq(three))
-		val target = MockNode(1, Seq(two))
+		val two = MockNode(2, List(three))
+		val target = MockNode(1, List(two))
 		val result = target.dfs(0)(_ + _)
 		result shouldBe 6
 	}
 
 	it should "work for list" in {
 		val three = MockNode(3)
-		val two = MockNode(2, Seq(three))
-		val target = MockNode(1, Seq(two))
+		val two = MockNode(2, List(three))
+		val target = MockNode(1, List(two))
 		val result = target.dfs(List[Int]())((z, t) => t +: z)
 		result shouldBe List(3, 2, 1)
 	}
@@ -134,8 +135,8 @@ class ExpandingNodeSpec extends FlatSpec with Matchers with PrivateMethodTester 
 	it should "work for list 2" in {
 		val three = MockNode(3)
 		val four = MockNode(4)
-		val two = MockNode(2, Seq(three, four))
-		val target = MockNode(1, Seq(two))
+		val two = MockNode(2, List(three, four))
+		val target = MockNode(1, List(two))
 		val result = target.dfs(List[Int]())((z, t) => t +: z)
 		result shouldBe List(4, 3, 2, 1)
 	}
@@ -143,8 +144,8 @@ class ExpandingNodeSpec extends FlatSpec with Matchers with PrivateMethodTester 
 	it should "work for list 3" in {
 		val three = MockNode(3)
 		val four = MockNode(4)
-		val two = MockNode(2, Seq(three))
-		val target = MockNode(1, Seq(four, two))
+		val two = MockNode(2, List(three))
+		val target = MockNode(1, List(four, two))
 		val result = target.dfs(List[Int]())((z, t) => t +: z)
 		result shouldBe List(3, 2, 4, 1)
 	}
@@ -295,25 +296,25 @@ class ExpandingNodeSpec extends FlatSpec with Matchers with PrivateMethodTester 
 
 }
 
-case class MockNode(override val t: Int, override val so: Option[Int], override val children: Seq[ExpandingNode[Int]]) extends {
-	private implicit val expandableInt: Expandable[Int] = (t: Int) => Seq(t + 1)
+case class MockNode(override val t: Int, override val so: Option[Int], override val children: List[ExpandingNode[Int]]) extends {
+	private implicit val expandableInt: Expandable[Int] = (t: Int) => List(t + 1)
 	private implicit val goalDrivenInt: GoalDriven[Int] = new GoalDriven[Int] {
 		def goalAchieved(t: Int): Boolean = false
 
 		def goalImpossible(t: Int, moves: Int): Boolean = false
 	}
 } with ExpandingNode[Int](t, so, children) {
-	def unit(_t: Int, decide: Option[Int], tns: Seq[Node[Int]]): ExpandingNode[Int] = MockNode(_t, decide, tns.asInstanceOf[Seq[ExpandingNode[Int]]])
+	def unit(_t: Int, decide: Option[Int], tns: Seq[Node[Int]]): ExpandingNode[Int] = MockNode(_t, decide, tns.asInstanceOf[List[ExpandingNode[Int]]])
 }
 
 object MockNode {
-	def apply(t: Int, children: Seq[ExpandingNode[Int]]): MockNode = MockNode(t, None, children)
+	def apply(t: Int, children: List[ExpandingNode[Int]]): MockNode = MockNode(t, None, children)
 
 	def apply(t: Int): MockNode = apply(t, Nil)
 }
 
-case class AltMockNode1(override val t: Int, override val so: Option[Int], override val children: Seq[ExpandingNode[Int]]) extends {
-	private implicit val expandableInt: Expandable[Int] = (t: Int) => Seq(t + 1, t + 2)
+case class AltMockNode1(override val t: Int, override val so: Option[Int], override val children: List[ExpandingNode[Int]]) extends {
+	private implicit val expandableInt: Expandable[Int] = (t: Int) => List(t + 1, t + 2)
 	private implicit val goalDrivenInt: GoalDriven[Int] = new GoalDriven[Int] {
 		def goalAchieved(t: Int): Boolean = t >= 3
 
@@ -321,18 +322,18 @@ case class AltMockNode1(override val t: Int, override val so: Option[Int], overr
 	}
 } with ExpandingNode[Int](t, so, children) {
 
-	def unit(_t: Int, so: Option[Int], tns: Seq[Node[Int]]): ExpandingNode[Int] = AltMockNode1(_t, so, tns.asInstanceOf[Seq[ExpandingNode[Int]]])
+	def unit(_t: Int, so: Option[Int], tns: Seq[Node[Int]]): ExpandingNode[Int] = AltMockNode1(_t, so, tns.asInstanceOf[List[ExpandingNode[Int]]])
 
 }
 
 object AltMockNode1 {
-	def apply(t: Int, children: Seq[ExpandingNode[Int]]): AltMockNode1 = AltMockNode1(t, None, children)
+	def apply(t: Int, children: List[ExpandingNode[Int]]): AltMockNode1 = AltMockNode1(t, None, children)
 
 	def apply(t: Int): AltMockNode1 = apply(t, Nil)
 }
 
-case class AltMockNode2(override val t: Int, override val so: Option[Int], override val children: Seq[ExpandingNode[Int]]) extends {
-	implicit private val expandableInt: Expandable[Int] = (t: Int) => Seq(t + 1, t + 2)
+case class AltMockNode2(override val t: Int, override val so: Option[Int], override val children: List[ExpandingNode[Int]]) extends {
+	implicit private val expandableInt: Expandable[Int] = (t: Int) => List(t + 1, t + 2)
 	private implicit val goalDrivenInt: GoalDriven[Int] = new GoalDriven[Int] {
 		def goalAchieved(t: Int): Boolean = t == 5
 
@@ -340,21 +341,21 @@ case class AltMockNode2(override val t: Int, override val so: Option[Int], overr
 	}
 } with ExpandingNode[Int](t, so, children) {
 
-	def unit(_t: Int, so: Option[Int], tns: Seq[Node[Int]]): ExpandingNode[Int] = AltMockNode2(_t, so, tns.asInstanceOf[Seq[ExpandingNode[Int]]])
+	def unit(_t: Int, so: Option[Int], tns: Seq[Node[Int]]): ExpandingNode[Int] = AltMockNode2(_t, so, tns.asInstanceOf[List[ExpandingNode[Int]]])
 }
 
 object AltMockNode2 {
-	def apply(t: Int, children: Seq[ExpandingNode[Int]]): AltMockNode2 = AltMockNode2(t, None, children)
+	def apply(t: Int, children: List[ExpandingNode[Int]]): AltMockNode2 = AltMockNode2(t, None, children)
 
 	def apply(t: Int): AltMockNode2 = apply(t, Nil)
 }
 
-case class AltMockNodeS(override val t: String, override val so: Option[String], override val children: Seq[AltMockNodeS])
+case class AltMockNodeS(override val t: String, override val so: Option[String], override val children: List[AltMockNodeS])
 	extends {
 		private implicit val expandableString: Expandable[String] = new Expandable[String] {
 			def successor(t: String, x: Int): String = (if (t.isEmpty) "" else t + ".") + x
 
-			def successors(t: String): Seq[String] = for (x <- 1 to 3) yield successor(t, x)
+			def successors(t: String): List[String] = (for (x <- 1 to 3) yield successor(t, x)).toList
 		}
 		private implicit val goalDrivenString: GoalDriven[String] = new GoalDriven[String] {
 			def goalAchieved(t: String): Boolean = t endsWith AltMockNodeS.goal
@@ -366,7 +367,7 @@ case class AltMockNodeS(override val t: String, override val so: Option[String],
 		}
 	} with ExpandingNode[String](t, so, children) {
 	def unit(t: String, so: Option[String], tns: Seq[Node[String]]): ExpandingNode[String] =
-		AltMockNodeS(t, so, tns.asInstanceOf[Seq[AltMockNodeS]])
+		AltMockNodeS(t, so, tns.asInstanceOf[List[AltMockNodeS]])
 
 }
 

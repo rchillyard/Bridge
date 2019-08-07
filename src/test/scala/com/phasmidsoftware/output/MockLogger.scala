@@ -30,13 +30,19 @@ case class MockLogger(name: String, level: String = "DEBUG", sb: StringBuilder =
 
   def warn(msg: String) = doLog(msg)
 
+  def warn(msg: String, t: Throwable) = doLog(msg, t)
+
 //  def debug(format: String, arg: Any) = doLog(format, arg)
 
 //  def info(format: String, arg: Any) = doLog(format, arg)
 
 //  def warn(format: String, arg: Any) = doLog(format, arg)
 
-  private def doLog(msg: String) = sb.append(s"$name: $level: $msg\n")
+  private def doLog(msg: String, e: Throwable = null) = {
+    sb.append(s"$name: $level: $msg")
+    if (e!=null) sb.append(s" threw an exception: ${e.getLocalizedMessage}")
+    sb.append("\n")
+  }
 
 //  private def doLog(format: String, arg: Any) = sb.append(s"$name: $level: ${String.format(Locale.US, format, arg)}\n")
 
@@ -87,8 +93,6 @@ case class MockLogger(name: String, level: String = "DEBUG", sb: StringBuilder =
   def warn(format: String, arguments: AnyRef*) = ???
 
   def warn(format: String, arg1: scala.Any, arg2: scala.Any) = ???
-
-  def warn(msg: String, t: Throwable) = ???
 
   def warn(marker: Marker, msg: String) = ???
 

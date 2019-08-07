@@ -12,11 +12,17 @@
         </encoder>
     </appender>
 
+    <!-- Insert the current time formatted as "yyyyMMdd'T'HHmmss" under
+         the key "bySecond" into the logger context. This value will be
+         available to all subsequent configuration elements. -->
+    <!-- <timestamp key="bySecond" datePattern="yyyyMMdd'T'HHmmss"/> -->
+
     <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <!-- <file>logs/testing-${bySecond}.log</file> -->
         <file>logs/testing.log</file>
         <append>true</append>
         <!-- set immediateFlush to false for much higher logging throughput -->
-        <immediateFlush>true</immediateFlush>
+        <immediateFlush>false</immediateFlush>
         <!-- encoders are assigned the type
              ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
         <encoder>
@@ -27,7 +33,6 @@
     <root level="DEBUG">
         <appender-ref ref="FILE"/>
     </root>
-
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>

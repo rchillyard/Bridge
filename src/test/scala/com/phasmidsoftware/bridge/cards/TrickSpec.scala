@@ -13,7 +13,7 @@ class TrickSpec extends FlatSpec with Matchers {
 
 	it should "construct" in {
 		val index = 0
-		val target = Trick(index, Nil)
+		val target = Trick(index, Nil, None)
 		target.index shouldBe index
 		target.plays shouldBe Nil
 		target.started shouldBe false
@@ -25,9 +25,32 @@ class TrickSpec extends FlatSpec with Matchers {
 		an[CardException] should be thrownBy target.last
 	}
 
+	it should "history" in {
+		val deal = Deal("test", 0L)
+		val whist0 = Whist(deal, 0)
+		val state0 = State(whist0)
+		val states = state0.enumeratePlays
+		val state1 = states.head
+		val trick1 = state1.trick
+		val whist1 = state1.whist
+		val trick2alternatives = trick1.enumerateSubsequentPlays(whist1)
+		val state2alternatives = whist1.makeStates(state1.tricks, trick2alternatives)
+		val state20 = state2alternatives.head
+		val state3alternatives: Seq[State] = state20.enumeratePlays
+		val state30 = state3alternatives.head
+		val state4alternatives = state30.enumeratePlays
+		val state40: State = state4alternatives.head
+		val state5alternatives = state40.enumeratePlays
+		val state50 = state5alternatives.head
+		val target = state50.trick.history
+		println(target)
+		target.size shouldBe 2
+		target.head shouldBe state4alternatives.head.trick
+	}
+
 	it should "append" in {
 		val index = 0
-		val nothing = Trick(index, Nil)
+		val nothing = Trick(index, Nil, None)
 		val deal = Deal("test", 0L)
 		val play = CardPlay(deal, 0, Spades, 5)
 		val target = nothing :+ play
@@ -72,7 +95,7 @@ class TrickSpec extends FlatSpec with Matchers {
 		val secondHandPlay1 = trick21.last
 		secondHandPlay1.suit shouldBe Hearts
 		secondHandPlay1.priority shouldBe 0
-		val trick3alternatives: Seq[Trick] = trick20.enumerateSubsequentPlays(whist20)
+		val trick3alternatives: List[Trick] = trick20.enumerateSubsequentPlays(whist20)
 		val state3alternatives: Seq[State] = state20.enumeratePlays
 		state3alternatives.size shouldBe 3
 		whist20.makeStates(state20.tricks, trick3alternatives) shouldBe state3alternatives

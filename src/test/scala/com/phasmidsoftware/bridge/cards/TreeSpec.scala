@@ -14,13 +14,15 @@ class TreeSpec extends FlatSpec with Matchers {
 	class OldStyleExpandable(success: State => Boolean = _ => false, failure: State => Boolean = _ => false) extends Expandable[State] with Loggables {
 
 		implicit val optionLoggerBoolean: Loggable[Option[Boolean]] = optionLoggable[Boolean]
-		implicit val seqLoggerState: Loggable[Seq[State]] = sequenceLoggable[State]
+		implicit val seqLoggerState: Loggable[List[State]] = listLoggable[State]
 
-		def successors(t: State): Seq[State] = t.enumeratePlays
+		import com.phasmidsoftware.output.SmartValueOps._
+
+		def successors(t: State): List[State] = t.enumeratePlays.invariant(xs => xs.distinct.length==xs.length)
 	}
 
 	class PlainEnumerationExpandable() extends Expandable[State] with Loggables {
-		def successors(t: State): Seq[State] = t.enumeratePlays
+		def successors(t: State): List[State] = t.enumeratePlays
 	}
 
 	behavior of "Tree"
@@ -43,19 +45,20 @@ class TreeSpec extends FlatSpec with Matchers {
 		target.root shouldBe root
 	}
 
-	it should "chooseLeads" in {
-		implicit val whistGoal: GoalDriven[State] = Whist.goal(0, _directionNS = true, 1)
-		val state = State(whist00)
-		val target = Tree(state)
-		val result: Seq[CardPlay] = state.chooseLeads(0)
-		result.size shouldBe 3
-		result.head shouldBe CardPlay(deal0, 0, Hearts, 10)
-		result(1) shouldBe CardPlay(deal0, 0, Hearts, 5)
-		result.last shouldBe CardPlay(deal0, 0, Hearts, 2)
-		val writer = MockWriter()
-		target.output(Output(writer)).close()
-		writer.spilled shouldBe 9
-	}
+	// TESTING method which no longer exists
+//	it should "chooseLeads" in {
+//		implicit val whistGoal: GoalDriven[State] = Whist.goal(0, _directionNS = true, 1)
+//		val state = State(whist00)
+//		val target = Tree(state)
+//		val result: Seq[CardPlay] = state.chooseLeads(0)
+//		result.size shouldBe 3
+//		result.head shouldBe CardPlay(deal0, 0, Hearts, 10)
+//		result(1) shouldBe CardPlay(deal0, 0, Hearts, 5)
+//		result.last shouldBe CardPlay(deal0, 0, Hearts, 2)
+//		val writer = MockWriter()
+//		target.output(Output(writer)).close()
+//		writer.spilled shouldBe 9
+//	}
 
 	it should "output" in {
 		implicit val whistGoal: GoalDriven[State] = Whist.goal(0, _directionNS = true, 1)
@@ -65,49 +68,51 @@ class TreeSpec extends FlatSpec with Matchers {
 		writer.spilled shouldBe 9
 	}
 
-	it should "enumerateLeads 1" in {
-		val deal = Deal("test", 2L)
-		val whist = Whist(deal, 0)
-		val state = State(whist)
-		// NOTE: Figure out all the possible leads from the North's longest and strongest suit.
-		// Bear in mind that we consider all cards from a "sequence" equivalent.
-		val ss: Seq[State] = state.enumerateLeads(0, 1)
-		ss.size shouldBe 4
-		ss.head should matchPattern { case State(_, _, _) => }
-		ss.head.trick.toString shouldBe "T1 {Play: 0 H2}"
-		ss.tail.head.trick.toString shouldBe "T1 {Play: 0 H4}"
-		ss.init.last.trick.toString shouldBe "T1 {Play: 0 H9}"
-		ss.last.trick.toString shouldBe "T1 {Play: 0 HK}"
-	}
+	// TESTING method which no longer exists
+//	it should "enumerateLeads 1" in {
+//		val deal = Deal("test", 2L)
+//		val whist = Whist(deal, 0)
+//		val state = State(whist)
+//		// NOTE: Figure out all the possible leads from the North's longest and strongest suit.
+//		// Bear in mind that we consider all cards from a "sequence" equivalent.
+//		val ss: Seq[State] = state.enumerateLeads(0, 1)
+//		ss.size shouldBe 4
+//		ss.head should matchPattern { case State(_, _, _) => }
+//		ss.head.trick.toString shouldBe "T1 {Play: 0 H2}"
+//		ss.tail.head.trick.toString shouldBe "T1 {Play: 0 H4}"
+//		ss.init.last.trick.toString shouldBe "T1 {Play: 0 H9}"
+//		ss.last.trick.toString shouldBe "T1 {Play: 0 HK}"
+//	}
 
-	it should "enumerateLeads 2" in {
-		val deal = Deal("test", 2L)
-		val whist = Whist(deal, 0)
-		val hands = deal.hands
-		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
-		val trick = Trick.create(0, CardPlay(deal, 0, Spades, priority1S), CardPlay(deal, 1, Spades, priority2S), CardPlay(deal, 2, Spades, priority3S), CardPlay(deal, 3, Spades, priority4S))
-		// TODO need to sort this out.
-		//		val deal2 = deal.playAll(trick)
-		trick.winner match {
-			case Some(Winner(p, true)) =>
-				val state = State(whist, trick, Tricks(0, 0).increment(trick))
-				val ss: Seq[State] = state.enumerateLeads(p.hand, trick.index + 1)
-				ss.size shouldBe 4
-				ss.head should matchPattern { case State(_, _, _) => }
-				ss.head.trick.toString shouldBe "T1 {Play: 0 H2}"
-				ss.tail.head.trick.toString shouldBe "T1 {Play: 0 H4}"
-				ss.init.last.trick.toString shouldBe "T1 {Play: 0 H9}"
-				ss.last.trick.toString shouldBe "T1 {Play: 0 HK}"
-			case _ => fail("no winner")
-		}
-
-	}
+	// TESTING method which no longer exists
+//	it should "enumerateLeads 2" in {
+//		val deal = Deal("test", 2L)
+//		val whist = Whist(deal, 0)
+//		val hands = deal.hands
+//		val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
+//		val trick = Trick.create(0, CardPlay(deal, 0, Spades, priority1S), CardPlay(deal, 1, Spades, priority2S), CardPlay(deal, 2, Spades, priority3S), CardPlay(deal, 3, Spades, priority4S))
+//		// TODO need to sort this out.
+//		//		val deal2 = deal.playAll(trick)
+//		trick.winner match {
+//			case Some(Winner(p, true)) =>
+//				val state = State(whist, trick, Tricks(0, 0).increment(trick))
+//				val ss: Seq[State] = state.enumerateLeads(p.hand, trick.index + 1)
+//				ss.size shouldBe 4
+//				ss.head should matchPattern { case State(_, _, _) => }
+//				ss.head.trick.toString shouldBe "T1 {Play: 0 H2}"
+//				ss.tail.head.trick.toString shouldBe "T1 {Play: 0 H4}"
+//				ss.init.last.trick.toString shouldBe "T1 {Play: 0 H9}"
+//				ss.last.trick.toString shouldBe "T1 {Play: 0 HK}"
+//			case _ => fail("no winner")
+//		}
+//
+//	}
 
 	it should "enumerateFollows" in {
 		val deal = Deal("test", 2L)
 		deal.output(Output(System.out)).close()
 		val whist = Whist(deal, 0)
-		val trick = Trick(1, Seq(CardPlay(deal, 0, Spades, 1)))
+		val trick = Trick(1, List(CardPlay(deal, 0, Spades, 1)), None)
 		val state = State(whist, trick)
 		val ss = state.enumerateFollows
 		ss.size shouldBe 2

@@ -90,11 +90,11 @@ object Flog {
 	var enabled = true
 
 	/**
-		* The default logging function which logs to the info method of the logger for the Flogger class.
+		* The default logging function which logs to the debug method of the logger for the Flogger class.
 		*/
 	implicit var loggingFunction: LogFunction = getLogger[Flogger]
 
-	def getLogger[T: ClassTag]: LogFunction = LogFunction(LoggerFactory.getLogger(implicitly[ClassTag[T]].runtimeClass).info)
+	def getLogger[T: ClassTag]: LogFunction = LogFunction(LoggerFactory.getLogger(implicitly[ClassTag[T]].runtimeClass).debug)
 
 	/**
 		* Method to generate a log message based on x, pass it to the logFunc, and return the x value.

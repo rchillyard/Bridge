@@ -5,6 +5,7 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.pbn.{DealValue, Game, PBN, PBNParser}
+import com.phasmidsoftware.output.Flog
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.io.Source
@@ -15,6 +16,8 @@ class AnalysisSpec extends FlatSpec with Matchers {
   private val so = Option(getClass.getResourceAsStream("westwood_20190625_1.pbn")) map (Source.fromInputStream(_))
   private val py: Option[PBN] = for (s <- so; p <- PBNParser.parsePBN(s).toOption) yield p
   private val pbn: PBN = py.get
+
+  Flog.enabled = false
 
   behavior of "double dummy analysis"
   it should "analyze deal 0" in {
@@ -47,20 +50,20 @@ class AnalysisSpec extends FlatSpec with Matchers {
     analyzeMakableContracts(game)
   }
 
-  ignore should "analyze deal 16" in {
-    val game = pbn(15)
+  it should "analyze deal 7" in {
+    val game = pbn.last
     analyzeMakableContracts(game)
   }
 
-  it should "analyze deal 7" in {
-    val game = pbn.last
+  it should "analyze deal 16" in {
+    val game = pbn(15)
     analyzeMakableContracts(game)
   }
 
   private def analyzeMakableContracts(game: Game): Unit = {
     val deal = game("Deal").value.asInstanceOf[DealValue].deal
     val detail = game("OptimumResultTable").detail
-    val ntContracts = detail.filter(_.contains("NT"))
+    val ntContracts = detail.filter(_.contains("NT")).filter(_.startsWith("S"))
     val declarerTricksR = """([NESW])\s*NT\s*(\d+)""".r
     ntContracts foreach {
       case declarerTricksR(l, n) =>

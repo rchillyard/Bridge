@@ -33,7 +33,7 @@ trait Node[T] extends Outputable[Unit] {
 		*
 		* @return a sequence of Node[T]
 		*/
-	def children: Seq[Node[T]]
+	def children: List[Node[T]]
 
 	/**
 		* Method to form a Node from a T.
@@ -42,7 +42,7 @@ trait Node[T] extends Outputable[Unit] {
 		* @param tns the nodes which will be the children of the result.
 		* @return a new Node based on t and tns.
 		*/
-	def unit(t: T, tns: Seq[Node[T]]): Node[T]
+	def unit(t: T, tns: List[Node[T]]): Node[T]
 
 	/**
 		* Method to form a Node from a T.
