@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.output.{Loggable, Loggables, Output, Outputable}
+import com.phasmidsoftware.util.{Loggable, Loggables, Output, Outputable}
 
 import scala.language.postfixOps
 
@@ -106,7 +106,7 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     }
     else None
 
-  import com.phasmidsoftware.output.SmartValueOps._
+  import com.phasmidsoftware.util.SmartValueOps._
 
   /**
     * Enumerate the possible plays to follow the current play.

@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.output.{Loggable, Loggables}
+import com.phasmidsoftware.util.{Loggable, Loggables}
 
 import scala.language.implicitConversions
 

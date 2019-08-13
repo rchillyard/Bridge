@@ -7,7 +7,7 @@ package com.phasmidsoftware.bridge.cards
 import java.io.Writer
 
 import com.phasmid.laScala.Shuffle
-import com.phasmidsoftware.output.{Loggable, Loggables, Output, Outputable}
+import com.phasmidsoftware.util.{Loggable, Loggables, Output, Outputable}
 
 import scala.language.postfixOps
 

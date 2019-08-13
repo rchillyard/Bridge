@@ -5,7 +5,7 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.pbn.{DealValue, Game, PBN, PBNParser}
-import com.phasmidsoftware.output.Flog
+import com.phasmidsoftware.util.Flog
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.io.Source

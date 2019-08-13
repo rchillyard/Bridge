@@ -4,8 +4,8 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.bridge.tree.{Expandable, GoalDriven}
-import com.phasmidsoftware.output.{Loggable, Loggables, Output, Outputable}
+import com.phasmidsoftware.decisiontree.{Expandable, GoalDriven}
+import com.phasmidsoftware.util._
 
 import scala.collection.mutable
 import scala.language.implicitConversions
@@ -68,8 +68,8 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
       val cache: mutable.HashMap[(State, Option[State], Int), Either[State, List[State]]] = Expandable.cache[State]
       cache.clear()
 
-      override def result(t: State, to: Option[State], moves: Int)(implicit ev1: GoalDriven[State], ev2: Ordering[State]): Either[State, List[State]] = {
-        import com.phasmidsoftware.output.SmartValueOps._
+      override def result(t: State, to: Option[State], moves: Int)(implicit ev1: GoalDriven[State], ev2: Ordering[State], ev3: Show[State]): Either[State, List[State]] = {
+        import com.phasmidsoftware.util.SmartValueOps._
         val zo = cache.get((t, to, moves))
         zo match {
           case Some(z) =>
@@ -77,19 +77,19 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
             z.debug(s"cache found $t")
             Right(Nil)
           case None =>
-            val z = super.result(t, to, moves)(ev1, ev2)
+            val z = super.result(t, to, moves)(ev1, ev2, ev3)
             cache.put((t, to, moves), z)
             z
         }
       }
 
       override def runaway(t: State): Boolean = {
-        import com.phasmidsoftware.output.Flog._
+        import com.phasmidsoftware.util.Flog._
         "Examining: " !! t
         t.asInstanceOf[State].sequence > 200000
       }
     }
-    val tree = Tree(this)
+    val tree = StateTree(this)
     val node = tree.expand()
     node.output(Output(System.out)).insertBreak().close()
     node.so flatMap (sn => sn.tricks.decide(tricks, directionNS))

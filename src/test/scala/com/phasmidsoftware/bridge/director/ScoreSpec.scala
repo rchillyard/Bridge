@@ -6,7 +6,8 @@ package com.phasmidsoftware.bridge.director
 
 import com.phasmid.laScala.values.Rational
 import com.phasmidsoftware.bridge.director
-import com.phasmidsoftware.output.{MockWriter, Output}
+import com.phasmidsoftware.output.MockWriter
+import com.phasmidsoftware.util.Output
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.io.Source

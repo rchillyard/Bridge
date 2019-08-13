@@ -8,7 +8,8 @@ import java.io.PrintWriter
 
 import com.phasmid.laScala.fp.FP
 import com.phasmid.laScala.values.Rational
-import com.phasmidsoftware.output.{Output, Outputable, Util}
+import com.phasmidsoftware.output.Util
+import com.phasmidsoftware.util.{Output, Outputable}
 
 import scala.io.{BufferedSource, Source}
 import scala.language.postfixOps

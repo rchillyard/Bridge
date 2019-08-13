@@ -7,7 +7,8 @@ package com.phasmidsoftware.bridge.cards
 import java.io.{BufferedWriter, File, FileWriter, PrintWriter}
 
 import com.phasmidsoftware.bridge.pbn.PBNParser
-import com.phasmidsoftware.output.{MockWriter, Output}
+import com.phasmidsoftware.output.MockWriter
+import com.phasmidsoftware.util.Output
 import org.scalatest.{FlatSpec, Matchers}
 
 //noinspection ScalaStyle

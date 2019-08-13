@@ -4,8 +4,8 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.bridge.tree.Fitness
-import com.phasmidsoftware.output.{Loggable, Loggables, Output, Outputable}
+import com.phasmidsoftware.decisiontree.Fitness
+import com.phasmidsoftware.util._
 
 import scala.language.postfixOps
 
@@ -192,6 +192,9 @@ object State {
         s"${implicitly[Loggable[Whist]].toLog(t.whist)}"
   }
 
+  implicit object ShowState extends Show[State] {
+    def show(t: State): String = t.neatOutput
+  }
 }
 
 /**
