@@ -83,11 +83,7 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
         }
       }
 
-      override def runaway(t: State): Boolean = {
-        import com.phasmidsoftware.util.Flog._
-        "Examining: " !! t
-        t.asInstanceOf[State].sequence > 200000
-      }
+      override def runaway(t: State): Boolean = false
     }
     val tree = StateTree(this)
     val node = tree.expand()
@@ -396,9 +392,15 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
 
     def f(play: CardPlay, index: Int): Int = applyStrategy(play, strategy, index, priorityToBeat)
 
+    strategy match {
+      case Discard =>
+        val so: Option[Sequence] = sequences.lastOption
+        so.toList map (s => CardPlay(deal, hand, suit, s.priority))
+      case _ =>
     (for ((s, i) <- sequences.zipWithIndex) yield CardPlay(deal, hand, suit, s.priority) -> i).
       sortBy((f _).tupled).
       map(_._1)
+    }
   }
 
   /**
@@ -626,9 +628,9 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     }
 
     for {
-      // NOTE: first get the holdings from the other suits in order of length
+      // NOTE: first get the lowest holdings from each of the other suits in order of length
       h <- holdings.flatMap { case (k, v) => if (suitsMatch(k)) None else Some(v) }.toList.sortWith(_.length < _.length)
-      ps <- h.choosePlays(deal, index, Duck, None)
+      ps <- h.choosePlays(deal, index, Discard, None)
     } yield ps
   }
 

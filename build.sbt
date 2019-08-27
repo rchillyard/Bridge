@@ -10,7 +10,7 @@ resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/release
 
 libraryDependencies ++= Seq(
   "com.phasmid" %% "lascala" % "1.0.11",
-  "com.phasmidsoftware" %% "decisiontree" % "1.0.0",
+  "com.phasmidsoftware" %% "decisiontree" % "1.0.1-SNAPSHOT",
   "joda-time" % "joda-time" % "2.9.2",
   "org.scala-lang.modules" %% "scala-xml" % "1.0.5",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.5",

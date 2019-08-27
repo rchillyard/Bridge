@@ -11,7 +11,7 @@ import org.scalatest.{FlatSpec, Matchers}
 import scala.io.Source
 
 //noinspection ScalaStyle
-class AnalysisSpec extends FlatSpec with Matchers {
+class ProblemSpec extends FlatSpec with Matchers {
 
   State.count = 0
   private val so = Option(getClass.getResourceAsStream("westwood_20190625_1.pbn")) map (Source.fromInputStream(_))
@@ -21,43 +21,9 @@ class AnalysisSpec extends FlatSpec with Matchers {
   Flog.enabled = false
 
   behavior of "double dummy analysis"
-  it should "analyze deal 0" in {
-    val game = pbn.head
-    analyzeMakableContracts(game)
-  }
-
-  it should "analyze deal 1" in {
-    val game = pbn(1)
-    analyzeMakableContracts(game)
-  }
-
-  it should "analyze deal 2" in {
-    val game = pbn(2)
-    analyzeMakableContracts(game)
-  }
-
-  it should "analyze deal 3" in {
-    val game = pbn(3)
-    analyzeMakableContracts(game)
-  }
-
-  it should "analyze deal 4" in {
-    val game = pbn(4)
-    analyzeMakableContracts(game)
-  }
-
-  it should "analyze deal 5" in {
-    val game = pbn(5)
-    analyzeMakableContracts(game)
-  }
-
-  it should "analyze deal 7" in {
-    val game = pbn.last
-    analyzeMakableContracts(game)
-  }
-
   ignore should "analyze deal 16" in {
     val game = pbn(15)
+    println(game)
     analyzeMakableContracts(game)
   }
 
