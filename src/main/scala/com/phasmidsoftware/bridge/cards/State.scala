@@ -28,13 +28,6 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
     */
   def enumeratePlays: List[State] = _enumeratePlays
 
-  //	TODO make private
-  // TODO eliminate since this is only ever called from Spec files
-  lazy val enumerateFollows: List[State] = trick.next match {
-    case Some(t) => whist.makeStates(tricks, for (p <- deal.hands(t).choosePlays(deal, trick)) yield trick :+ p)
-    case None => throw CardException(s"State: $this cannot be followed")
-  }
-
   /**
     * NOTE: this is used only in unit tests
     *

@@ -61,33 +61,10 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
     */
   def analyzeDoubleDummy(tricks: Int, directionNS: Boolean): Option[Boolean] = {
     implicit val sg: GoalDriven[State] = Whist.goal(tricks, directionNS)
-    implicit val se: Expandable[State] = new Expandable[State] {
-      def successors(t: State): List[State] = t.enumeratePlays
-
-      // TODO remove this cache. It does NOT speed things up--it's only to try to determine infinite loop
-      val cache: mutable.HashMap[(State, Option[State], Int), Either[State, List[State]]] = Expandable.cache[State]
-      cache.clear()
-
-      override def result(t: State, to: Option[State], moves: Int)(implicit ev1: GoalDriven[State], ev2: Ordering[State], ev3: Show[State]): Either[State, List[State]] = {
-        import com.phasmidsoftware.util.SmartValueOps._
-        val zo = cache.get((t, to, moves))
-        zo match {
-          case Some(z) =>
-            val q = cache.keys.find(x => x == (t, to, moves))
-            z.debug(s"cache found $t")
-            Right(Nil)
-          case None =>
-            val z = super.result(t, to, moves)(ev1, ev2, ev3)
-            cache.put((t, to, moves), z)
-            z
-        }
-      }
-
-      override def runaway(t: State): Boolean = false
-    }
+    implicit val se: Expandable[State] = (t: State) => t.enumeratePlays
     val tree = StateTree(this)
     val node = tree.expand()
-    node.output(Output(System.out)).insertBreak().close()
+//    node.output(Output(System.out)).insertBreak().close()
     node.so flatMap (sn => sn.tricks.decide(tricks, directionNS))
   }
 
@@ -361,6 +338,7 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     * @return a sequence of all possible plays, starting with the ones most suited to the appropriate strategy.
     */
   def choosePlays(deal: Deal, hand: Int, trick: Trick): List[CardPlay] = {
+    // TODO eliminate this method: it never results in Discard
     def suitMatches(x: Strategy) = trick.suit match {
       case Some(`suit`) => x;
       case _ => Discard
@@ -374,7 +352,6 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
       case 3 => suitMatches(Cover)
       case x => throw CardException(s"too many prior plays: $x")
     }
-
     choosePlays(deal, hand, strategy, trick.winner)
   }
 
@@ -393,7 +370,7 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     val priorityToBeat = (currentWinner map (_.priorityToBeat(hand))).getOrElse(Rank.lowestPriority)
     strategy match {
       case Discard =>
-        sequences.lastOption.toList map (s => createPlay(s.priority)) sortBy (-_.priority)
+        sequences.lastOption.toList map (s => createPlay(s.priority))
       case Finesse if priorityToBeat > Rank.honorPriority =>
         chooseNonDiscardPlays(createPlay, WinIt, priorityToBeat)
       case _ =>
@@ -643,11 +620,16 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
       case _ => false
     }
 
-    for {
-      // NOTE: first get the lowest holdings from each of the other suits in order of length
-      h <- holdings.flatMap { case (k, v) => if (suitsMatch(k)) None else Some(v) }.toList.sortWith(_.length < _.length)
+    val plays = for {
+      // XXX get the holdings from each of the other suits.
+      h <- holdings.flatMap { case (k, v) => if (suitsMatch(k)) None else Some(v) }.toList
+      // XXX for each holding, get the lowest ranked card
       ps <- h.choosePlays(deal, index, Discard, None)
     } yield ps
+
+    // XXX sort the (one, two, or three) cards such that we try the least worthy first.
+    // NOTE: that we use current priority, not rank here.
+    plays.sortBy(-_.priority)
   }
 
   /**

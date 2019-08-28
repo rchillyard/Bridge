@@ -9,3 +9,5 @@ target/
 hand1\.pbn
 
 logs/
+
+lib/

@@ -5,7 +5,6 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.pbn.{DealValue, Game, PBN, PBNParser}
-import com.phasmidsoftware.util.Flog
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.io.Source
@@ -18,7 +17,7 @@ class ProblemSpec extends FlatSpec with Matchers {
   private val py: Option[PBN] = for (s <- so; p <- PBNParser.parsePBN(s).toOption) yield p
   private val pbn: PBN = py.get
 
-  Flog.enabled = false
+  //  Flog.enabled = false
 
   behavior of "double dummy analysis"
   // NOTE: there is another copy of this test in the functional specs. It currently takes 19 seconds to run this test.

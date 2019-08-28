@@ -5,13 +5,17 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.pbn.{DealValue, Game, PBN, PBNParser}
+import org.scalatest.concurrent.TimeLimitedTests
+import org.scalatest.time.{Seconds, Span}
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.io.Source
 import scala.util.Try
 
 //noinspection ScalaStyle
-class WhistPBNSpec extends FlatSpec with Matchers {
+class WhistPBNSpec extends FlatSpec with Matchers with TimeLimitedTests{
+
+  val timeLimit = Span(10, Seconds)
 
   private val py: Try[PBN] = PBNParser.parsePBN(Source.fromResource("com/phasmidsoftware/bridge/director/LEXINGTON 2016.2.9.PBN"))
   private val pbn: PBN = py.get
@@ -42,6 +46,7 @@ class WhistPBNSpec extends FlatSpec with Matchers {
     analyzeMakableContracts(game)
   }
 
+  // 8 seconds
   it should "analyze deal 5" in {
     val game = pbn(5)
     analyzeMakableContracts(game)
@@ -60,7 +65,7 @@ class WhistPBNSpec extends FlatSpec with Matchers {
   private def analyzeMakableContracts(game: Game): Unit = {
     val deal = game("Deal").value.asInstanceOf[DealValue].deal
     val detail = game("OptimumResultTable").detail
-    val ntContracts = detail.filter(_.contains("NT"))
+    val ntContracts = detail.filter(_.contains("NT")).filter(_.startsWith("S"))
     val declarerTricksR = """([NESW])\s*NT\s*(\d+)""".r
     ntContracts foreach {
       case declarerTricksR(l, n) =>

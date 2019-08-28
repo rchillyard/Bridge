@@ -210,17 +210,6 @@ object Rank {
   }
 
   /**
-    * Method to yield a Rank from a priority value.
-    * 0 should yield Ace, 2 should yield Deuce.
-    *
-    * TODO this appears not to be used.
-    *
-    * @param priority the given priority
-    * @return a Rank.
-    */
-  def fromPriority(priority: Int): Rank = apply(lowestPriority - priority)
-
-  /**
     * The priority of a Ten: 4
     */
   val honorPriority: Int = Ten.priority

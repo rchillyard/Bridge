@@ -54,17 +54,17 @@ class StateTreeSpec extends FlatSpec with Matchers {
     writer.spilled shouldBe 9
   }
 
-  it should "enumerateFollows" in {
-    val deal = Deal("test", 2L)
-    deal.output(Output(System.out)).close()
-    val whist = Whist(deal, 0)
-    val trick = Trick(1, List(CardPlay(deal, 0, Spades, 1)), None)
-    val state = State(whist, trick)
-    val ss = state.enumerateFollows
-    ss.size shouldBe 2
-    ss.head.trick.toString shouldBe "T1 {SK, S4}"
-    ss.last.trick.toString shouldBe "T1 {SK, SJ}"
-  }
+//  it should "enumerateFollows" in {
+//    val deal = Deal("test", 2L)
+//    deal.output(Output(System.out)).close()
+//    val whist = Whist(deal, 0)
+//    val trick = Trick(1, List(CardPlay(deal, 0, Spades, 1)), None)
+//    val state = State(whist, trick)
+//    val ss = state.enumerateFollows
+//    ss.size shouldBe 2
+//    ss.head.trick.toString shouldBe "T1 {SK, S4}"
+//    ss.last.trick.toString shouldBe "T1 {SK, SJ}"
+//  }
 
   it should "expand 1" in {
     implicit val whistGoal: GoalDriven[State] = Whist.goal(1, _directionNS = true, 1)

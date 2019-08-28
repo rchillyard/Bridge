@@ -5,20 +5,23 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.pbn.{DealValue, Game, PBN, PBNParser}
-import com.phasmidsoftware.util.Flog
+import org.scalatest.concurrent.TimeLimitedTests
+import org.scalatest.time.{Seconds, Span}
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.io.Source
 
 //noinspection ScalaStyle
-class AnalysisSpec extends FlatSpec with Matchers {
+class AnalysisSpec extends FlatSpec with Matchers with TimeLimitedTests {
+
+  val timeLimit = Span(23, Seconds)
 
   State.count = 0
   private val so = Option(getClass.getResourceAsStream("westwood_20190625_1.pbn")) map (Source.fromInputStream(_))
   private val py: Option[PBN] = for (s <- so; p <- PBNParser.parsePBN(s).toOption) yield p
   private val pbn: PBN = py.get
 
-  Flog.enabled = false
+  //  Flog.enabled = false
 
   behavior of "double dummy analysis"
   it should "analyze deal 0" in {
@@ -36,6 +39,7 @@ class AnalysisSpec extends FlatSpec with Matchers {
     analyzeMakableContracts(game)
   }
 
+  // 22 seconds
   it should "analyze deal 3" in {
     val game = pbn(3)
     analyzeMakableContracts(game)
@@ -48,6 +52,11 @@ class AnalysisSpec extends FlatSpec with Matchers {
 
   it should "analyze deal 5" in {
     val game = pbn(5)
+    analyzeMakableContracts(game)
+  }
+
+  it should "analyze deal 6" in {
+    val game = pbn(6)
     analyzeMakableContracts(game)
   }
 
@@ -76,5 +85,3 @@ class AnalysisSpec extends FlatSpec with Matchers {
     }
   }
 }
-
-
