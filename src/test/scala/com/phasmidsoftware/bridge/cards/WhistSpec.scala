@@ -173,9 +173,4 @@ class WhistSpec extends FlatSpec with Matchers {
     val whist = Whist(target, 3)
     whist.analyzeDoubleDummy(9, directionNS = true) shouldBe Some(true)
   }
-  it should "analyzeDoubleDummy0" in {
-    val target = Deal("test", 0L)
-    val whist = Whist(target, 0)
-    whist.analyzeDoubleDummy(9, directionNS = false) shouldBe Some(true)
-  }
 }

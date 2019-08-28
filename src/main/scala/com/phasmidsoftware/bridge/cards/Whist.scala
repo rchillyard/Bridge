@@ -370,7 +370,7 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     lazy val strategy: Strategy = trick.size match {
       case 0 => if (hasHonorSequence) LeadHigh else FourthBest
       case 1 => suitMatches(if (trick.isHonorLed || realSequences.nonEmpty) Cover else Duck)
-      case 2 => suitMatches(Finesse)
+      case 2 => suitMatches(Finesse) // XXX becomes WinIt if card to beat isn't an honor
       case 3 => suitMatches(Cover)
       case x => throw CardException(s"too many prior plays: $x")
     }
@@ -388,19 +388,25 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     * @return a sequence of CardPlay objects.
     */
   def choosePlays(deal: Deal, hand: Int, strategy: Strategy, currentWinner: Option[Winner]): List[CardPlay] = {
+    def createPlay(priority: Int): CardPlay = CardPlay(deal, hand, suit, priority)
+
     val priorityToBeat = (currentWinner map (_.priorityToBeat(hand))).getOrElse(Rank.lowestPriority)
-
-    def f(play: CardPlay, index: Int): Int = applyStrategy(play, strategy, index, priorityToBeat)
-
     strategy match {
       case Discard =>
-        val so: Option[Sequence] = sequences.lastOption
-        so.toList map (s => CardPlay(deal, hand, suit, s.priority))
+        sequences.lastOption.toList map (s => createPlay(s.priority)) sortBy (-_.priority)
+      case Finesse if priorityToBeat > Rank.honorPriority =>
+        chooseNonDiscardPlays(createPlay, WinIt, priorityToBeat)
       case _ =>
-    (for ((s, i) <- sequences.zipWithIndex) yield CardPlay(deal, hand, suit, s.priority) -> i).
+        chooseNonDiscardPlays(createPlay, strategy, priorityToBeat)
+    }
+  }
+
+  private def chooseNonDiscardPlays(createPlay: Int => CardPlay, strategy: Strategy, priorityToBeat: Int) = {
+    def f(play: CardPlay, index: Int): Int = applyStrategy(play, strategy, priorityToBeat)
+
+    (for ((s, i) <- sequences.zipWithIndex) yield createPlay(s.priority) -> i).
       sortBy((f _).tupled).
       map(_._1)
-    }
   }
 
   /**
@@ -466,18 +472,27 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     *
     * @param play          a potential card play.
     * @param strategy      the required strategy.
-    * @param index         the index of the sequence from which this play arises.
     * @param currentWinner the priority of the card play which is currently winning this trick.
-    * @return a relatively low number if this matches the given strategy, otherwise a high number.
+    * @return a relatively low number (e.g. 0) if this matches the given strategy, otherwise a high number.
     */
   //	private
-  def applyStrategy(play: CardPlay, strategy: Strategy, index: Int, currentWinner: Int): Int = {
-    val rank = Rank.lowestPriority - play.priority // XXX the value according to the rank of the played card.
-    if (play.suit != suit) rank // XXX discard situation: prefer the lowest ranking card.
-    else if (strategy.winIfPossible) play.priority // XXX best card to use is the highest ranking.
-    else if (strategy.finesse) if (index == 1 && play.priority < currentWinner) 0 else play.priority
-    else if (strategy.split) if (sequences(index).length > 1 && play.priority < currentWinner) 0 else play.priority
-    else rank // XXX ducking: prefer the the lowest ranking card.
+  def applyStrategy(play: CardPlay, strategy: Strategy, currentWinner: Int): Int = {
+    lazy val rank = 2 * Rank.lowestPriority - play.priority // XXX the rank of the played card plus 14
+
+    def applyPotentialWinStrategy =
+      if (strategy.conditional)
+        currentWinner - play.priority // XXX prefer the card that wins by the slimmest margin (always positive)
+      else if (strategy.win)
+        play.priority // XXX play high.
+      else
+        rank // XXX play low.
+
+    if (play.suit != suit)
+      rank // XXX discard situation: prefer the lowest ranking card. Is this condition ever used?
+    else if (play.priority < currentWinner) // XXX can we win this trick if we want to?
+      applyPotentialWinStrategy
+    else
+      rank // XXX play low.
   }
 
   private lazy val _quit = {
@@ -554,6 +569,7 @@ object Holding {
   /**
     * An ordering for Ranks.
     * Lower priorities precede higher priorities.
+    * TODO merge with duplicate code.
     */
   implicit object RankOrdering extends Ordering[Rank] {
     override def compare(x: Rank, y: Rank): Int = -x.priority + y.priority
@@ -817,37 +833,34 @@ object Hand {
   */
 trait Strategy {
   /**
-    * @return true if we always play the highest card if it will beat the existing cards.
+    * @return true if the card played depends on its whether we can beat the current winner;
+    *         false if we always play the same card.
     */
-  val winIfPossible: Boolean
+  val conditional: Boolean
 
   /**
-    * @return true if we want to play an intermediate card that beats the current highest in the hope of winning.
-    *         Typically, this may mean choosing the second sequence from a holding.
+    * @return true if we want to try to win the trick if possible.
+    *         false if we are OK with not winning the trick.
     */
-  val finesse: Boolean
+  val win: Boolean
 
-  /**
-    * @return true if we want to play from a sequence that is higher than the current highest.
-    */
-  val split: Boolean
 }
 
-abstract class BaseStrategy(val winIfPossible: Boolean, val finesse: Boolean, val split: Boolean) extends Strategy
+abstract class BaseStrategy(val win: Boolean, val conditional: Boolean) extends Strategy
 
-case object FourthBest extends BaseStrategy(false, false, false)
+case object WinIt extends BaseStrategy(true, false)
 
-case object LeadHigh extends BaseStrategy(true, false, true)
+case object LeadHigh extends BaseStrategy(true, false)
 
-case object Cover extends BaseStrategy(false, true, true)
+case object Cover extends BaseStrategy(false, true)
 
-case object WinIt extends BaseStrategy(true, false, false)
+case object Finesse extends BaseStrategy(true, true)
 
-case object Duck extends BaseStrategy(false, false, false)
+case object FourthBest extends BaseStrategy(false, false)
 
-case object Finesse extends BaseStrategy(false, true, false)
+case object Duck extends BaseStrategy(false, false)
 
-case object Discard extends BaseStrategy(false, false, false)
+case object Discard extends BaseStrategy(false, false)
 
 /**
   * Trait to describe behavior of a type which can experience the play of a card.

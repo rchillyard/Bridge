@@ -146,7 +146,7 @@ class StateSpec extends FlatSpec with Matchers {
     val state5alternatives = state40.enumeratePlays
     val target = state5alternatives.head
     target.neatOutput shouldBe
-      """State: Trick History: "T1 {H2, H7, HT, HJ}, T2 {D5}" 0:1 4.0 Deal test (47) List(S95 HQ943 D64 CT652, SK742 HA DT93 CAQJ7, SAJT86 HK8 DK82 CK3, SQ3 H65 DAQJ7 C984)""".stripMargin
+      """State: Trick History: "T1 {H2, H7, HK, H5}, T2 {S6}" 1:0 4.7 Deal test (47) List(S95 HQ943 D64 CT652, SK742 HA DT93 CAQJ7, SAJT8 HT8 DK82 CK3, SQ3 HJ6 DAQJ75 C984)""".stripMargin
   }
 
 }

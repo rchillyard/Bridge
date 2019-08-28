@@ -62,8 +62,8 @@ class StateTreeSpec extends FlatSpec with Matchers {
     val state = State(whist, trick)
     val ss = state.enumerateFollows
     ss.size shouldBe 2
-    ss.head.trick.toString shouldBe "T1 {SK, SJ}"
-    ss.last.trick.toString shouldBe "T1 {SK, S4}"
+    ss.head.trick.toString shouldBe "T1 {SK, S4}"
+    ss.last.trick.toString shouldBe "T1 {SK, SJ}"
   }
 
   it should "expand 1" in {
