@@ -12,8 +12,5 @@ As it stands, the tree package is concerned with MCTS. The specifics of the
 double dummy analysis are provided through type classes which are defined in, for example,
 the Whist class.
 
-At present, the analysis works for most of the examples provided.
-However, there is one where it doesn't work and, if we don't keep track of the number of states
-visited, will go for ever.
-I would like to understand why!
+For the tree search, we use DecisionTree.
 
