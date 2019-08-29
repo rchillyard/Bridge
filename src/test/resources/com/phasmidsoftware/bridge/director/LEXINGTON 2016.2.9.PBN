@@ -29,8 +29,9 @@
 %HtmlHearts entity,"http://bridgecomposer.com/suitimg/h.gif"
 %HtmlDiamonds entity,"http://bridgecomposer.com/suitimg/d.gif"
 %HtmlClubs entity,"http://bridgecomposer.com/suitimg/c.gif"
-[Event "Bb3"]
-[Site ""]
+[Event "Bb3"] { this...
+ ... is ignored }
+[Site ""] ; this is also ignored
 [Date "2016.01.28"]
 [Board "1"]
 [West ""]

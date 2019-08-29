@@ -5,3 +5,9 @@ target/
 *.log
 
 \.idea/
+
+hand1\.pbn
+
+logs/
+
+lib/

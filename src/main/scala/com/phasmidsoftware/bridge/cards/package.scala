@@ -4,6 +4,6 @@
 
 package com.phasmidsoftware.bridge
 
-package object director {
+package object cards {
 
 }

@@ -1,0 +1,78 @@
+Testing started at 15:41 ...
+/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/bin/java "-javaagent:/Applications/IntelliJ IDEA 2.app/Contents/lib/idea_rt.jar=60339:/Applications/IntelliJ IDEA 2.app/Contents/bin" -Dfile.encoding=UTF-8 -classpath "/Users/rhillyard/Library/Application Support/IntelliJIdea2019.2/Scala/lib/runners.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/charsets.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/deploy.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/ext/cldrdata.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/ext/dnsns.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/ext/jaccess.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/ext/jfxrt.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/ext/localedata.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/ext/nashorn.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/ext/sunec.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/ext/sunjce_provider.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/ext/sunpkcs11.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/ext/zipfs.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/javaws.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/jce.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/jfr.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/jfxswt.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/jsse.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/management-agent.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/plugin.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/resources.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/jre/lib/rt.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/lib/ant-javafx.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/lib/dt.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/lib/javafx-mx.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/lib/jconsole.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/lib/packager.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/lib/sa-jdi.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_152.jdk/Contents/Home/lib/tools.jar:/Users/rhillyard/IdeaProjects/Bridge/target/scala-2.12/test-classes:/Users/rhillyard/IdeaProjects/Bridge/target/scala-2.12/classes:/Users/rhillyard/.ivy2/local/com.phasmid/lascala_2.12/1.0.11/jars/lascala_2.12.jar:/Users/rhillyard/.ivy2/local/com.phasmidsoftware/decisiontree_2.12/1.0.1-SNAPSHOT/jars/decisiontree_2.12.jar:/Users/rhillyard/.ivy2/cache/org.slf4j/slf4j-api/jars/slf4j-api-1.7.25.jar:/Users/rhillyard/.ivy2/cache/org.scalatest/scalatest_2.12/bundles/scalatest_2.12-3.0.5.jar:/Users/rhillyard/.ivy2/cache/org.scalactic/scalactic_2.12/bundles/scalactic_2.12-3.0.5.jar:/Users/rhillyard/.ivy2/cache/org.scala-lang.modules/scala-xml_2.12/bundles/scala-xml_2.12-1.0.6.jar:/Users/rhillyard/.ivy2/cache/org.scala-lang.modules/scala-parser-combinators_2.12/bundles/scala-parser-combinators_2.12-1.0.5.jar:/Users/rhillyard/.ivy2/cache/org.scala-lang/scala-reflect/jars/scala-reflect-2.12.5.jar:/Users/rhillyard/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.12.5.jar:/Users/rhillyard/.ivy2/cache/joda-time/joda-time/jars/joda-time-2.9.2.jar:/Users/rhillyard/.ivy2/cache/io.spray/spray-json_2.12/bundles/spray-json_2.12-1.3.2.jar:/Users/rhillyard/.ivy2/cache/com.typesafe/config/bundles/config-1.3.1.jar:/Users/rhillyard/.ivy2/cache/ch.qos.logback/logback-classic/jars/logback-classic-1.2.3.jar:/Users/rhillyard/.ivy2/cache/ch.qos.logback/logback-core/jars/logback-core-1.2.3.jar:/Users/rhillyard/.ivy2/cache/com.typesafe.scala-logging/scala-logging_2.12/bundles/scala-logging_2.12-3.9.2.jar" org.jetbrains.plugins.scala.testingSupport.scalaTest.ScalaTestRunner -s com.phasmidsoftware.bridge.cards.ProblemSpec -C org.jetbrains.plugins.scala.testingSupport.scalaTest.ScalaTestReporter -showProgressMessages true
+15:41:33,407 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found resource [logback-test.xml] at [file:/Users/rhillyard/IdeaProjects/Bridge/target/scala-2.12/test-classes/logback-test.xml]
+15:41:33,484 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
+15:41:33,487 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - Naming appender as [STDOUT]
+15:41:33,494 |-INFO in ch.qos.logback.core.joran.action.NestedComplexPropertyIA - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+15:41:33,535 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - About to instantiate appender of type [ch.qos.logback.core.FileAppender]
+15:41:33,538 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - Naming appender as [FILE]
+15:41:33,540 |-INFO in ch.qos.logback.core.joran.action.NestedComplexPropertyIA - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+15:41:33,541 |-INFO in ch.qos.logback.core.FileAppender[FILE] - File property is set to [logs/testing.log]
+15:41:33,543 |-INFO in ch.qos.logback.classic.joran.action.RootLoggerAction - Setting level of ROOT logger to DEBUG
+15:41:33,543 |-INFO in ch.qos.logback.core.joran.action.AppenderRefAction - Attaching appender named [FILE] to Logger[ROOT]
+15:41:33,544 |-INFO in ch.qos.logback.classic.joran.action.RootLoggerAction - Setting level of ROOT logger to DEBUG
+15:41:33,544 |-INFO in ch.qos.logback.core.joran.action.AppenderRefAction - Attaching appender named [STDOUT] to Logger[ROOT]
+15:41:33,544 |-INFO in ch.qos.logback.classic.joran.action.ConfigurationAction - End of configuration.
+15:41:33,545 |-INFO in ch.qos.logback.classic.joran.JoranConfigurator@618b19ad - Registering current configuration as safe fallback point
+
+
+
+
+
+Game: Map(Vulnerable -> "EW" , South -> "" , West -> "" , ScoreTable -> "SetValue(List(PairId_NS\4R, PairId_EW\4R, Contract\5L, Declarer\1R, Result\2R))" 1    9    2H    W  8,2    12   3S*   S  8,3    14   4H    W  7,4    16   3H    W  7,5    2    3S    S  7,6    4    4H*   W  7,7    6    2S    S  9,8    8    4H*   W  8,13   1    3S*   S  8,14   3    4H    W  5,15   5    2H    W  8,16   7    4H    W  6, Date -> "" , Dealer -> "W" , Site -> "Westwood Duplicate Bridge Club" , Scoring -> "MP" , OptimumResultTable -> "SetValue(List(Declarer, Denomination\2R, Result\2R))" N  S  9,N  H  6,N  D 10,N  C 10,N NT  8,E  S  4,E  H  7,E  D  3,E  C  3,E NT  5,S  S  9,S  H  6,S  D 10,S  C 10,S NT  8,W  S  4,W  H  7,W  D  3,W  C  3,W NT  5, Board -> "16" , Event -> "Silver Points Pairs" , DoubleDummyTricks -> "896aa896aa5473354733" , Result -> "?" , North -> "" , East -> "" , Contract -> "?" , Deal -> "DealValue(W,List(List(J, Q98763, 976, K86), List(7, T2, AJ542, AT974), List(AK93, AJ4, QT8, 532), List(QT86542, K5, K3, QJ)))" , Declarer -> "?" )
+analyzeDoubleDummy: tricks=8, declarer=S, leader=3
+2019-08-27 15:42:21,161 DEBUG c.p.util.SmartValueOps$  - Testing 100000th state: State: Trick History: "T1 {H3, H2, HA, HK}, T2 {S3, ST, SJ, S7}, T3 {H6, HT, HJ, H5}, T4 {SK, SQ, H7, C4}, T5 {D8, DK, D6, DJ}, T6 {S2, H8, C7, S9}, T7 {C6, C9, C2}" 1:5 5.8 Deal  (25) List(S- H- DA542 CAT, SA H4 DQT C53, S8654 H- D3 CQJ, S- HQ9 D97 CK8)
+2019-08-27 15:43:08,764 DEBUG c.p.util.SmartValueOps$  - Testing 200000th state: State: Trick History: "T1 {H3, H2, HA, HK}, T2 {S3, ST, SJ, S7}, T3 {H6, HT, HJ, H5}, T4 {SK, S2, D6, D2}, T5 {DQ, DK, D9, DA}, T6 {CA, C5, CJ, CK}, T7 {C4, C2, CQ, C6}, T8 {S4, D7, D4, S9}, T9 {H7, D5, H4}" 3:5 8.6 Deal  (17) List(S- H- DJ CT97, SA H- DT8 C3, SQ865 H- D3 C-, S- HQ98 D- C8)
+2019-08-27 15:43:39,354 DEBUG c.p.util.SmartValueOps$  - Testing 300000th state: State: Trick History: "T1 {H3, H2, HA, HK}, T2 {S3, ST, SJ, S7}, T3 {H6, HT, HJ, H5}, T4 {SK, S2, H7, D2}, T5 {D8, D3, D6, DA}, T6 {CA, C2, CJ, CK}, T7 {C9, C3, CQ, C6}, T8 {SQ, D7, C4, SA}, T9 {H8}" 3:5 7.9 Deal  (19) List(S- H- DJ54 CT7, S9 H4 DQT C5, S8654 H- DK C-, S- HQ9 D9 C8)
+2019-08-27 15:44:47,676 DEBUG c.p.util.SmartValueOps$  - Testing 400000th state: State: Trick History: "T1 {H3, H2, HA, HK}, T2 {S3, ST, SJ, S7}, T3 {H6, HT, HJ, H5}, T4 {SK, S2, H7, D2}, T5 {DQ, DK, D6, DA}, T6 {CA, C2, CJ, CK}, T7 {C7, C3, CQ, C6}, T8 {S4, C8, D4, SA}" 3:5 9.1 Deal  (20) List(S- H- DJ5 CT94, S9 H4 DT8 C5, SQ865 H- D3 C-, S- HQ98 D97 C-)
+2019-08-27 15:45:22,244 DEBUG c.p.util.SmartValueOps$  - Testing 500000th state: State: Trick History: "T1 {H3, H2, HA, HK}, T2 {S3, ST, SJ, S7}, T3 {H6, HT, H4, H5}, T4 {D2, D8, DK, D9}, T5 {S2, D6, D4, SK}, T6 {H7, D5, HJ, D3}, T7 {CA, C2, CJ, CK}, T8 {C4, C3, CQ, C8}, T9 {SQ, C6, DJ, SA}, T10 {H8, DA, DT, S4}, T11 {H9, C7, C5}" 5:5 8.5 Deal  (9) List(S- H- D- CT9, S9 H- DQ C-, S865 H- D- C-, S- HQ D7 C-)
+2019-08-27 15:45:59,867 INFO  c.p.util.SmartValueOps$  - Goal achieved for state: State: Trick History: "T1 {H3, H2, HA, HK}, T2 {S3, ST, SJ, S7}, T3 {H6, HT, H4, H5}, T4 {D2, D8, DK, D9}, T5 {S2, D6, D4, SK}, T6 {H7, D5, HJ, CJ}, T7 {CA, C5, CQ, CK}, T8 {C9, C2, D3, C8}, T9 {C7, C3, S4, C6}, T10 {DA, DQ, S5, D7}, T11 {C4, DT, S6, H8}" 8:3 10.8 Deal  (8) List(S- H- DJ CT, SA9 H- D- C-, SQ8 H- D- C-, S- HQ9 D- C-)
+T0  (4.7)
+  T1 W:H3 (4.7)
+    T1 N:H2 (4.7)
+      T1 E:HA (4.7)
+        T1 S:HK (4.4)
+          T2 E:S3 (4.4)
+            T2 S:ST (4.2)
+              T2 W:SJ (4.2)
+                T2 N:S7 (4.7)
+                  T3 W:H6 (4.7)
+                    T3 N:HT (4.5)
+                      T3 E:H4 (4.5)
+                        T3 S:H5 (5.5)
+                          T4 N:D2 (5.5)
+                            T4 E:D8 (5.5)
+                              T4 S:DK (5.0)
+                                T4 W:D9 (6.3)
+                                  T5 S:S2 (6.2)
+                                    T5 W:D6 (6.2)
+                                      T5 N:D4 (6.1)
+                                        T5 E:SK (7.0)
+                                          T6 W:H7 (7.0)
+                                            T6 N:D5 (6.8)
+                                              T6 E:HJ (6.8)
+                                                T6 S:CJ (7.9)
+                                                  T7 N:CA (6.6)
+                                                    T7 E:C5 (6.6)
+                                                      T7 S:CQ (6.4)
+                                                        T7 W:CK (9.8)
+                                                          T8 N:C9 (8.4)
+                                                            T8 E:C2 (8.4)
+                                                              T8 S:D3 (8.4)
+                                                                T8 W:C8 (10.5)
+                                                                  T9 N:C7 (9.2)
+                                                                    T9 E:C3 (9.2)
+                                                                      T9 S:S4 (9.0)
+                                                                        T9 W:C6 (10.8)
+                                                                          T10 N:DA (9.5)
+                                                                            T10 E:DQ (9.5)
+                                                                              T10 S:S5 (9.2)
+                                                                                T10 W:D7 (11.0)
+                                                                                  T11 N:C4 (10.0)
+                                                                                    T11 E:DT (10.0)
+                                                                                      T11 S:S6 (9.8)
+                                                                                        T11 W:H8 (10.8)
+
+
+
+Process finished with exit code 0
