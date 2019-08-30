@@ -15,7 +15,7 @@ import scala.util.Try
 //noinspection ScalaStyle
 class WhistPBNSpec extends FlatSpec with Matchers with TimeLimitedTests{
 
-  val timeLimit = Span(10, Seconds)
+  val timeLimit = Span(3, Seconds)
 
   private val py: Try[PBN] = PBNParser.parsePBN(Source.fromResource("com/phasmidsoftware/bridge/director/LEXINGTON 2016.2.9.PBN"))
   private val pbn: PBN = py.get
@@ -46,7 +46,7 @@ class WhistPBNSpec extends FlatSpec with Matchers with TimeLimitedTests{
     analyzeMakableContracts(game)
   }
 
-  // 8 seconds
+  // 2.25 seconds
   it should "analyze deal 5" in {
     val game = pbn(5)
     analyzeMakableContracts(game)

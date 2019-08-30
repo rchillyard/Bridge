@@ -1,6 +1,6 @@
 name := "Bridge"
 
-version := "1.0.1"
+version := "1.0.2-SNAPSHOT"
 
 scalaVersion := "2.12.5"
 

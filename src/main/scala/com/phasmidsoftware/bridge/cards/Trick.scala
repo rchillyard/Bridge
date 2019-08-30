@@ -198,6 +198,8 @@ case class Winner(play: CardPlay, complete: Boolean) {
   def sameSide(hand: Int): Boolean = Hand.sameSide(hand, play.hand)
 
   def priorityToBeat(hand: Int): Int = if (sameSide(hand)) Rank.lowestPriority else play.priority
+
+  def partnerIsWinning(hand: Int): Boolean = play.isHonor && sameSide(hand)
 }
 
 /**
