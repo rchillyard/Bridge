@@ -83,8 +83,8 @@ class StateSpec extends FlatSpec with Matchers {
   }
 
   it should "toString" in {
-    val target = State.create(whist, trick0 :+ play0, tricks0)
-    target.toString shouldBe "State(Whist(Deal test (51),0),T1 {S5},0:0)"
+    val target: State = State.create(whist, trick0 :+ play0, tricks0)
+    target.toString shouldBe "State(Whist(Deal test (51), N, NT),T1 {S5},0:0)"
   }
 
   it should "neatOutput" in {

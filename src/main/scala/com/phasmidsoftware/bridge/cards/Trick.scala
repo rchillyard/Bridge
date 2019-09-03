@@ -111,12 +111,14 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
   /**
     * Enumerate the possible plays to follow the current play.
     *
+    * TODO move this into Whist?
+    *
     * @param whist the current game (only needed when the opening lead is being made) ???
     * @return a sequence of Trick instances, each based on:
     *         (1) the current trick if we are following;
     *         (2) a new trick if we are leading.
     */
-  def enumerateSubsequentPlays(whist: Whist): List[Trick] = enumerateSubsequentPlays(whist.deal, whist.openingLeader).invariant(ts => ts.nonEmpty)
+  def enumerateSubsequentPlays(whist: Whist): List[Trick] = enumerateSubsequentPlays(whist.deal, whist.openingLeader, whist.maybeTrumps).invariant(ts => ts.nonEmpty)
 
   /**
     * Determine if the declaring side still has a play left in this trick.
@@ -143,13 +145,6 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     (additionalTricksNeeded - movesByDeclarerThisTrick) * Deal.CardsPerTrick
   }
 
-  //	def forcedPlay(deal: Deal, leader: Int): Trick =
-  //		(for (i <- next orElse Some(leader); c <- deal.hands(i).cards.headOption) yield
-  //			this :+ CardPlay(deal, i, c.suit, c.priority)) match {
-  //		case Some(t) => t
-  //			case None => throw CardException(s"forcedPlay: logic error $this $deal $leader")
-  //	}
-
   /**
     * NOTE: this doesn't look right
     *
@@ -157,13 +152,13 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     * @param leader the opening leader.
     * @return a list of Tricks.
     */
-  private def enumerateSubsequentPlays(deal: Deal, leader: Int) = // if (deal.nCards<4) List(forcedPlay(deal, leader)) else
+  private def enumerateSubsequentPlays(deal: Deal, leader: Int, maybeTrumps: Option[Suit]) = // if (deal.nCards<4) List(forcedPlay(deal, leader)) else
     winner match {
       case Some(Winner(p, true)) =>
         enumerateLeads(deal, p.hand) // XXX enumerate leads, given a complete trick with an actual winner
       case _ =>
         if (started)
-          for (q <- deal.hands(next.get).choosePlays(deal, this)) yield this :+ q
+          for (q <- deal.hands(next.get).choosePlays(deal, this, maybeTrumps)) yield this :+ q
         else
           enumerateLeads(deal, leader) // XXX: enumerate leads, starting from the null trick.
     }
@@ -253,7 +248,7 @@ case class CardPlay(deal: Deal, hand: Int, suit: Suit, priority: Int) extends Or
 
   override def toString: String = s"Play: $hand $asCard"
 
-  def output(output: Output, xo: Option[Deal]): Output = output :+ (Deal.name(hand) + ":" + asCard)
+  def output(output: Output, xo: Option[Deal]): Output = output :+ (Hand.name(hand) + ":" + asCard)
 }
 
 object CardPlay {

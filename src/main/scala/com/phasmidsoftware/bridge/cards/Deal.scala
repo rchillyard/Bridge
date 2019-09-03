@@ -198,14 +198,6 @@ object Deal {
     fromCards(title, shuffler(newDeck))
   }
 
-  /**
-    * This method must only be called with a valid hand value.
-    *
-    * @param hand an index between 0 and 3.
-    * @return an appropriate name for the hand.
-    */
-  def name(hand: Int): String = Seq("N", "E", "S", "W")(hand)
-
   def writePBN(writer: Writer, map: Map[String, String], boards: Seq[Deal]): Unit = {
     writer.append("% PBN 2.1\n% EXPORT\n")
     for ((d, i) <- boards.zipWithIndex) writer.append(d.asPBN(map, i + 1))

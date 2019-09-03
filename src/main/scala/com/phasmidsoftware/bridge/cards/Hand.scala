@@ -160,6 +160,7 @@ object Sequence {
   * @param sequences  the sequences (expected to be in order of rank).
   * @param suit       the suit of this holding.
   * @param promotions a list of promotions that should be applied on quitting a trick.
+  *                   CONSIDER eliminating the list of promotions if holding is void.
   */
 case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] = Nil)
   extends Outputable[Unit] with Quittable[Holding] with Evaluatable with Removable {
@@ -172,7 +173,7 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
   lazy val size: Int = sequences.size
 
   /**
-    * @return the number of cards in this Holing (i.e. the suit length)
+    * @return the number of cards in this Holding (i.e. the suit length)
     */
   lazy val length: Int = sequences.map(_.length).sum
 
@@ -204,6 +205,7 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
 
   /**
     * Method to choose plays according to the prior plays and the cards in this Holding.
+    * This Holding corresponds to the suit of trick and is never empty.
     *
     * All possible plays are returned, but the order in which they occur is dependent on the Strategy chosen.
     *
@@ -212,21 +214,16 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     * @param trick the current state of this trick (i.e. the prior plays).
     * @return a sequence of all possible plays, starting with the ones most suited to the appropriate strategy.
     */
-  def choosePlays(deal: Deal, hand: Int, trick: Trick): List[CardPlay] = {
-    // TODO eliminate this method: it never results in Discard
-    def suitMatches(x: Strategy) = trick.suit match {
-      case Some(`suit`) => x;
-      case _ => Discard
-    }
-
+  def chooseFollowSuitPlays(deal: Deal, hand: Int, trick: Trick): List[CardPlay] = {
     // XXX Determine the Strategy to be used when choosePlays is called.
-    lazy val strategy: Strategy = trick.size match {
+    val strategy: Strategy = trick.size match {
       case 0 => if (hasHonorSequence) LeadHigh else FourthBest
-      case 1 => suitMatches(if (trick.isHonorLed || realSequences.nonEmpty) Cover else Duck)
-      case 2 => suitMatches(Finesse) // XXX becomes WinIt if card to beat isn't an honor
-      case 3 => suitMatches(Cover)
+      case 1 => if (trick.isHonorLed || realSequences.nonEmpty) Cover else Duck
+      case 2 => Finesse // XXX becomes WinIt if card to beat isn't an honor
+      case 3 => Cover
       case x => throw CardException(s"too many prior plays: $x")
     }
+
     choosePlays(deal, hand, strategy, trick.winner)
   }
 
@@ -245,6 +242,8 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     lazy val priorityToBeat = (currentWinner map (_.priorityToBeat(hand))).getOrElse(Rank.lowestPriority)
     lazy val isPartnerWinning: Boolean = currentWinner exists (_.partnerIsWinning(hand))
     strategy match {
+      case Ruff if isPartnerWinning =>
+        choosePlays(deal, hand, Discard, currentWinner)
       case Discard =>
         sequences.lastOption.toList map (s => createPlay(s.priority))
       case Finesse if priorityToBeat > Rank.honorPriority =>
@@ -342,6 +341,7 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
         rank // XXX play low.
 
     if (play.suit != suit)
+    // TODO handle ruffs
       rank // XXX discard situation: prefer the lowest ranking card. Is this condition ever used?
     else if (play.priority < currentWinner) // XXX can we win this trick if we want to?
       applyPotentialWinStrategy
@@ -491,17 +491,18 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     * @param trick the current state of the Trick.
     * @return a sequence of card plays.
     */
-  def discard(deal: Deal, trick: Trick): List[CardPlay] = {
-    def suitsMatch(k: Suit) = trick.suit match {
-      case Some(`k`) => true;
-      case _ => false
-    }
+  def discardOrRuff(deal: Deal, trick: Trick, maybeTrumps: Option[Suit]): List[CardPlay] = {
+    def strategy(suit: Suit, cards: Int): Strategy =
+      maybeTrumps map (_ == suit) map (b => if (b && cards > 0) Ruff else Discard) getOrElse Discard
 
     val plays = for {
+      // TODO exclude the trumps suit if there is one.
       // XXX get the holdings from each of the other suits.
-      h <- holdings.flatMap { case (k, v) => if (suitsMatch(k)) None else Some(v) }.toList
-      // XXX for each holding, get the lowest ranked card
-      ps <- h.choosePlays(deal, index, Discard, None)
+      h: Holding <- holdings.flatMap { case (k, _) if k == trick.suit => None; case (_, v) => Some(v) }.toList
+      // XXX determine the strategy for this holding (ruff or discard)
+      s = strategy(h.suit, h.length)
+      // XXX for each holding, get the lowest ranked card according to the strategy
+      ps <- h.choosePlays(deal, index, s, None)
     } yield ps
 
     // XXX sort the (one, two, or three) cards such that we try the least worthy first.
@@ -516,11 +517,11 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     * @param trick the prior plays to the current trick.
     * @return a List[CardPlay].
     */
-  def choosePlays(deal: Deal, trick: Trick): List[CardPlay] =
+  def choosePlays(deal: Deal, trick: Trick, maybeTrumps: Option[Suit]): List[CardPlay] =
     if (trick.started) {
       val holding = holdings(trick.suit.get)
-      if (holding.isVoid) discard(deal, trick)
-      else holding.choosePlays(deal, index, trick)
+      if (holding.isVoid) discardOrRuff(deal, trick, maybeTrumps)
+      else holding.chooseFollowSuitPlays(deal, index, trick)
     }
     else throw CardException("choosePlays called with empty trick")
 
@@ -682,4 +683,12 @@ object Hand {
   def sameSide(hand: Int, other: Int): Boolean = (other - hand) % 2 == 0
 
   implicit val z: Loggable[Hand] = (t: Hand) => t.neatOutput
+
+  /**
+    * This method must only be called with a valid index value.
+    *
+    * @param index an index between 0 and 3.
+    * @return an appropriate name for the hand.
+    */
+  def name(index: Int): String = Seq("N", "E", "S", "W")(index)
 }

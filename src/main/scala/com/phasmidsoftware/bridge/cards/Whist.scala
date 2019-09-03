@@ -25,8 +25,9 @@ import scala.language.implicitConversions
   *
   * @param deal          the arrangement of cards.
   * @param openingLeader the player on opening lead (0 thru 3 for "North" thru "West").
+  * @param maybeTrumps   the (optional) trump suit: None indicates notrump.
   */
-case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Quittable[Whist] {
+case class Whist(deal: Deal, openingLeader: Int, maybeTrumps: Option[Suit] = None) extends Playable[Whist] with Quittable[Whist] {
 
   /**
     * Method to make a sequence of States from the given sequence of Trick instances.
@@ -45,7 +46,7 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
     * @param cardPlay the card play.
     * @return a new Playable.
     */
-  def play(cardPlay: CardPlay): Whist = Whist(deal.play(cardPlay), openingLeader)
+  def play(cardPlay: CardPlay): Whist = Whist(deal.play(cardPlay), openingLeader, maybeTrumps)
 
   /**
     * Solve this Whist game as a double-dummy problem where one side or the other (depending on directionNS)
@@ -67,6 +68,7 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
     node.so flatMap (sn => sn.tricks.decide(tricks, directionNS))
   }
 
+  override def toString: String = s"Whist($deal, ${Hand.name(openingLeader)}, $strain)"
   /**
     * Method to enact the pending promotions on this Quittable.
     *
@@ -74,7 +76,7 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
     *
     * @return an eagerly promoted Whist game.
     */
-  def quit: Whist = Whist(deal.quit, openingLeader)
+  def quit: Whist = Whist(deal.quit, openingLeader, maybeTrumps)
 
   /**
     * Create an initial state for this Whist game.
@@ -84,6 +86,8 @@ case class Whist(deal: Deal, openingLeader: Int) extends Playable[Whist] with Qu
     * @return a State using deal and openingLeader
     */
   lazy val createState: State = State(this)
+
+  lazy val strain: String = maybeTrumps map (_.toString) getOrElse "NT"
 }
 
 /**
@@ -105,7 +109,7 @@ trait WhistGoalDriven extends GoalDriven[State] {
 object Whist {
 
   implicit object LoggableWhist extends Loggable[Whist] with Loggables {
-    def toLog(t: Whist): String = s"${implicitly[Loggable[Deal]].toLog(t.deal)}@${Deal.name(t.openingLeader)}"
+    def toLog(t: Whist): String = s"${implicitly[Loggable[Deal]].toLog(t.deal)}@${Hand.name(t.openingLeader)}:${t.strain}"
   }
 
   def goal(_neededTricks: Int, _directionNS: Boolean, _totalTricks: Int = Deal.TricksPerDeal): WhistGoalDriven = new WhistGoalDriven {
@@ -167,6 +171,8 @@ case object FourthBest extends BaseStrategy(false, false)
 case object Duck extends BaseStrategy(false, false)
 
 case object Discard extends BaseStrategy(false, false)
+
+case object Ruff extends BaseStrategy(false, false)
 
 /**
   * Trait to describe behavior of a type which can experience the play of a card.
