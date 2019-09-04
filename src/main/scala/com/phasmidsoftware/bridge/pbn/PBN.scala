@@ -133,12 +133,15 @@ case class DateValue(year: Int, month: Int, day: Int) extends Value {
 /**
   * Create a Deal from a sequence of sequence of Strings, each representing a holding.
   *
+  * CONSIDER making this an implicit class
+  *
   * @param q   the compass point of the first hand.
-  * @param rss four hands of four holdings in order SHDC.
+  * @param rss four hands in order NESW of four holdings in order SHDC.
   * @return a new Deal.
   */
 case class DealValue(q: String, rss: Seq[Seq[String]]) extends Value {
 
+  // CONSIDER adding a proper title to this deal.
   def deal: Deal = Deal.fromHandStrings("", q, rss)
 }
 

@@ -109,4 +109,49 @@ class TrickSpec extends FlatSpec with Matchers {
     state50.whist.deal.nCards shouldBe 47
     state50.trick.index shouldBe 2
   }
+  it should "enumerate plays 2" in {
+    val deal = Deal.fromHandStrings("test", "N", Seq(Seq("AQ", "", "J", "3"), Seq("K3", "T", "", "6"), Seq("", "87", "J", "8"), Seq("", "A", "9", "T9")))
+    val whist0 = Whist(deal, 0, Some(Clubs))
+    val state0 = State(whist0)
+    val states = state0.enumeratePlays
+    states.size shouldBe 2
+    val state1 = states.head
+    val trick1 = state1.trick
+    trick1.size shouldBe 1
+    val whist1 = state1.whist
+    whist1.deal.nCards shouldBe 15
+    val openingLead = trick1.led.get
+    openingLead.priority shouldBe 2
+    openingLead.suit shouldBe Spades
+    openingLead.hand shouldBe 0
+    openingLead.asCard shouldBe Card("SQ")
+    val trick2alternatives = trick1.enumerateSubsequentPlays(whist1)
+    trick2alternatives.size shouldBe 2
+    val state2alternatives = whist1.makeStates(state1.tricks, trick2alternatives)
+    val state20 = state2alternatives.head
+    val whist20 = state20.whist
+    val trick20 = trick2alternatives.head
+    val secondHandPlay0 = trick20.last
+    secondHandPlay0.suit shouldBe Spades
+    secondHandPlay0.priority shouldBe 1
+    val trick21 = trick2alternatives.last
+    trick21.cardsPlayed shouldBe 2
+    val secondHandPlay1 = trick21.last
+    secondHandPlay1.suit shouldBe Spades
+    secondHandPlay1.priority shouldBe 11
+    val trick3alternatives: List[Trick] = trick20.enumerateSubsequentPlays(whist20)
+    val state3alternatives: Seq[State] = state20.enumeratePlays
+    state3alternatives.size shouldBe 3
+    state3alternatives.head.trick.plays.drop(2).head.asCard shouldBe Card(Clubs, Eight)
+    whist20.makeStates(state20.tricks, trick3alternatives) shouldBe state3alternatives
+    val state30 = state3alternatives.head
+    val state4alternatives = state30.enumeratePlays
+    state4alternatives.size shouldBe 3
+    val state40: State = state4alternatives.head
+    val state5alternatives = state40.enumeratePlays
+    state5alternatives.size shouldBe 1
+    val state50 = state5alternatives.head
+    state50.whist.deal.nCards shouldBe 11
+    state50.trick.index shouldBe 2
+  }
 }

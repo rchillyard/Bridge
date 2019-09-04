@@ -176,6 +176,14 @@ object Deal {
   def fromCards(title: String, cs: Seq[Card]): Deal =
     new Deal(title, (for ((cs, index) <- cs.grouped(CardsPerHand).zipWithIndex) yield index -> Hand.createHoldings(cs.toList)).toMap)
 
+  /**
+    * Construct a Deal of sequence of a sequence of Card representations.
+    *
+    * @param title the title for the deal.
+    * @param start the player who will lead to this deal.
+    * @param wss a sequence in order NESW of a sequence in order SHDC of card representations.
+    * @return a new deal. Yeah to FDR.
+    */
   def fromHandStrings(title: String, start: String, wss: Seq[Seq[String]]): Deal = {
     val firstIndex = start match { case "N" => 0; case "E" => 1; case "S" => 2; case "W" => 3 }
     val hSss: Seq[Seq[(Suit, Holding)]] = for (ws <- wss) yield for ((w, x) <- ws zip Seq(Spades, Hearts, Diamonds, Clubs)) yield x -> Holding(x, w)

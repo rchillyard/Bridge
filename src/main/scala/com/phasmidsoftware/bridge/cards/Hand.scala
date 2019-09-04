@@ -495,6 +495,20 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     def strategy(suit: Suit, cards: Int): Strategy =
       maybeTrumps map (_ == suit) map (b => if (b && cards > 0) Ruff else Discard) getOrElse Discard
 
+    /**
+      * Compare two plays returning:
+      *   if both are ruffs or both are discards then we return true if the first play is less worthy than the second play (using current priority);
+      *   otherwise, we return according to whether the first play is a ruff.
+      * @param play1 the first play to compare.
+      * @param play2 the second play to compare.
+      * @return true if we want to choose the first play.
+      */
+    def compareDiscards(play1: CardPlay, play2: CardPlay): Boolean = {
+      val play1isRuff = play1.isRuff(maybeTrumps)
+      if (play1isRuff == play2.isRuff(maybeTrumps)) play1.priority > play2.priority
+      else play1isRuff
+    }
+
     val plays = for {
       // TODO exclude the trumps suit if there is one.
       // XXX get the holdings from each of the other suits.
@@ -505,9 +519,8 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
       ps <- h.choosePlays(deal, index, s, None)
     } yield ps
 
-    // XXX sort the (one, two, or three) cards such that we try the least worthy first.
-    // NOTE: that we use current priority, not rank here.
-    plays.sortBy(-_.priority)
+    // XXX sort the (one, two, or three) cards such that we choose ruffs first, then discards, always in order of least worthy first.
+    plays sortWith compareDiscards
   }
 
   /**

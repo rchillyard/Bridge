@@ -234,6 +234,14 @@ case class CardPlay(deal: Deal, hand: Int, suit: Suit, priority: Int) extends Or
   def beats(other: CardPlay): Boolean = compare(other) < 0
 
   /**
+    * Method to determine if this play is actually a ruff.
+    *
+    * @param maybeTrumps optional suit which is the trumps suit.
+    * @return true if ruffing else false.
+    */
+  def isRuff(maybeTrumps: Option[Suit]): Boolean = maybeTrumps contains suit
+
+  /**
     * Yield the actual card to be played for this CardPlay (we arbitrarily choose the top card of a sequence)
     *
     * @return an actual Card.
