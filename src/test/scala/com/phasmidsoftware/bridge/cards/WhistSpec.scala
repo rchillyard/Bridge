@@ -45,7 +45,7 @@ class WhistSpec extends FlatSpec with Matchers {
     val deal = Deal("test", 0L)
     val target = deal.hands.head
     target.nCards shouldBe 13
-    val result = target.play(CardPlay(deal, 0, Spades, 5))
+    val result = target.play(CardPlay(deal, None, 0, Spades, 5))
     result.nCards shouldBe 12
   }
 
@@ -56,7 +56,7 @@ class WhistSpec extends FlatSpec with Matchers {
     hands.size shouldBe 4
     val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
     val trick =
-      Trick.create(0, CardPlay(deal, 0, Spades, priority1S), CardPlay(deal, 1, Spades, priority2S), CardPlay(deal, 2, Spades, priority3S), CardPlay(deal, 3, Spades, priority4S))
+      Trick.create(0, CardPlay(deal, None, 0, Spades, priority1S), CardPlay(deal, None, 1, Spades, priority2S), CardPlay(deal, None, 2, Spades, priority3S), CardPlay(deal, None, 3, Spades, priority4S))
     val target0 = deal.north
     target0.nCards shouldBe 13
     target0.playAll(trick).nCards shouldBe 12
@@ -90,14 +90,14 @@ class WhistSpec extends FlatSpec with Matchers {
     //		state0.isConsistent shouldBe true
     val hands = deal0.hands
     val Seq(priority1S, priority2S, _, _) = hands map (_.holdings(Spades).sequences.last.priority)
-    val trick1 = Trick.create(1, CardPlay(deal0, 0, Spades, priority1S))
+    val trick1 = Trick.create(1, CardPlay(deal0, None, 0, Spades, priority1S))
     val state1 = state0.next(trick1)
     state1.deal.nCards shouldBe 51
     //		state1.isConsistent shouldBe true
     state1.trick.isComplete shouldBe false
     state1.trick shouldBe trick1
     state1.deal should not be deal0
-    val trick2 = Trick.create(1, CardPlay(deal0, 0, Spades, priority1S), CardPlay(deal0, 1, Spades, priority2S))
+    val trick2 = Trick.create(1, CardPlay(deal0, None, 0, Spades, priority1S), CardPlay(deal0, None, 1, Spades, priority2S))
     val state2 = state1.next(trick2)
     state2.deal.nCards shouldBe 50
     //		state2.isConsistent shouldBe true
@@ -171,6 +171,12 @@ class WhistSpec extends FlatSpec with Matchers {
   it should "analyzeDoubleDummy2" in {
     val target = Deal("test", 2L)
     val whist = Whist(target, 3)
+    whist.analyzeDoubleDummy(9, directionNS = true) shouldBe Some(true)
+  }
+
+  it should "analyzeDoubleDummy for suit" in {
+    val target = Deal("test", 2L)
+    val whist = Whist(target, 3, Some(Clubs))
     whist.analyzeDoubleDummy(9, directionNS = true) shouldBe Some(true)
   }
 }

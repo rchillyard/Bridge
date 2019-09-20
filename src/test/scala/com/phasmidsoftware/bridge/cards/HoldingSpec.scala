@@ -140,27 +140,26 @@ class HoldingSpec extends FlatSpec with Matchers {
     val suit = holding.suit
     suit shouldBe Hearts
     // Queen lead?
-    holding.applyStrategy(CardPlay(deal, 0, suit, 2), FourthBest, Rank.lowestPriority) shouldBe 26
+    Holding.applyFollowSuitStrategy(FourthBest, Rank.lowestPriority, 2) shouldBe 26
     // Nine lead?
-    holding.applyStrategy(CardPlay(deal, 0, suit, 5), FourthBest, Rank.lowestPriority) shouldBe 23
+    Holding.applyFollowSuitStrategy(FourthBest, Rank.lowestPriority, 5) shouldBe 23
     // Four lead?
-    holding.applyStrategy(CardPlay(deal, 0, suit, 10), FourthBest, Rank.lowestPriority) shouldBe 18
+    Holding.applyFollowSuitStrategy(FourthBest, Rank.lowestPriority, 10) shouldBe 18
   }
 
   it should "apply win it strategy" in {
     val deal = Deal("test", 0L)
     val holding: Holding = deal.hands.head.longestSuit
-    val suit = holding.suit
-    val leads: Seq[CardPlay] = holding.choosePlays(deal, 0, FourthBest, None)
+    val leads: Seq[CardPlay] = holding.choosePlays(deal, None, 0, FourthBest, None)
     leads.size shouldBe 3
     val lead: CardPlay = leads.head
     val trick0 = Trick(1, List(lead), None)
     val wo = trick0.winner
     wo should matchPattern { case Some(Winner(`lead`, false)) => }
     // Ace play?
-    holding.applyStrategy(CardPlay(deal, 1, suit, 0), WinIt, wo.get.play.priority) shouldBe 0
+    Holding.applyFollowSuitStrategy(WinIt, wo.get.play.priority, 0) shouldBe 0
     // Seven play?
-    holding.applyStrategy(CardPlay(deal, 1, suit, 7), WinIt, wo.get.play.priority) shouldBe 7
+    Holding.applyFollowSuitStrategy(WinIt, wo.get.play.priority, 7) shouldBe 7
   }
 
   //  it should "apply cover strategy" in {
@@ -174,109 +173,98 @@ class HoldingSpec extends FlatSpec with Matchers {
   //    val wo = trick0.winner
   //    wo should matchPattern { case Some(Winner(`lead`, false)) => }
   //    // Ace play?
-  //    holding.applyStrategy(CardPlay(deal, 1, suit, 0), WinIt, 0, wo.get.play.priority) shouldBe 0
+  //    holding.applyFollowSuitStrategy(CardPlay(deal, 1, suit, 0), WinIt, 0, wo.get.play.priority) shouldBe 0
   //    // Seven play?
-  //    holding.applyStrategy(CardPlay(deal, 1, suit, 7), WinIt, 1, wo.get.play.priority) shouldBe 7
+  //    holding.applyFollowSuitStrategy(CardPlay(deal, 1, suit, 7), WinIt, 1, wo.get.play.priority) shouldBe 7
   //  }
 
 
-  it should "applyStrategy WinIt when 3 played" in {
+  it should "applyFollowSuitStrategy WinIt when 3 played" in {
     val strategy: Strategy = WinIt
-    val holding = Holding.parseHolding("SKJ92")
-    holding.applyStrategy(CardPlay(null, 0, Spades, 1), strategy, 11) shouldBe 1
-    holding.applyStrategy(CardPlay(null, 0, Spades, 3), strategy, 11) shouldBe 3
-    holding.applyStrategy(CardPlay(null, 0, Spades, 5), strategy, 11) shouldBe 5
-    holding.applyStrategy(CardPlay(null, 0, Spades, 12), strategy, 11) shouldBe 16
+    Holding.applyFollowSuitStrategy(strategy, 11, 1) shouldBe 1
+    Holding.applyFollowSuitStrategy(strategy, 11, 3) shouldBe 3
+    Holding.applyFollowSuitStrategy(strategy, 11, 5) shouldBe 5
+    Holding.applyFollowSuitStrategy(strategy, 11, 12) shouldBe 16
   }
 
-  it should "applyStrategy WinIt when T played" in {
+  it should "applyFollowSuitStrategy WinIt when T played" in {
     val strategy: Strategy = WinIt
-    val holding = Holding.parseHolding("SKJ92")
-    holding.applyStrategy(CardPlay(null, 0, Spades, 1), strategy, 4) shouldBe 1
-    holding.applyStrategy(CardPlay(null, 0, Spades, 3), strategy, 4) shouldBe 3
-    holding.applyStrategy(CardPlay(null, 0, Spades, 5), strategy, 4) shouldBe 23
-    holding.applyStrategy(CardPlay(null, 0, Spades, 12), strategy, 4) shouldBe 16
+    Holding.applyFollowSuitStrategy(strategy, 4, 1) shouldBe 1
+    Holding.applyFollowSuitStrategy(strategy, 4, 3) shouldBe 3
+    Holding.applyFollowSuitStrategy(strategy, 4, 5) shouldBe 23
+    Holding.applyFollowSuitStrategy(strategy, 4, 12) shouldBe 16
   }
 
-  it should "applyStrategy WinIt when Q played" in {
+  it should "applyFollowSuitStrategy WinIt when Q played" in {
     val strategy: Strategy = WinIt
-    val holding = Holding.parseHolding("SKJ92")
-    holding.applyStrategy(CardPlay(null, 0, Spades, 1), strategy, 2) shouldBe 1
-    holding.applyStrategy(CardPlay(null, 0, Spades, 3), strategy, 2) shouldBe 25
-    holding.applyStrategy(CardPlay(null, 0, Spades, 5), strategy, 2) shouldBe 23
-    holding.applyStrategy(CardPlay(null, 0, Spades, 12), strategy, 2) shouldBe 16
+    Holding.applyFollowSuitStrategy(strategy, 2, 1) shouldBe 1
+    Holding.applyFollowSuitStrategy(strategy, 2, 3) shouldBe 25
+    Holding.applyFollowSuitStrategy(strategy, 2, 5) shouldBe 23
+    Holding.applyFollowSuitStrategy(strategy, 2, 12) shouldBe 16
   }
 
-  it should "applyStrategy WinIt when A played" in {
+  it should "applyFollowSuitStrategy WinIt when A played" in {
     val strategy: Strategy = WinIt
-    val holding = Holding.parseHolding("SKJ92")
-    holding.applyStrategy(CardPlay(null, 0, Spades, 1), strategy, 0) shouldBe 27
-    holding.applyStrategy(CardPlay(null, 0, Spades, 3), strategy, 0) shouldBe 25
-    holding.applyStrategy(CardPlay(null, 0, Spades, 5), strategy, 0) shouldBe 23
-    holding.applyStrategy(CardPlay(null, 0, Spades, 12), strategy, 0) shouldBe 16
+    Holding.applyFollowSuitStrategy(strategy, 0, 1) shouldBe 27
+    Holding.applyFollowSuitStrategy(strategy, 0, 3) shouldBe 25
+    Holding.applyFollowSuitStrategy(strategy, 0, 5) shouldBe 23
+    Holding.applyFollowSuitStrategy(strategy, 0, 12) shouldBe 16
   }
 
-  it should "applyStrategy Finesse against KJ when 3 played" in {
+  it should "applyFollowSuitStrategy Finesse against KJ when 3 played" in {
     val strategy: Strategy = Finesse
-    val holding = Holding.parseHolding("SAQT2")
-    holding.applyStrategy(CardPlay(null, 0, Spades, 0), strategy, 11) shouldBe 11
-    holding.applyStrategy(CardPlay(null, 0, Spades, 2), strategy, 11) shouldBe 9
-    holding.applyStrategy(CardPlay(null, 0, Spades, 4), strategy, 11) shouldBe 7
-    holding.applyStrategy(CardPlay(null, 0, Spades, 12), strategy, 11) shouldBe 16
+    Holding.applyFollowSuitStrategy(strategy, 11, 0) shouldBe 11
+    Holding.applyFollowSuitStrategy(strategy, 11, 2) shouldBe 9
+    Holding.applyFollowSuitStrategy(strategy, 11, 4) shouldBe 7
+    Holding.applyFollowSuitStrategy(strategy, 11, 12) shouldBe 16
   }
 
-  it should "applyStrategy Finesse against KJ when J played" in {
+  it should "applyFollowSuitStrategy Finesse against KJ when J played" in {
     val strategy: Strategy = Finesse
-    val holding = Holding.parseHolding("SAQT2")
-    holding.applyStrategy(CardPlay(null, 0, Spades, 0), strategy, 3) shouldBe 3
-    holding.applyStrategy(CardPlay(null, 0, Spades, 2), strategy, 3) shouldBe 1
-    holding.applyStrategy(CardPlay(null, 0, Spades, 4), strategy, 3) shouldBe 24
-    holding.applyStrategy(CardPlay(null, 0, Spades, 12), strategy, 3) shouldBe 16
+    Holding.applyFollowSuitStrategy(strategy, 3, 0) shouldBe 3
+    Holding.applyFollowSuitStrategy(strategy, 3, 2) shouldBe 1
+    Holding.applyFollowSuitStrategy(strategy, 3, 4) shouldBe 24
+    Holding.applyFollowSuitStrategy(strategy, 3, 12) shouldBe 16
   }
 
-  it should "applyStrategy Finesse against KJ when K played" in {
+  it should "applyFollowSuitStrategy Finesse against KJ when K played" in {
     val strategy: Strategy = Finesse
-    val holding = Holding.parseHolding("SAQT2")
-    holding.applyStrategy(CardPlay(null, 0, Spades, 0), strategy, 1) shouldBe 1
-    holding.applyStrategy(CardPlay(null, 0, Spades, 2), strategy, 1) shouldBe 26
-    holding.applyStrategy(CardPlay(null, 0, Spades, 4), strategy, 1) shouldBe 24
-    holding.applyStrategy(CardPlay(null, 0, Spades, 12), strategy, 1) shouldBe 16
+    Holding.applyFollowSuitStrategy(strategy, 1, 0) shouldBe 1
+    Holding.applyFollowSuitStrategy(strategy, 1, 2) shouldBe 26
+    Holding.applyFollowSuitStrategy(strategy, 1, 4) shouldBe 24
+    Holding.applyFollowSuitStrategy(strategy, 1, 12) shouldBe 16
   }
 
-  it should "applyStrategy Cover when 3 played" in {
+  it should "applyFollowSuitStrategy Cover when 3 played" in {
     val strategy: Strategy = Cover
-    val holding = Holding.parseHolding("SAQT2")
-    holding.applyStrategy(CardPlay(null, 0, Spades, 0), strategy, 11) shouldBe 11
-    holding.applyStrategy(CardPlay(null, 0, Spades, 2), strategy, 11) shouldBe 9
-    holding.applyStrategy(CardPlay(null, 0, Spades, 4), strategy, 11) shouldBe 7
-    holding.applyStrategy(CardPlay(null, 0, Spades, 12), strategy, 11) shouldBe 16
+    Holding.applyFollowSuitStrategy(strategy, 11, 0) shouldBe 11
+    Holding.applyFollowSuitStrategy(strategy, 11, 2) shouldBe 9
+    Holding.applyFollowSuitStrategy(strategy, 11, 4) shouldBe 7
+    Holding.applyFollowSuitStrategy(strategy, 11, 12) shouldBe 16
   }
 
-  it should "applyStrategy Cover when J played" in {
+  it should "applyFollowSuitStrategy Cover when J played" in {
     val strategy: Strategy = Cover
-    val holding = Holding.parseHolding("SAQT2")
-    holding.applyStrategy(CardPlay(null, 0, Spades, 0), strategy, 3) shouldBe 3
-    holding.applyStrategy(CardPlay(null, 0, Spades, 2), strategy, 3) shouldBe 1
-    holding.applyStrategy(CardPlay(null, 0, Spades, 4), strategy, 3) shouldBe 24
-    holding.applyStrategy(CardPlay(null, 0, Spades, 12), strategy, 3) shouldBe 16
+    Holding.applyFollowSuitStrategy(strategy, 3, 0) shouldBe 3
+    Holding.applyFollowSuitStrategy(strategy, 3, 2) shouldBe 1
+    Holding.applyFollowSuitStrategy(strategy, 3, 4) shouldBe 24
+    Holding.applyFollowSuitStrategy(strategy, 3, 12) shouldBe 16
   }
 
-  it should "applyStrategy Cover when K played" in {
+  it should "applyFollowSuitStrategy Cover when K played" in {
     val strategy: Strategy = Cover
-    val holding = Holding.parseHolding("SAQT2")
-    holding.applyStrategy(CardPlay(null, 0, Spades, 0), strategy, 1) shouldBe 1
-    holding.applyStrategy(CardPlay(null, 0, Spades, 2), strategy, 1) shouldBe 26
-    holding.applyStrategy(CardPlay(null, 0, Spades, 4), strategy, 1) shouldBe 24
-    holding.applyStrategy(CardPlay(null, 0, Spades, 12), strategy, 1) shouldBe 16
+    Holding.applyFollowSuitStrategy(strategy, 1, 0) shouldBe 1
+    Holding.applyFollowSuitStrategy(strategy, 1, 2) shouldBe 26
+    Holding.applyFollowSuitStrategy(strategy, 1, 4) shouldBe 24
+    Holding.applyFollowSuitStrategy(strategy, 1, 12) shouldBe 16
   }
 
-  it should "applyStrategy Duck" in {
+  it should "applyFollowSuitStrategy Duck" in {
     val strategy: Strategy = Duck
-    val holding = Holding.parseHolding("SAQT2")
-    holding.applyStrategy(CardPlay(null, 0, Spades, 0), strategy, 11) shouldBe 28
-    holding.applyStrategy(CardPlay(null, 0, Spades, 2), strategy, 11) shouldBe 26
-    holding.applyStrategy(CardPlay(null, 0, Spades, 4), strategy, 11) shouldBe 24
-    holding.applyStrategy(CardPlay(null, 0, Spades, 12), strategy, 11) shouldBe 16
+    Holding.applyFollowSuitStrategy(strategy, 11, 0) shouldBe 28
+    Holding.applyFollowSuitStrategy(strategy, 11, 2) shouldBe 26
+    Holding.applyFollowSuitStrategy(strategy, 11, 4) shouldBe 24
+    Holding.applyFollowSuitStrategy(strategy, 11, 12) shouldBe 16
   }
 
   it should "choose Play" in {
@@ -284,17 +272,17 @@ class HoldingSpec extends FlatSpec with Matchers {
     val hand1 = deal.hands(1)
     val holding: Holding = deal.hands.head.longestSuit
     holding.suit shouldBe Hearts
-    val leads: Seq[CardPlay] = holding.choosePlays(deal, 0, FourthBest, None)
+    val leads: Seq[CardPlay] = holding.choosePlays(deal, None, 0, FourthBest, None)
     leads.size shouldBe 3
     val lead = leads.head
     val trick0 = Trick(1, List(lead), None)
     val wo = trick0.winner
     wo should matchPattern { case Some(Winner(`lead`, false)) => }
     val holding1 = hand1.holdings(trick0.suit.get)
-    val plays = holding1.choosePlays(deal, 1, WinIt, wo)
+    val plays = holding1.choosePlays(deal, None, 1, WinIt, wo)
     plays.size shouldBe 2
-    plays.head shouldBe CardPlay(deal, 1, Hearts, 0)
-    plays.last shouldBe CardPlay(deal, 1, Hearts, 7)
+    plays.head shouldBe CardPlay(deal, None, 1, Hearts, 0)
+    plays.last shouldBe CardPlay(deal, None, 1, Hearts, 7)
   }
 
 }

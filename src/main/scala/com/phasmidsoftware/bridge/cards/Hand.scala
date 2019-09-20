@@ -214,52 +214,37 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     * @param trick the current state of this trick (i.e. the prior plays).
     * @return a sequence of all possible plays, starting with the ones most suited to the appropriate strategy.
     */
-  def chooseFollowSuitPlays(deal: Deal, hand: Int, trick: Trick): List[CardPlay] = {
-    // XXX Determine the Strategy to be used when choosePlays is called.
-    val strategy: Strategy = trick.size match {
-      case 0 => if (hasHonorSequence) LeadHigh else FourthBest
-      case 1 => if (trick.isHonorLed || realSequences.nonEmpty) Cover else Duck
-      case 2 => Finesse // XXX becomes WinIt if card to beat isn't an honor
-      case 3 => Cover
-      case x => throw CardException(s"too many prior plays: $x")
-    }
-
-    choosePlays(deal, hand, strategy, trick.winner)
-  }
+  def chooseFollowSuitPlays(deal: Deal, strain: Option[Suit], hand: Int, trick: Trick): List[CardPlay] =
+    choosePlays(deal, strain, hand, getStrategyForFollowingSuit(trick), trick.winner)
 
   /**
     * For now, we ignore strategy which is only used to ensure that we try the likely more successful card play first.
     *
     * @param deal          the deal to which these plays will belong.
     * @param hand          the index of this Hand (N, E, S, W).
+    * @param strain        the (optional) trump suit.
     * @param strategy      the recommended strategy.
     * @param currentWinner the play currently winning the trick.
     * @return a sequence of CardPlay objects.
     */
-  def choosePlays(deal: Deal, hand: Int, strategy: Strategy, currentWinner: Option[Winner]): List[CardPlay] = {
-    def createPlay(priority: Int): CardPlay = CardPlay(deal, hand, suit, priority)
+  def choosePlays(deal: Deal, strain: Option[Suit], hand: Int, strategy: Strategy, currentWinner: Option[Winner]): List[CardPlay] = {
+    def createPlay(priority: Int): CardPlay = CardPlay(deal, strain, hand, suit, priority)
 
     lazy val priorityToBeat = (currentWinner map (_.priorityToBeat(hand))).getOrElse(Rank.lowestPriority)
     lazy val isPartnerWinning: Boolean = currentWinner exists (_.partnerIsWinning(hand))
     strategy match {
       case Ruff if isPartnerWinning =>
-        choosePlays(deal, hand, Discard, currentWinner)
-      case Discard =>
+        choosePlays(deal, strain, hand, Discard, currentWinner)
+      case Ruff | Discard =>
+        // NOTE: these cards will be ordered appropriately by the caller.
         sequences.lastOption.toList map (s => createPlay(s.priority))
       case Finesse if priorityToBeat > Rank.honorPriority =>
-        choosePlays(deal, hand, WinIt, currentWinner)
+        choosePlays(deal, strain, hand, WinIt, currentWinner)
       case WinIt if isPartnerWinning =>
-        chooseNonDiscardPlays(createPlay, Duck, priorityToBeat)
+        chooseFollowSuitPlays(createPlay, Duck, priorityToBeat)
       case _ =>
-        chooseNonDiscardPlays(createPlay, strategy, priorityToBeat)
+        chooseFollowSuitPlays(createPlay, strategy, priorityToBeat)
     }
-  }
-
-  private def chooseNonDiscardPlays(createPlay: Int => CardPlay, strategy: Strategy, priorityToBeat: Int) = {
-    // XXX this function is used to sort the possible plays according to which fits the given strategy best (smallest resulting Int)
-    def sortFunction(play: CardPlay): Int = applyStrategy(play, strategy, priorityToBeat)
-
-    (for (s <- sequences) yield createPlay(s.priority)).sortBy(sortFunction)
   }
 
   /**
@@ -320,35 +305,6 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     */
   def output(output: Output, xo: Option[Unit] = None): Output = output :+ suit.toString :+ Holding.ranksToString(cards map (_.rank))
 
-  /**
-    * Method to assess the given strategy in the current situation.
-    *
-    * @param play          a potential card play.
-    * @param strategy      the required strategy.
-    * @param currentWinner the priority of the card play which is currently winning this trick.
-    * @return a relatively low number (e.g. 0) if this matches the given strategy, otherwise a high number.
-    */
-  //	private
-  def applyStrategy(play: CardPlay, strategy: Strategy, currentWinner: Int): Int = {
-    lazy val rank = 2 * Rank.lowestPriority - play.priority // XXX the rank of the played card plus 14
-
-    def applyPotentialWinStrategy =
-      if (strategy.conditional)
-        currentWinner - play.priority // XXX prefer the card that wins by the slimmest margin (always positive)
-      else if (strategy.win)
-        play.priority // XXX play high.
-      else
-        rank // XXX play low.
-
-    if (play.suit != suit)
-    // TODO handle ruffs
-      rank // XXX discard situation: prefer the lowest ranking card. Is this condition ever used?
-    else if (play.priority < currentWinner) // XXX can we win this trick if we want to?
-      applyPotentialWinStrategy
-    else
-      rank // XXX play low.
-  }
-
   private lazy val _quit = {
 
     def applyPromotions(sequence: Sequence): Sequence = {
@@ -381,6 +337,22 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
       cards += sequence.length
     }
     result
+  }
+
+  private def chooseFollowSuitPlays(createPlay: Int => CardPlay, strategy: Strategy, priorityToBeat: Int): List[CardPlay] = {
+    // XXX this function is used to sort the possible plays according to which fits the given strategy best (smallest resulting Int)
+    def sortFunction(play: CardPlay): Int = Holding.applyFollowSuitStrategy(strategy, priorityToBeat, play.priority)
+
+    (for (s <- sequences) yield createPlay(s.priority)).sortBy(sortFunction)
+  }
+
+  private def getStrategyForFollowingSuit(trick: Trick): Strategy = trick.size match {
+    // XXX this first case should never occur.
+    case 0 => if (hasHonorSequence) LeadHigh else FourthBest
+    case 1 => if (trick.isHonorLed || realSequences.nonEmpty) Cover else Duck
+    case 2 => Finesse // XXX becomes WinIt if card to beat isn't an honor
+    case 3 => Cover
+    case x => throw CardException(s"too many prior plays: $x")
   }
 }
 
@@ -440,6 +412,33 @@ object Holding {
     def toLog(t: Holding): String = t.neatOutput
   }
 
+  /**
+    * Method to assess the given strategy in the current situation.
+    *
+    * @param strategy      the required strategy.
+    * @param currentWinner the priority of the card play which is currently winning this trick.
+    * @param priority      the priority of the card (sequence) being considered.
+    * @return a relatively low number (e.g. 0) if this matches the given strategy, otherwise a high number.
+    */
+  //	private
+  def applyFollowSuitStrategy(strategy: Strategy, currentWinner: Int, priority: Int): Int = {
+    lazy val rank = 2 * Rank.lowestPriority - priority // XXX the rank of the played card plus 14
+
+    // CONSIDER extracting this logic to a lazy val
+    def applyPotentialWinStrategy =
+      if (strategy.conditional)
+        currentWinner - priority // XXX prefer the card that wins by the slimmest margin (always positive)
+      else if (strategy.win)
+        priority // XXX play high.
+      else
+        rank // XXX play low.
+
+    if (priority < currentWinner) // XXX can we win this trick if we want to?
+      applyPotentialWinStrategy
+    else
+      rank // XXX play low.
+  }
+
 }
 
 /**
@@ -488,12 +487,14 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
   /**
     * Method to determine possible discard plays.
     *
-    * @param trick the current state of the Trick.
+    * @param deal   the deal to which this Hand belongs.
+    * @param strain the strain.
+    * @param trick  the current state of the Trick.
     * @return a sequence of card plays.
     */
-  def discardOrRuff(deal: Deal, trick: Trick, maybeTrumps: Option[Suit]): List[CardPlay] = {
+  def discardOrRuff(deal: Deal, strain: Option[Suit], trick: Trick): List[CardPlay] = {
     def strategy(suit: Suit, cards: Int): Strategy =
-      maybeTrumps map (_ == suit) map (b => if (b && cards > 0) Ruff else Discard) getOrElse Discard
+      strain map (_ == suit) map (b => if (b && cards > 0) Ruff else Discard) getOrElse Discard
 
     /**
       * Compare two plays returning:
@@ -503,9 +504,9 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
       * @param play2 the second play to compare.
       * @return true if we want to choose the first play.
       */
-    def compareDiscards(play1: CardPlay, play2: CardPlay): Boolean = {
-      val play1isRuff = play1.isRuff(maybeTrumps)
-      if (play1isRuff == play2.isRuff(maybeTrumps)) play1.priority > play2.priority
+    def comparePlays(play1: CardPlay, play2: CardPlay): Boolean = {
+      val play1isRuff = play1.isRuff
+      if (play1isRuff == play2.isRuff) play1.priority > play2.priority
       else play1isRuff
     }
 
@@ -516,11 +517,11 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
       // XXX determine the strategy for this holding (ruff or discard)
       s = strategy(h.suit, h.length)
       // XXX for each holding, get the lowest ranked card according to the strategy
-      ps <- h.choosePlays(deal, index, s, None)
+      ps <- h.choosePlays(deal, strain, index, s, None)
     } yield ps
 
     // XXX sort the (one, two, or three) cards such that we choose ruffs first, then discards, always in order of least worthy first.
-    plays sortWith compareDiscards
+    plays sortWith comparePlays
   }
 
   /**
@@ -530,11 +531,11 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     * @param trick the prior plays to the current trick.
     * @return a List[CardPlay].
     */
-  def choosePlays(deal: Deal, trick: Trick, maybeTrumps: Option[Suit]): List[CardPlay] =
+  def choosePlays(deal: Deal, trick: Trick, strain: Option[Suit]): List[CardPlay] =
     if (trick.started) {
       val holding = holdings(trick.suit.get)
-      if (holding.isVoid) discardOrRuff(deal, trick, maybeTrumps)
-      else holding.chooseFollowSuitPlays(deal, index, trick)
+      if (holding.isVoid) discardOrRuff(deal, strain, trick)
+      else holding.chooseFollowSuitPlays(deal, strain, index, trick)
     }
     else throw CardException("choosePlays called with empty trick")
 

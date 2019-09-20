@@ -70,6 +70,12 @@ object Score extends App {
   }
 }
 
+/**
+  * Class to represent an Event.
+  *
+  * @param title    the event's title.
+  * @param sections a sequence of sections.
+  */
 case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit] {
   if (sections.isEmpty)
     System.err.println("Warning: there are no sections in this event")
@@ -86,6 +92,14 @@ case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit]
   def output(output: Output, xo: Option[Unit] = None): Output = (output :+ title).insertBreak ++ Output.apply(sections)(s => s.output(Output.empty))
 }
 
+/**
+  * Class to represent a section of an event.
+  *
+  * CONSIDER what happens when there are no travelers, but all pickup slips?
+  *
+  * @param preamble  the preamble describing this section.
+  * @param travelers a sequence of travelers.
+  */
 case class Section(preamble: Preamble, travelers: Seq[Traveler]) extends Outputable[Unit] {
 
   def createResults: Seq[Result] = {
@@ -150,6 +164,13 @@ case class Preamble(identifier: String, maybeModifier: Option[String], pairs: Se
   }
 }
 
+/**
+  * Class to represent a pair.
+  *
+  * @param number    the pair number.
+  * @param direction the direction (assuming a Mitchell movement).
+  * @param players   the players who make up this pair (N, E first).
+  */
 case class Pair(number: Int, direction: String, players: (Player, Player)) {
   override def toString: String = s"$number$direction: $brief"
 
@@ -157,6 +178,8 @@ case class Pair(number: Int, direction: String, players: (Player, Player)) {
 }
 
 /**
+  * Class to represent a player.
+  *
   * CONSIDER: splitting into first and last so that abbreviations can be used.
   *
   * @param name the name of the player
@@ -199,10 +222,12 @@ case class Matchpoints(ns: Int, ew: Int, result: PlayResult, mp: Option[Rational
 }
 
 /**
-  * This is the traveler for a specific board (in a specific, unnamed, section)
+  * This is a traveler for a specific board (in a specific, unnamed, section).
+  * We usually report boards either by travelers or pickup slips.
+  * It is however possible to mix these up.
   *
-  * @param board number
-  * @param ps    plays
+  * @param board the board number.
+  * @param ps    the plays.
   */
 case class Traveler(board: Int, ps: Seq[Play]) extends Outputable[Unit] with Ordered[Traveler] {
   def isPlayed: Boolean = ps.nonEmpty
@@ -251,21 +276,39 @@ object Traveler {
 }
 
 /**
+  * Class to describe a board result.
+  *
   * CONSIDER renaming this case class (and parser methods)
   *
-  * @param board  the board number
-  * @param result the result
+  * @param board  the board number.
+  * @param result the result.
   */
 case class BoardResult(board: Int, result: PlayResult) {
   override def toString: String = s"$board: $result"
 }
 
+/**
+  * Class to describe a pickup slip.
+  * NOTE: board numbers are not required to be a consecutive set.
+  *
+  * @param ns     the N/S pair.
+  * @param ew     the E/W pair.
+  * @param boards a sequence of BoardResults which are written on this pickup slip.
+  */
 case class Pickup(ns: Int, ew: Int, boards: Seq[BoardResult]) {
   def asBoardPlays: Seq[BoardPlay] = for (e <- boards) yield BoardPlay(e.board, Play(ns, ew, e.result))
 
   override def toString: String = s"Pickup: $ns vs $ew: ${boards.mkString(", ")}"
 }
 
+/**
+  * Class to describe the play on a board.
+  *
+  * CONSIDER merging this class with BoardResult.
+  *
+  * @param board the board number.
+  * @param play  the play.
+  */
 case class BoardPlay(board: Int, play: Play) {
   def addTo(travelerMap: Map[Int, Traveler]): Map[Int, Traveler] = {
     val entry = travelerMap.get(board)

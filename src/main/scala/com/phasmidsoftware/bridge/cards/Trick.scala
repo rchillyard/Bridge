@@ -65,7 +65,10 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     * @return a new Trick, with one more card play than this.
     */
   //noinspection ScalaStyle
-  def :+(play: CardPlay): Trick = if (isComplete) Trick(index + 1, List(play), Some(this)) else Trick(if (index == 0) 1 else index, plays :+ play, maybePrior)
+  def :+(play: CardPlay): Trick =
+    if (isComplete || index == 0) Trick(index + 1, List(play), if (index == 0) None else Some(this))
+    else if (next contains play.hand) Trick(index, plays :+ play, maybePrior)
+    else throw CardException(s"play $play cannot be added to this trick: $this ")
 
   //		Trick(if (isComplete || index == 0) index + 1 else index, plays :+ play, if (isComplete) Some(this) else None)
 
@@ -84,7 +87,7 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     */
   def evaluate: Double = _evaluate
 
-  override def toString: String = s"T$index ${plays.map(_.asCard).mkString("{", ", ", "}")}"
+  override def toString: String = s"T$index ${leader.map(_.toString).getOrElse("")} ${plays.map(_.asCard).mkString("{", ", ", "}")}"
 
   /**
     * Refactor this
@@ -101,10 +104,24 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     */
   lazy val winner: Option[Winner] =
     if (started) {
-      val winningPlay = plays.maxBy(p => if (p.suit == suit.get) Ace.priority - p.priority else 0)
+      val winningPlay = plays maxBy score
+      //      println(s"$this: winner = $winningPlay")
       Some(Winner(winningPlay, isComplete))
     }
     else None
+
+  /**
+    * This method yields a score which can be used to determine the winning play.
+    *
+    * @param p a play.
+    * @return an Int which will be large for a winning play and small for a losing play.
+    */
+  private def score(p: CardPlay) = {
+    val base = if (followingSuit(p)) Rank.lowestPriority else if (p.isRuff) 2 * Rank.lowestPriority else 0
+    base - p.priority
+  }
+
+  private def followingSuit(p: CardPlay) = suit contains p.suit
 
   import com.phasmidsoftware.util.SmartValueOps._
 
@@ -150,23 +167,24 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     *
     * @param deal the deal.
     * @param leader the opening leader.
+    * @param strain the trump suit, if any.
     * @return a list of Tricks.
     */
-  private def enumerateSubsequentPlays(deal: Deal, leader: Int, maybeTrumps: Option[Suit]) = // if (deal.nCards<4) List(forcedPlay(deal, leader)) else
+  private def enumerateSubsequentPlays(deal: Deal, leader: Int, strain: Option[Suit]) = // if (deal.nCards<4) List(forcedPlay(deal, leader)) else
     winner match {
       case Some(Winner(p, true)) =>
-        enumerateLeads(deal, p.hand) // XXX enumerate leads, given a complete trick with an actual winner
+        enumerateLeads(deal, p.hand, strain) // XXX enumerate leads, given a complete trick with an actual winner
       case _ =>
         if (started)
-          for (q <- deal.hands(next.get).choosePlays(deal, this, maybeTrumps)) yield this :+ q
+          for (q <- deal.hands(next.get).choosePlays(deal, this, strain)) yield this :+ q
         else
-          enumerateLeads(deal, leader) // XXX: enumerate leads, starting from the null trick.
+          enumerateLeads(deal, leader, strain) // XXX: enumerate leads, starting from the null trick.
     }
 
-  private def enumerateLeads(deal: Deal, leader: Int): List[Trick] = for (q <- chooseLeads(deal, leader)) yield Trick(index + 1, List(q), Some(this))
+  private def enumerateLeads(deal: Deal, leader: Int, strain: Option[Suit]) = for (q <- chooseLeads(deal, leader, strain)) yield Trick(index + 1, List(q), Some(this))
 
   // TODO make private
-  def chooseLeads(deal: Deal, leader: Int): List[CardPlay] = deal.hands(leader).longestSuit.choosePlays(deal, leader, FourthBest, None)
+  def chooseLeads(deal: Deal, leader: Int, strain: Option[Suit]): List[CardPlay] = deal.hands(leader).longestSuit.choosePlays(deal, strain, leader, FourthBest, None)
 
   lazy val value: Option[Double] = for (w <- winner; if w.complete) yield if (w.sameSide(0)) 1 else 0
 
@@ -201,11 +219,14 @@ case class Winner(play: CardPlay, complete: Boolean) {
   * The play of a card.
   *
   * @param deal     the deal to which this play belongs (this is used solely for representing this play as an actual card).
+  * @param strain   optional suit which is the trump suit.
   * @param hand     the index of this hand in the deal.
   * @param suit     rhe suit from which the card is to be played.
   * @param priority the priority of the sequence from which the card is to be played.
   */
-case class CardPlay(deal: Deal, hand: Int, suit: Suit, priority: Int) extends Ordered[CardPlay] with Outputable[Deal] {
+case class CardPlay(deal: Deal, strain: Option[Suit], hand: Int, suit: Suit, priority: Int) extends Ordered[CardPlay] with Outputable[Deal] {
+
+  require(findSequence isDefined, s"impossible CardPlay: cannot locate card with suit: $suit, priority: $priority in hand $hand of ${deal.neatOutput}")
 
   /**
     * @return true if this play can be validated. Basically, this means that no exception is thrown.
@@ -236,10 +257,9 @@ case class CardPlay(deal: Deal, hand: Int, suit: Suit, priority: Int) extends Or
   /**
     * Method to determine if this play is actually a ruff.
     *
-    * @param maybeTrumps optional suit which is the trumps suit.
     * @return true if ruffing else false.
     */
-  def isRuff(maybeTrumps: Option[Suit]): Boolean = maybeTrumps contains suit
+  lazy val isRuff: Boolean = strain contains suit
 
   /**
     * Yield the actual card to be played for this CardPlay (we arbitrarily choose the top card of a sequence)
@@ -248,11 +268,13 @@ case class CardPlay(deal: Deal, hand: Int, suit: Suit, priority: Int) extends Or
     * @throws CardException if this CardPlay cannot be made from the given deal.
     */
   lazy val asCard: Card =
-    deal.hands(hand).holdings(suit).sequence(priority) match {
+    findSequence match {
       case Some(s) => s.last
       case None =>
         throw CardException(s"CardPlay (deal=${deal.title}, hand=$hand, suit=$suit, priority=$priority) cannot find actual card.")
     }
+
+  lazy val findSequence: Option[Sequence] = for (h <- deal.hands(hand).holdings.get(suit); s <- h.sequence(priority)) yield s
 
   override def toString: String = s"Play: $hand $asCard"
 
@@ -262,7 +284,7 @@ case class CardPlay(deal: Deal, hand: Int, suit: Suit, priority: Int) extends Or
 object CardPlay {
 
   implicit object LoggableCardPlay extends Loggable[CardPlay] with Loggables {
-    val loggable: Loggable[CardPlay] = toLog4(CardPlay.apply, List("deal", "hand", "suit", "priority"))
+    val loggable: Loggable[CardPlay] = toLog4((deal: Deal, hand: Int, suit: Suit, priority: Int) => CardPlay.apply(deal, None, hand, suit, priority), List("deal", "hand", "suit", "priority"))
 
     def toLog(t: CardPlay): String = loggable.toLog(t)
   }

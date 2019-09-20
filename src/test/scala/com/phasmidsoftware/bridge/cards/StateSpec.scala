@@ -18,7 +18,7 @@ class StateSpec extends FlatSpec with Matchers {
   private val whist = Whist(deal, north)
   private val trick0 = Trick.empty
   private val tricks0 = Tricks(0, 0)
-  private val play0 = CardPlay(deal, north, Spades, 9)
+  private val play0 = CardPlay(deal, None, north, Spades, 9)
 
   it should "apply" in {
     val target = State(whist, trick0, tricks0)
@@ -84,13 +84,13 @@ class StateSpec extends FlatSpec with Matchers {
 
   it should "toString" in {
     val target: State = State.create(whist, trick0 :+ play0, tricks0)
-    target.toString shouldBe "State(Whist(Deal test (51), N, NT),T1 {S5},0:0)"
+    target.toString shouldBe "State(Whist(Deal test (51), N, NT),T1 0 {S5},0:0)"
   }
 
   it should "neatOutput" in {
     val target = State.create(whist, trick0 :+ play0, tricks0)
     target.neatOutput shouldBe
-      "State: Trick History: \"T1 {S5}\" 0:0 3.8 Deal test (51) List(S9 HQ9432 D64 CT652," +
+      "State: Trick History: \"T1 0 {S5}\" 0:0 3.8 Deal test (51) List(S9 HQ9432 D64 CT652," +
         " SK742 HA7 DT93 CAQJ7, SAJT86 HKT8 DK82 CK3, SQ3 HJ65 DAQJ75 C984)"
   }
 
@@ -125,7 +125,7 @@ class StateSpec extends FlatSpec with Matchers {
     val plays: Seq[State] = target.enumeratePlays
     plays.size shouldBe 3
     plays.head.trick.plays.size shouldBe 1
-    plays.head.trick.plays.head shouldBe CardPlay(deal, north, Hearts, 10)
+    plays.head.trick.plays.head shouldBe CardPlay(deal, None, north, Hearts, 10)
   }
 
   it should "get complex neat output" in {
@@ -146,7 +146,7 @@ class StateSpec extends FlatSpec with Matchers {
     val state5alternatives = state40.enumeratePlays
     val target = state5alternatives.head
     target.neatOutput shouldBe
-      """State: Trick History: "T1 {H2, H7, HK, H5}, T2 {S6}" 1:0 4.7 Deal test (47) List(S95 HQ943 D64 CT652, SK742 HA DT93 CAQJ7, SAJT8 HT8 DK82 CK3, SQ3 HJ6 DAQJ75 C984)""".stripMargin
+      """State: Trick History: "T1 0 {H2, H7, HK, H5}, T2 2 {S6}" 1:0 4.7 Deal test (47) List(S95 HQ943 D64 CT652, SK742 HA DT93 CAQJ7, SAJT8 HT8 DK82 CK3, SQ3 HJ6 DAQJ75 C984)""".stripMargin
   }
 
 }
