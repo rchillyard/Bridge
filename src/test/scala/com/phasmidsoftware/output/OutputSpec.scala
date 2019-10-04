@@ -7,7 +7,7 @@ package com.phasmidsoftware.output
 import java.io.Writer
 
 import com.phasmid.laScala.values.Rational
-import com.phasmidsoftware.bridge.director.Score
+import com.phasmidsoftware.bridge.director.Card
 import com.phasmidsoftware.util.{Output, OutputException}
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -25,7 +25,7 @@ class OutputSpec extends FlatSpec with Matchers {
     val output: Output = Output(writer)
 
     def getResultsForDirection(preamble: (String, Option[String], Seq[(Int, String, String)]), r: (Boolean, Int, Map[Int, (Rational[Int], Int)]), top: Int): Output = {
-      def resultDetails(s: (Int, (Rational[Int], Int))): Output = Output(s"${s._1} : ${Score.mpsAsString(s._2._1, top)} : ${Score.mpsAsPercentage(s._2._1, s._2._2)} : Tweedledum & Tweedledee").insertBreak()
+      def resultDetails(s: (Int, (Rational[Int], Int))): Output = Output(s"${s._1} : ${Card.mpsAsString(s._2._1, top)} : ${Card.percentageAsString(s._2._1, s._2._2)} : Tweedledum & Tweedledee").insertBreak()
 
       Output.foldLeft(r._3.toSeq.sortBy(_._2._1).reverse)()(_ ++ resultDetails(_))
     }

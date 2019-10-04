@@ -17,6 +17,9 @@ import scala.util.{Failure, Success, _}
 
 /**
   * Created by scalaprof on 4/12/16.
+  *
+  * TODO need to order the results by percentage
+  *
   */
 object Score extends App {
   if (args.length > 0) {
@@ -28,12 +31,7 @@ object Score extends App {
   }
   else System.err.println("Syntax: Score filename")
 
-  def mpsAsString(r: Rational[Int], top: Int): String = "%2.2f".format((r * top) toDouble)
-
-  def mpsAsPercentage(r: Rational[Int], boards: Int): String =
-    if (boards > 0) "%2.2f".format((r * 100 / boards).toDouble) + "%"
-    else "infinity"
-
+  // TODO use the methods in Result
   def doScoreResource(resource: String, output: Output = Output(new PrintWriter(System.out))): Try[Output] =
     Option(getClass.getResourceAsStream(resource)) match {
       case Some(s) => doScore(Source.fromInputStream(s), output)
@@ -45,10 +43,12 @@ object Score extends App {
   def doScore(source: BufferedSource, output: Output = Output(new PrintWriter(System.out))): Try[Output] = {
 
     def getResultsForDirection(k: Preamble, r: Result, top: Int): Output = {
-      def resultDetails(s: (Int, (Rational[Int], Int))): Output =
-        Output(s"${s._1} : ${Score.mpsAsString(s._2._1, top)} : ${Score.mpsAsPercentage(s._2._1, s._2._2)} : ${k.getNames(r.isNS, s._1)}").insertBreak()
+      def resultDetails(s: (Int, Card)): Output = {
+        val card: Card = s._2
+        Output(s"${s._1} : ${card.toStringMps(top)} : ${card.toStringPercent} : ${k.getNames(r.isNS, s._1)}").insertBreak()
+      }
 
-      Output.foldLeft(r.cards.toSeq.sortBy(_._2._1).reverse)()(_ ++ resultDetails(_))
+      Output.foldLeft(r.cards.toSeq.sortBy(_._2).reverse)()(_ ++ resultDetails(_))
     }
 
     def getResults(k: Preamble, r: Result): Output =
@@ -95,10 +95,8 @@ case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit]
 /**
   * Class to represent a section of an event.
   *
-  * CONSIDER what happens when there are no travelers, but all pickup slips?
-  *
   * @param preamble  the preamble describing this section.
-  * @param travelers a sequence of travelers.
+  * @param travelers a sequence of travelers (maybe be empty of all pickup slips are used).
   */
 case class Section(preamble: Preamble, travelers: Seq[Traveler]) extends Outputable[Unit] {
 
@@ -106,9 +104,11 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler]) extends Outputa
     val top = calculateTop
     val recap: Seq[Matchpoints] = for (t <- travelers; m <- t.matchpointIt) yield m
 
-    def all(n: Int, dir: Boolean): Seq[Rational[Int]] = recap.filter { m => m.matchesPair(n, dir) } flatMap { m => m.getMatchpoints(dir) }
+    def all(n: Int, dir: Boolean): Seq[Option[Rational[Int]]] = recap.filter { m => m.matchesPair(n, dir) } map { m => m.getMatchpoints(dir) }
 
-    def total(d: Boolean): Seq[(Int, (Rational[Int], Int))] = for (p <- preamble.pairs; x = all(p.number, d)) yield p.number -> (x.sum, x.size)
+    def total(d: Boolean): Seq[(Int, Card)] = for {p <- preamble.pairs
+                                                   ros = all(p.number, d)
+                                                   } yield p.number -> Card(ros)
 
     for (d <- Seq(true, false)) yield Result(d, top, total(d).toMap)
   }
@@ -188,6 +188,44 @@ case class Player(name: String) {
   override def toString: String = name
 }
 
+case class Card(totalMps: Rational[Int], played: Int, notPlayed: Int) extends Ordered[Card] {
+
+  def toStringMps(top: Int): String = Card.mpsAsString(scaledMps, top)
+
+  lazy val toStringPercent: String = Card.percentageAsString(totalMps, played)
+
+  lazy val percentage: Rational[Int] = Card.asPercent(totalMps, played)
+
+  private def scaledMps = totalMps * (played + notPlayed) / played
+
+  def compare(that: Card): Int = Rational.compare(percentage, that.percentage)
+}
+
+object Card {
+  def apply(ros: Seq[Option[Rational[Int]]]): Card = {
+    val z: Seq[Rational[Int]] = ros.flatten
+    Card(z.sum, z.size, ros.size - z.size)
+  }
+
+  def mpsAsString(r: Rational[Int], top: Int): String = "%2.2f".format((r * top) toDouble)
+
+  // TODO use percentage instead.
+  def percentageAsString(r: Rational[Int], boards: Int): String = {
+    val percentage = asPercent(r, boards)
+    if (percentage.isInfinity) "infinity"
+    else "%2.2f".format(percentage.toDouble) + "%"
+  }
+
+  /**
+    * method to transform a Rational (r) into a percentage.
+    *
+    * @param r    a Rational.
+    * @param base the value corresponding to 100%.
+    * @return r converted to a percentage of base.
+    */
+  def asPercent(r: Rational[Int], base: Int): Rational[Int] = r * 100 / base
+}
+
 /**
   * This is the complete results for a particular direction
   *
@@ -195,7 +233,25 @@ case class Player(name: String) {
   * @param top   top on a board
   * @param cards a map of tuples containing total score and number of boards played, indexed by the pair number
   */
-case class Result(isNS: Boolean, top: Int, cards: Map[Int, (Rational[Int], Int)])
+case class Result(isNS: Boolean, top: Int, cards: Map[Int, Card]) extends Outputable[Unit] {
+  // TODO merge in getResultsForDirections, etc.
+
+  def output(output: Output, xo: Option[Unit]): Output = ???
+
+  def getResultsForDirection(k: Preamble, r: Result, top: Int): Output = {
+    def resultDetails(s: (Int, Card)): Output = {
+      val card: Card = s._2
+      Output(s"${s._1} : ${card.toStringMps(top)} : ${card.toStringPercent} : ${k.getNames(r.isNS, s._1)}").insertBreak()
+    }
+
+    Output.foldLeft(r.cards.toSeq.sortBy(_._2).reverse)()(_ ++ resultDetails(_))
+  }
+
+  def getResults(k: Preamble, r: Result): Output =
+    Output(s"Results for direction: ${if (r.isNS) "N/S" else "E/W"}").insertBreak ++ getResultsForDirection(k, r, r.top)
+
+
+}
 
 /**
   * This is the matchpoint result for one boardResult (of NS/EW/Board).
@@ -203,17 +259,17 @@ case class Result(isNS: Boolean, top: Int, cards: Map[Int, (Rational[Int], Int)]
   * @param ns     NS pair #
   * @param ew     EW pair #
   * @param result the table result
-  * @param mp     the matchpoints earned by ns for this boardResult
+  * @param mp     (optionally) the matchpoints earned by ns for this boardResult
   * @param top    the maximum number of matchpoints possible
   */
 case class Matchpoints(ns: Int, ew: Int, result: PlayResult, mp: Option[Rational[Int]], top: Int) {
   def matchesPair(n: Int, dir: Boolean): Boolean = if (dir) n == ns else n == ew
 
-  def getMatchpoints(dir: Boolean): Iterable[Rational[Int]] = if (dir) mp else invert
+  def getMatchpoints(dir: Boolean): Option[Rational[Int]] = if (dir) mp else invert
 
   // CONSIDER extending Outputable and putting this logic into output method.
   override def toString: String = mp match {
-    case Some(x) => s"NS: $ns, EW: $ew, score: $result, MP: ${Score.mpsAsString(x, top)}"
+    case Some(x) => s"NS: $ns, EW: $ew, score: $result, MP: ${Card.mpsAsString(x, top)}"
     case _ => ""
   }
 
