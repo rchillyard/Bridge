@@ -285,7 +285,7 @@ class ScoreSpec extends FlatSpec with Matchers {
   }
   "percentageAsString" should "work" in {
     val r = Rational(3, 4)
-    Card.percentageAsString(r, 1) shouldBe "75.00%"
+    Card(r, 1, 0).toStringPercent shouldBe "75.00%"
   }
   "mpsAsString" should "work" in {
     val r = Rational(3, 4)
@@ -465,6 +465,13 @@ class ScoreSpec extends FlatSpec with Matchers {
     target.toStringMps(2) shouldBe "12.50"
   }
 
+  behavior of "Rational"
+
+  it should "render" in {
+    Score.rationalToString(Score.asPercent(Rational(1, 2), 1)) shouldBe "50.00"
+    Score.rationalToString(Rational(2, 1)) shouldBe " 2.00"
+    Score.rationalToString(Rational(1, 2)) shouldBe " 0.50"
+  }
 
 }
 

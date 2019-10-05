@@ -18,8 +18,6 @@ import scala.util.{Failure, Success, _}
 /**
   * Created by scalaprof on 4/12/16.
   *
-  * TODO need to order the results by percentage
-  *
   */
 object Score extends App {
   if (args.length > 0) {
@@ -42,22 +40,10 @@ object Score extends App {
 
   def doScore(source: BufferedSource, output: Output = Output(new PrintWriter(System.out))): Try[Output] = {
 
-    def getResultsForDirection(k: Preamble, r: Result, top: Int): Output = {
-      def resultDetails(s: (Int, Card)): Output = {
-        val card: Card = s._2
-        Output(s"${s._1} : ${card.toStringMps(top)} : ${card.toStringPercent} : ${k.getNames(r.isNS, s._1)}").insertBreak()
-      }
-
-      Output.foldLeft(r.cards.toSeq.sortBy(_._2).reverse)()(_ ++ resultDetails(_))
-    }
-
-    def getResults(k: Preamble, r: Result): Output =
-      Output(s"Results for direction: ${if (r.isNS) "N/S" else "E/W"}").insertBreak ++ getResultsForDirection(k, r, r.top)
-
     implicit val separator: Output = Output.empty.insertBreak()
 
     def eventResults(e: Event, k: Preamble, rs: Seq[Result]): Output = {
-      val z = for (r <- rs) yield getResults(k, r)
+      val z = for (r <- rs) yield r.getResults(k)
       (Output(s"Section ${k.identifier}") ++ z :+
         "=====================================================\n" :+
         "=====================================================\n") ++
@@ -67,6 +53,31 @@ object Score extends App {
     val ey = RecapParser.readEvent(source)
 
     for (e <- ey) yield (output :+ e.title).insertBreak ++ (for ((k, rs) <- e.createResults) yield eventResults(e, k, rs))
+  }
+
+  /**
+    * Method to transform a Rational (r) into a percentage.
+    *
+    * CONSIDER This method belongs in Rational.
+    *
+    * @param r    a Rational.
+    * @param base the value corresponding to 100%.
+    * @return r converted to a percentage of base.
+    */
+  def asPercent(r: Rational[Int], base: Int): Rational[Int] = r * 100 / base
+
+  /**
+    * Method to render a Rational (r).
+    *
+    * CONSIDER This method belongs in Rational.
+    *
+    * @param r a Rational.
+    * @return r rendered in 5 spaces.
+    */
+  def rationalToString(r: Rational[Int]): String = r match {
+    case Rational(x, 1) => f"$x%2d.00"
+    case Rational(_, 0) => "infty"
+    case _ => f"${r.toDouble}%5.2f"
   }
 }
 
@@ -192,38 +203,22 @@ case class Card(totalMps: Rational[Int], played: Int, notPlayed: Int) extends Or
 
   def toStringMps(top: Int): String = Card.mpsAsString(scaledMps, top)
 
-  lazy val toStringPercent: String = Card.percentageAsString(totalMps, played)
+  def compare(that: Card): Int = Rational.compare(percentage, that.percentage)
 
-  lazy val percentage: Rational[Int] = Card.asPercent(totalMps, played)
+  lazy val toStringPercent: String = Score.rationalToString(percentage) + "%"
+
+  lazy val percentage: Rational[Int] = Score.asPercent(totalMps, played)
 
   private def scaledMps = totalMps * (played + notPlayed) / played
-
-  def compare(that: Card): Int = Rational.compare(percentage, that.percentage)
 }
 
 object Card {
   def apply(ros: Seq[Option[Rational[Int]]]): Card = {
-    val z: Seq[Rational[Int]] = ros.flatten
-    Card(z.sum, z.size, ros.size - z.size)
+    val irs: Seq[Rational[Int]] = ros.flatten
+    Card(irs.sum, irs.size, ros.size - irs.size)
   }
 
   def mpsAsString(r: Rational[Int], top: Int): String = "%2.2f".format((r * top) toDouble)
-
-  // TODO use percentage instead.
-  def percentageAsString(r: Rational[Int], boards: Int): String = {
-    val percentage = asPercent(r, boards)
-    if (percentage.isInfinity) "infinity"
-    else "%2.2f".format(percentage.toDouble) + "%"
-  }
-
-  /**
-    * method to transform a Rational (r) into a percentage.
-    *
-    * @param r    a Rational.
-    * @param base the value corresponding to 100%.
-    * @return r converted to a percentage of base.
-    */
-  def asPercent(r: Rational[Int], base: Int): Rational[Int] = r * 100 / base
 }
 
 /**
@@ -233,24 +228,21 @@ object Card {
   * @param top   top on a board
   * @param cards a map of tuples containing total score and number of boards played, indexed by the pair number
   */
-case class Result(isNS: Boolean, top: Int, cards: Map[Int, Card]) extends Outputable[Unit] {
-  // TODO merge in getResultsForDirections, etc.
+case class Result(isNS: Boolean, top: Int, cards: Map[Int, Card]) {
 
-  def output(output: Output, xo: Option[Unit]): Output = ???
+  def getResults(k: Preamble): Output =
+    Output(s"Results for direction: ${if (isNS) "N/S" else "E/W"}").insertBreak ++ getResultsForDirection(k)
 
-  def getResultsForDirection(k: Preamble, r: Result, top: Int): Output = {
+  private def getResultsForDirection(k: Preamble): Output = {
+    def getNames(k: Preamble, pairNumber: Int) = k.getNames(isNS, pairNumber)
+
     def resultDetails(s: (Int, Card)): Output = {
-      val card: Card = s._2
-      Output(s"${s._1} : ${card.toStringMps(top)} : ${card.toStringPercent} : ${k.getNames(r.isNS, s._1)}").insertBreak()
+      val (pairNumber, card) = s
+      Output(s"$pairNumber : ${card.toStringMps(top)} : ${card.toStringPercent} : ${getNames(k, pairNumber)}").insertBreak()
     }
 
-    Output.foldLeft(r.cards.toSeq.sortBy(_._2).reverse)()(_ ++ resultDetails(_))
+    Output.foldLeft(cards.toSeq.sortBy(_._2).reverse)()(_ ++ resultDetails(_))
   }
-
-  def getResults(k: Preamble, r: Result): Output =
-    Output(s"Results for direction: ${if (r.isNS) "N/S" else "E/W"}").insertBreak ++ getResultsForDirection(k, r, r.top)
-
-
 }
 
 /**
