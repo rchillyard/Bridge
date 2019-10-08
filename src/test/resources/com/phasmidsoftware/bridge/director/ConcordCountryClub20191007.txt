@@ -1,13 +1,13 @@
 Concord Country Club Oct 7th 2019
 A SW
-1 N Mary P & Susan H
-2 N Lynda A & Barbara S
-3 N Liz B & Barbara O
-4 N Anne M & Jeanne D
-5 N Debbie D & Cynthia L
-6 N Chandler W & Sybil C
-7 N Jane R & Pat B
-8 N Anne R & Ann N
+1 Mary P & Susan H
+2 Lynda A & Barbara S
+3 Liz B & Barbara O
+4 Anne M & Jeanne D
+5 Debbie D & Cynthia L
+6 Chandler W & Sybil C
+7 Jane R & Pat B
+8 Anne R & Ann N
 P 8 1
 1 -50
 2-170

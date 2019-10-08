@@ -174,6 +174,8 @@ case class Preamble(identifier: String, maybeModifier: Option[String], pairs: Se
   if (pairs.isEmpty)
     System.err.println(s"Warning: there are no players in this section: $identifier")
 
+  if (!pairs.forall(_.valid(maybeModifier))) throw ScoreException("pairs must have direction unless movement is single-winner")
+
   def getNames(ns: Option[Boolean], n: Int): String = {
     val ws: Seq[String] = pairs.filter { p => p.number == n } map { p => p.brief }
 
@@ -205,14 +207,23 @@ object Preamble {
 /**
   * Class to represent a pair.
   *
-  * @param number    the pair number.
-  * @param direction the (optional) direction (assuming a Mitchell movement).
-  * @param players   the players who make up this pair (N, E first).
+  * @param number         the pair number.
+  * @param maybeDirection the (optional) direction (assuming a Mitchell movement).
+  * @param players        the players who make up this pair (N, E first).
   */
-case class Pair(number: Int, direction: String, players: (Player, Player)) {
+case class Pair(number: Int, maybeDirection: Option[String], players: (Player, Player)) {
+
   override def toString: String = s"$number$direction: $brief"
 
-  def brief: String = s"${players._1} & ${players._2}"
+  // CONSIDER making this more elegant
+  def valid(x: Option[String]): Boolean = x match {
+    case Some(Preamble.SingleWinner) => "N" == (maybeDirection getOrElse "N")
+    case _ => maybeDirection.isDefined
+  }
+
+  lazy val brief: String = s"${players._1} & ${players._2}"
+
+  private lazy val direction = maybeDirection getOrElse ""
 }
 
 /**

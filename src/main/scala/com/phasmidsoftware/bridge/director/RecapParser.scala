@@ -32,7 +32,7 @@ class RecapParser extends JavaTokenParsers {
   def pairs: Parser[List[Pair]] = rep(pair <~ endOfLine)
 
   // XXX pair parser yields a Players object and is a number followed by "N" or "E" followed by two full names, each terminated by a period
-  def pair: Parser[Pair] = (wholeNumber <~ spacer) ~ ("E" | "N") ~ playerPlayer ^^ { case n ~ d ~ p => Pair(n.toInt, d, p._1 -> p._2) }
+  def pair: Parser[Pair] = (wholeNumber <~ spacer) ~ opt("E" | "N") ~ playerPlayer ^^ { case n ~ d ~ p => Pair(n.toInt, d, p._1 -> p._2) }
 
   //  def pair: Parser[Pair] = (wholeNumber <~ spacer) ~ opt("E" | "N") ~ playerPlayer ^^ { case n ~ d ~ p => Pair(n.toInt, d, p._1 -> p._2) }
 

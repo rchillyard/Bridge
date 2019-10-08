@@ -304,10 +304,10 @@ class ScoreSpec extends FlatSpec with Matchers {
 
   it should "apply with pickups" in {
     val pairs = Seq(
-      director.Pair(1, "N", (Player("tweedledum"), Player("tweedledee"))),
-      director.Pair(2, "N", (Player("James Clark Maxwell"), Player("Albert Einstein"))),
-      director.Pair(1, "E", (Player("Tristan"), Player("Isolde"))),
-      director.Pair(2, "E", (Player("Romeo"), Player("Juliet")))
+      director.Pair(1, Some("N"), (Player("tweedledum"), Player("tweedledee"))),
+      director.Pair(2, Some("N"), (Player("James Clark Maxwell"), Player("Albert Einstein"))),
+      director.Pair(1, Some("E"), (Player("Tristan"), Player("Isolde"))),
+      director.Pair(2, Some("E"), (Player("Romeo"), Player("Juliet")))
     )
     val preamble = Preamble("A", None, pairs)
     val bd1 = 1
@@ -344,10 +344,10 @@ class ScoreSpec extends FlatSpec with Matchers {
     }
 
     val pairs = Seq(
-      director.Pair(1, "N", (Player("tweedledum"), Player("tweedledee"))),
-      director.Pair(2, "N", (Player("James Clark Maxwell"), Player("Albert Einstein"))),
-      director.Pair(1, "E", (Player("Tristan"), Player("Isolde"))),
-      director.Pair(2, "E", (Player("Romeo"), Player("Juliet")))
+      director.Pair(1, Some("N"), (Player("tweedledum"), Player("tweedledee"))),
+      director.Pair(2, Some("N"), (Player("James Clark Maxwell"), Player("Albert Einstein"))),
+      director.Pair(1, Some("E"), (Player("Tristan"), Player("Isolde"))),
+      director.Pair(2, Some("E"), (Player("Romeo"), Player("Juliet")))
     )
     val travelers: Seq[Traveler] = Seq(
       Traveler(1, Seq(Play(1, 1, PlayResult(Right(110))), Play(2, 2, PlayResult(Right(100))))),
@@ -418,8 +418,7 @@ class ScoreSpec extends FlatSpec with Matchers {
   behavior of "Score"
   it should "read travelers.lexington.2017.0404 as a resource" in {
     val writer = MockWriter(8192)
-    val output = Output(writer)
-    for (o <- Score.doScoreResource("travelers.lexington.2017.0404", output)) o.close()
+    for (o <- Score.doScoreResource("travelers.lexington.2017.0404", Output(writer))) o.close()
     writer.spilled shouldBe 2325
   }
   it should "read travelers.lexington.2017.0404P as a resource (includes pickup slips)" in {
@@ -431,6 +430,11 @@ class ScoreSpec extends FlatSpec with Matchers {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/travelers.lexington.2017.0404", Output(writer))) o.close()
     writer.spilled shouldBe 2325
+  }
+  it should "read ConcordCountryClub20191007.txt" in {
+    val writer = MockWriter(8192)
+    for (o <- Score.doScoreResource("ConcordCountryClub20191007.txt", Output(writer))) o.close()
+    writer.spilled shouldBe 2642
   }
 
   //noinspection SpellCheckingInspection
