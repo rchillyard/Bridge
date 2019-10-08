@@ -33,7 +33,7 @@ object Score extends App {
   def doScoreResource(resource: String, output: Output = Output(new PrintWriter(System.out))): Try[Output] =
     Option(getClass.getResourceAsStream(resource)) match {
       case Some(s) => doScore(Source.fromInputStream(s), output)
-      case None => Failure(new Exception(s"doScoreResource: cannot open resource: $resource"))
+      case None => Failure(ScoreException(s"doScoreResource: cannot open resource: $resource"))
     }
 
   def doScoreFromFile(filename: String, output: Output = Output(new PrintWriter(System.out))): Try[Output] = doScore(Source.fromFile(filename), output)
@@ -42,9 +42,9 @@ object Score extends App {
 
     implicit val separator: Output = Output.empty.insertBreak()
 
-    def eventResults(e: Event, k: Preamble, rs: Seq[Result]): Output = {
-      val z = for (r <- rs) yield r.getResults(k)
-      (Output(s"Section ${k.identifier}") ++ z :+
+    def eventResults(e: Event, p: Preamble, rs: Seq[Result]): Output = {
+      val z = for (r <- rs) yield r.getResults(p.getNames)
+      (Output(s"Section ${p.identifier}") ++ z :+
         "=====================================================\n" :+
         "=====================================================\n") ++
         e.output(Output.empty)
@@ -52,7 +52,7 @@ object Score extends App {
 
     val ey = RecapParser.readEvent(source)
 
-    for (e <- ey) yield (output :+ e.title).insertBreak ++ (for ((k, rs) <- e.createResults) yield eventResults(e, k, rs))
+    for (e <- ey) yield (output :+ e.title).insertBreak ++ (for ((p, rs) <- e.createResults) yield eventResults(e, p, rs))
   }
 
   /**
@@ -74,6 +74,7 @@ object Score extends App {
     * @param r a Rational.
     * @return r rendered in 5 spaces.
     */
+  //noinspection SpellCheckingInspection
   def rationalToString(r: Rational[Int]): String = r match {
     case Rational(x, 1) => f"$x%2d.00"
     case Rational(_, 0) => "infty"
@@ -111,20 +112,15 @@ case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit]
   */
 case class Section(preamble: Preamble, travelers: Seq[Traveler]) extends Outputable[Unit] {
 
-  def createResults: Seq[Result] = {
+  lazy val createResults: Seq[Result] = {
     val top = calculateTop
-    val recap: Seq[Matchpoints] = for (t <- travelers; m <- t.matchpointIt) yield m
-
-    def all(n: Int, dir: Boolean): Seq[Option[Rational[Int]]] = recap.filter { m => m.matchesPair(n, dir) } map { m => m.getMatchpoints(dir) }
-
-    def total(d: Boolean): Seq[(Int, Card)] = for {p <- preamble.pairs
-                                                   ros = all(p.number, d)
-                                                   } yield p.number -> Card(ros)
-
-    for (d <- Seq(true, false)) yield Result(d, top, total(d).toMap)
+    preamble.maybeModifier match {
+      case Some(Preamble.SingleWinner) => Seq(Result(None, top, getSwResults))
+      case _ => for (d <- Seq(true, false)) yield Result(Some(d), top, total(d).toMap)
+    }
   }
 
-  def calculateTop: Int = {
+  lazy val calculateTop: Int = {
     val tops: Seq[Int] = for (t <- travelers) yield t.top
     val theTop = tops.distinct
     if (theTop.size != 1) System.err.println(s"Warning: not all boards have been played the same number of times: $tops")
@@ -140,6 +136,22 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler]) extends Outputa
     */
   def output(output: Output, xo: Option[Unit] = None): Output = travelers.sorted.foldLeft(output :+ s"$preamble\n")((o, t) => o ++ t.output(Output.empty))
 
+  private lazy val recap: Seq[Matchpoints] = for (t <- travelers; m <- t.matchpointIt) yield m
+
+  private def all(n: Int, dir: Boolean): Seq[Option[Rational[Int]]] = recap.filter(_.matchesPair(n, dir)) map (_.getMatchpoints(dir))
+
+  private def total(d: Boolean): Seq[(Int, Card)] = for {p <- preamble.pairs
+                                                         ros = all(p.number, d)
+                                                         } yield p.number -> Card(ros)
+
+  private def sum(iCs: Seq[(Int, Card)]): Card = {
+    val (is, cs) = iCs.unzip
+    if (is.distinct.length > 1) throw ScoreException(s"logic error: sum: indices should be the same")
+    cs.foldLeft(Card(0, 0, 0))(_ + _)
+  }
+
+  private lazy val getSwResults: Map[Int, Card] =
+    for ((i, i_cs) <- total(true) ++ total(false) groupBy { case (i, _) => i }) yield i -> sum(i_cs)
 }
 
 object Section {
@@ -162,9 +174,20 @@ case class Preamble(identifier: String, maybeModifier: Option[String], pairs: Se
   if (pairs.isEmpty)
     System.err.println(s"Warning: there are no players in this section: $identifier")
 
-  def getNames(ns: Boolean, n: Int): String = {
-    val wt = Util.asTuple2(pairs.filter { p => p.number == n } map { p => p.brief })
-    if (ns) wt._1 else wt._2
+  def getNames(ns: Option[Boolean], n: Int): String = {
+    val ws: Seq[String] = pairs.filter { p => p.number == n } map { p => p.brief }
+
+    maybeModifier match {
+      case Some(Preamble.SingleWinner) =>
+        ws.head
+      case _ =>
+        val wt = Util.asTuple2(ws)
+        ns match {
+          case Some(b) => if (b) wt._1 else wt._2
+          case _ => throw ScoreException("logic error in Preamble.getNames")
+        }
+
+    }
   }
 
   override def toString: String = {
@@ -175,11 +198,15 @@ case class Preamble(identifier: String, maybeModifier: Option[String], pairs: Se
   }
 }
 
+object Preamble {
+  val SingleWinner: String = "SW"
+}
+
 /**
   * Class to represent a pair.
   *
   * @param number    the pair number.
-  * @param direction the direction (assuming a Mitchell movement).
+  * @param direction the (optional) direction (assuming a Mitchell movement).
   * @param players   the players who make up this pair (N, E first).
   */
 case class Pair(number: Int, direction: String, players: (Player, Player)) {
@@ -205,6 +232,8 @@ case class Card(totalMps: Rational[Int], played: Int, notPlayed: Int) extends Or
 
   def compare(that: Card): Int = Rational.compare(percentage, that.percentage)
 
+  def +(c: Card): Card = Card(totalMps + c.totalMps, played + c.played, notPlayed + c.notPlayed)
+
   lazy val toStringPercent: String = Score.rationalToString(percentage) + "%"
 
   lazy val percentage: Rational[Int] = Score.asPercent(totalMps, played)
@@ -218,27 +247,35 @@ object Card {
     Card(irs.sum, irs.size, ros.size - irs.size)
   }
 
-  def mpsAsString(r: Rational[Int], top: Int): String = "%2.2f".format((r * top) toDouble)
+  def mpsAsString(r: Rational[Int], top: Int): String = Score.rationalToString(r * top)
 }
 
 /**
   * This is the complete results for a particular direction
   *
-  * @param isNS  true if this result is for N/S; false if for E/W
+  * @param isNS  (optional) Some(true) if this result is for N/S; Some(false) if for E/W; None for single winner.
   * @param top   top on a board
   * @param cards a map of tuples containing total score and number of boards played, indexed by the pair number
   */
-case class Result(isNS: Boolean, top: Int, cards: Map[Int, Card]) {
+case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
 
-  def getResults(k: Preamble): Output =
-    Output(s"Results for direction: ${if (isNS) "N/S" else "E/W"}").insertBreak ++ getResultsForDirection(k)
+  /**
+    * Method to get results, given a nameFunction
+    *
+    * @param nameFunction a function to yield a name, given an optional direction and a pair number.
+    * @return Output
+    */
+  def getResults(nameFunction: (Option[Boolean], Int) => String): Output = Output(s"Results" + directionHeader).insertBreak ++ getResultsForDirection(nameFunction(isNS, _))
 
-  private def getResultsForDirection(k: Preamble): Output = {
-    def getNames(k: Preamble, pairNumber: Int) = k.getNames(isNS, pairNumber)
+  private lazy val directionHeader = isNS match {
+    case Some(d) => " for direction " + (if (d) "N/S" else "E/W")
+    case None => ""
+  }
 
+  private def getResultsForDirection(nameFunction: Int => String) = {
     def resultDetails(s: (Int, Card)): Output = {
       val (pairNumber, card) = s
-      Output(s"$pairNumber : ${card.toStringMps(top)} : ${card.toStringPercent} : ${getNames(k, pairNumber)}").insertBreak()
+      Output(s"$pairNumber : ${card.toStringMps(top)} : ${card.toStringPercent} : ${nameFunction(pairNumber)}").insertBreak()
     }
 
     Output.foldLeft(cards.toSeq.sortBy(_._2).reverse)()(_ ++ resultDetails(_))
@@ -261,7 +298,7 @@ case class Matchpoints(ns: Int, ew: Int, result: PlayResult, mp: Option[Rational
 
   // CONSIDER extending Outputable and putting this logic into output method.
   override def toString: String = mp match {
-    case Some(x) => s"NS: $ns, EW: $ew, score: $result, MP: ${Card.mpsAsString(x, top)}"
+    case Some(x) => s"NS: $ns, EW: $ew, score: $result, MP:${Card.mpsAsString(x, top)}"
     case _ => ""
   }
 
@@ -439,3 +476,5 @@ object PlayResult {
 
   def error(s: String): PlayResult = PlayResult(Left(s))
 }
+
+case class ScoreException(str: String) extends Exception(str)
