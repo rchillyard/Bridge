@@ -10,7 +10,7 @@ class IntegrationTreeSpec extends FlatSpec with Matchers {
 
   behavior of "expand"
 
-  private val deal2 = Deal("test", 2L)
+  private val deal2 = Deal("test", 2L, adjustForPartnerships = false)
   private val whist = Whist(deal2, 0)
 
   implicit val whistGoal: GoalDriven[State] = Whist.goal(1, _directionNS = true, 1)

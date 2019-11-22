@@ -25,9 +25,9 @@ import scala.language.implicitConversions
   *
   * @param deal          the arrangement of cards.
   * @param openingLeader the player on opening lead (0 thru 3 for "North" thru "West").
-  * @param maybeTrumps   the (optional) trump suit: None indicates notrump.
+  * @param strain        the (optional) trump suit: None indicates notrump.
   */
-case class Whist(deal: Deal, openingLeader: Int, maybeTrumps: Option[Suit] = None) extends Playable[Whist] with Quittable[Whist] {
+case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None) extends Playable[Whist] with Quittable[Whist] {
 
   /**
     * Method to make a sequence of States from the given sequence of Trick instances.
@@ -46,7 +46,7 @@ case class Whist(deal: Deal, openingLeader: Int, maybeTrumps: Option[Suit] = Non
     * @param cardPlay the card play.
     * @return a new Playable.
     */
-  def play(cardPlay: CardPlay): Whist = Whist(deal.play(cardPlay), openingLeader, maybeTrumps)
+  def play(cardPlay: CardPlay): Whist = Whist(deal.play(cardPlay), openingLeader, strain)
 
   /**
     * Solve this Whist game as a double-dummy problem where one side or the other (depending on directionNS)
@@ -64,19 +64,17 @@ case class Whist(deal: Deal, openingLeader: Int, maybeTrumps: Option[Suit] = Non
     implicit val se: Expandable[State] = (t: State) => t.enumeratePlays
     val tree = StateTree(this)
     val node = tree.expand()
-//    node.output(Output(System.out)).insertBreak().close()
     node.so flatMap (sn => sn.tricks.decide(tricks, directionNS))
   }
 
-  override def toString: String = s"Whist($deal, ${Hand.name(openingLeader)}, $strain)"
+  override def toString: String = s"Whist($deal, ${Hand.name(openingLeader)}, $sStrain)"
+
   /**
     * Method to enact the pending promotions on this Quittable.
     *
-    * CONSIDER making this a lazy val.
-    *
     * @return an eagerly promoted Whist game.
     */
-  def quit: Whist = Whist(deal.quit, openingLeader, maybeTrumps)
+  def quit: Whist = Whist(deal.quit, openingLeader, strain)
 
   /**
     * Create an initial state for this Whist game.
@@ -87,7 +85,7 @@ case class Whist(deal: Deal, openingLeader: Int, maybeTrumps: Option[Suit] = Non
     */
   lazy val createState: State = State(this)
 
-  lazy val strain: String = maybeTrumps map (_.toString) getOrElse "NT"
+  lazy val sStrain: String = strain map (_.toString) getOrElse "NT"
 }
 
 /**
@@ -109,7 +107,7 @@ trait WhistGoalDriven extends GoalDriven[State] {
 object Whist {
 
   implicit object LoggableWhist extends Loggable[Whist] with Loggables {
-    def toLog(t: Whist): String = s"${implicitly[Loggable[Deal]].toLog(t.deal)}@${Hand.name(t.openingLeader)}:${t.strain}"
+    def toLog(t: Whist): String = s"${implicitly[Loggable[Deal]].toLog(t.deal)}@${Hand.name(t.openingLeader)}:${t.sStrain}"
   }
 
   def goal(_neededTricks: Int, _directionNS: Boolean, _totalTricks: Int = Deal.TricksPerDeal): WhistGoalDriven = new WhistGoalDriven {
@@ -135,6 +133,38 @@ trait Quittable[X] {
     */
   def quit: X
 }
+
+/**
+  * The behavior of this trait is to (eagerly) quit a trick (holding, sequence),
+  * which is to say take the (lazy) promotions of a sequence and to promote them eagerly according to the
+  * quitting of the current trick.
+  *
+  * @tparam X the underlying type.
+  */
+trait Cooperative[X] {
+  /**
+    * Method to adjust for the virtual promotions on this Cooperative.
+    *
+    * @param x the cooperating object
+    * @return an eagerly promoted X.
+    */
+  def cooperate(x: X): X
+}
+
+/**
+  * The behavior of this trait is to reprioritize an X
+  *
+  * @tparam X the underlying type.
+  */
+trait Reprioritizable[X] {
+  /**
+    * Method to reprioritize.
+    *
+    * @return
+    */
+  def reprioritize: X
+}
+
 /**
   * Trait to model the behavior of play-choosing strategy.
   * We aim to choose the most favorable play each time so that we can achieve our goal quicker.

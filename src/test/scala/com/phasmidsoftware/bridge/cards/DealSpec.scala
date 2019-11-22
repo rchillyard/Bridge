@@ -17,7 +17,7 @@ class DealSpec extends FlatSpec with Matchers {
   behavior of "Deal"
 
   it should "applyStringSeed0" in {
-    val target = Deal("Test non-random", 0L)
+    val target = Deal("Test non-random", 0L, adjustForPartnerships = false)
     target.north.holdings(Spades) shouldBe Holding(Spades, Nine, Five)
     target.east.holdings(Hearts) shouldBe Holding(Hearts, Ace, Seven)
     target.south.holdings(Diamonds) shouldBe Holding(Diamonds, King, Eight, Deuce)
@@ -25,7 +25,7 @@ class DealSpec extends FlatSpec with Matchers {
   }
 
   it should "applyString" in {
-    val target = Deal("Test random")
+    val target = Deal("Test random", adjustForPartnerships = false)
     val output = target.output(Output(new PrintWriter(System.out)))
     output.close()
   }
@@ -33,13 +33,13 @@ class DealSpec extends FlatSpec with Matchers {
   it should "fromCards" in {
     val newDeck: Seq[Card] =
       for (s <- Seq(Spades, Hearts, Diamonds, Clubs); r <- Seq(Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)) yield Card(s, r)
-    val target = Deal.fromCards("test", newDeck)
+    val target = Deal.fromCards("test", newDeck, adjust = false)
     target.north.holdings(Spades) shouldBe Holding(Spades, Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)
     target.east.holdings(Hearts) shouldBe Holding(Hearts, Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)
   }
 
   it should "output" in {
-    val target = Deal("test", 0L)
+    val target = Deal("test", 0L, adjustForPartnerships = false)
     val writer = MockWriter()
     val output = target.output(Output(writer))
     output.close()
@@ -48,12 +48,12 @@ class DealSpec extends FlatSpec with Matchers {
   }
 
   it should "neatOutput" in {
-    val target = Deal("test", 0L)
+    val target = Deal("test", 0L, adjustForPartnerships = false)
     target.neatOutput shouldBe "Deal test (52) List(S95 HQ9432 D64 CT652, SK742 HA7 DT93 CAQJ7, SAJT86 HKT8 DK82 CK3, SQ3 HJ65 DAQJ75 C984)"
   }
 
   it should "asCard" in {
-    val deal = Deal("test", 0L)
+    val deal = Deal("test", 0L, adjustForPartnerships = false)
     val cardPlay = CardPlay(deal, None, 0, Spades, 5)
     val card = cardPlay.asCard
     card shouldBe Card(Spades, Nine)
@@ -61,7 +61,7 @@ class DealSpec extends FlatSpec with Matchers {
   }
 
   it should "asCard 2" in {
-    val deal1 = Deal("test", 0L)
+    val deal1 = Deal("test", 0L, adjustForPartnerships = false)
     val play1 = CardPlay(deal1, None, 0, Spades, 5)
     val card1 = play1.asCard
     card1 shouldBe Card(Spades, Nine)
@@ -74,7 +74,7 @@ class DealSpec extends FlatSpec with Matchers {
   }
 
   it should "asCard 3" in {
-    val deal1 = Deal("test", 0L)
+    val deal1 = Deal("test", 0L, adjustForPartnerships = false)
     val play1 = CardPlay(deal1, None, 0, Spades, 5)
     val card1 = play1.asCard
     card1 shouldBe Card(Spades, Nine)
@@ -85,7 +85,7 @@ class DealSpec extends FlatSpec with Matchers {
   }
 
   it should "evaluate" in {
-    val target = Deal("test", 0L)
+    val target = Deal("test", 0L, adjustForPartnerships = false)
     val Seq(n, _, s, _) = target.hands
     n.evaluate shouldBe 0.44 +- 0.02
     s.evaluate shouldBe 3.41 +- 0.02
@@ -100,9 +100,17 @@ class DealSpec extends FlatSpec with Matchers {
     a[CardException] shouldBe thrownBy(parseDeal("N:K632.7.A432.A932 J987.QT85.96.K76 AQ6.A432.K8.QJT8 T5.KJ96.QJT75.54"))
   }
 
+  behavior of "adjustForPartnerships"
+  it should "adjustForPartnerships" in {
+    val target = Deal("Test non-random", 0L, adjustForPartnerships = false)
+    val z = target._cooperate
+    val result = z.quit._reprioritize
+    (target.countSequences - result.countSequences) shouldBe 3
+  }
+
   behavior of "playAll"
   it should "playAll a trick made up of all highest spades" in {
-    val target = Deal("test", 0L)
+    val target = Deal("test", 0L, adjustForPartnerships = false)
     target.nCards shouldBe 52
     val hands = target.hands
     hands.size shouldBe 4
@@ -118,7 +126,7 @@ class DealSpec extends FlatSpec with Matchers {
   }
 
   it should "playAll a trick made up of all lowest spades" in {
-    val target = Deal("test", 0L)
+    val target = Deal("test", 0L, adjustForPartnerships = false)
     target.nCards shouldBe 52
     val hands = target.hands
     hands.size shouldBe 4
@@ -132,7 +140,7 @@ class DealSpec extends FlatSpec with Matchers {
   }
 
   it should "playAll a trick according to strategy" in {
-    val target = Deal("test", 0L)
+    val target = Deal("test", 0L, adjustForPartnerships = false)
     target.nCards shouldBe 52
     val hands = target.hands
     val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)

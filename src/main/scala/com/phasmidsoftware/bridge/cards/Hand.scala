@@ -17,7 +17,7 @@ import scala.language.implicitConversions
   * @param priority the number of higher-ranking cards in the suit.
   * @param cards    the cards.
   */
-case class Sequence(priority: Int, cards: List[Card]) extends Evaluatable {
+case class Sequence(priority: Int, cards: List[Card]) extends Evaluatable with Reprioritizable[Sequence] {
 
   require(cards.nonEmpty)
 
@@ -96,6 +96,12 @@ case class Sequence(priority: Int, cards: List[Card]) extends Evaluatable {
     * NOTE: this gets more and more optimistic as more tricks are turned.
     */
   private lazy val _evaluate = cards.length * math.pow(0.5, priority)
+
+  /**
+    *
+    * @return a Sequence based on the cards, ignoring the current priority.
+    */
+  def reprioritize: Sequence = Sequence(cards)
 }
 
 object Sequence {
@@ -163,7 +169,7 @@ object Sequence {
   *                   CONSIDER eliminating the list of promotions if holding is void.
   */
 case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] = Nil)
-  extends Outputable[Unit] with Quittable[Holding] with Evaluatable with Removable {
+  extends Outputable[Unit] with Quittable[Holding] with Cooperative[Holding] with Reprioritizable[Holding] with Evaluatable with Removable {
 
   require(isVoid || maybeSuit.get == suit)
 
@@ -270,6 +276,17 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
   def quit: Holding = _quit
 
   /**
+    * Adjust the priorities of this Holding by considering partner as cooperative.
+    *
+    * @param holding the cooperative holding.
+    * @return an eagerly promoted X.
+    */
+  def cooperate(holding: Holding): Holding = _cooperate(holding)
+
+
+  def reprioritize: Holding = _reprioritize
+
+  /**
     * Method to remove (i.e. play) a card from this Holding.
     *
     * @param priority the sequence from which the card will be played.
@@ -315,6 +332,10 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     val ss: List[Sequence] = sequences map applyPromotions
     Holding(ss.foldLeft[List[Sequence]](Nil)((r, s) => s.merge(r)), suit, Nil)
   }
+
+  private def _cooperate(holding: Holding) = Holding(sequences, suit, for (s <- holding.sequences; p = s.priority; is <- List.fill(s.length)(p)) yield is)
+
+  private lazy val _reprioritize: Holding = Holding(for (s <- sequences) yield s.reprioritize, suit, promotions)
 
   private lazy val hasHonorSequence: Boolean = realSequences exists (_.isHonor)
 
@@ -647,15 +668,10 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
 object Hand {
 
   /**
-    * NOTE: This doesn't really make sense.
-    *
-    * @param deal  deal
-    * @param index index
-    * @param cs    cards
-    * @return a Hand.
+    * Create holdings from a list of Cards.
+    * @param cs the list of Cards.
+    * @return a Map of Suit->Holding
     */
-  def apply(deal: Deal, index: Int, cs: List[Card]): Hand = Hand(index, createHoldings(cs))
-
   def createHoldings(cs: List[Card]): Map[Suit, Holding] = for ((suit, cards) <- cs.groupBy(c => c.suit)) yield (suit, Holding.create(suit, cards))
 
   /**

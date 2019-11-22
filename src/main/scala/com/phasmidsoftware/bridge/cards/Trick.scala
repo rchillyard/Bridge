@@ -135,7 +135,7 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     *         (1) the current trick if we are following;
     *         (2) a new trick if we are leading.
     */
-  def enumerateSubsequentPlays(whist: Whist): List[Trick] = enumerateSubsequentPlays(whist.deal, whist.openingLeader, whist.maybeTrumps).invariant(ts => ts.nonEmpty)
+  def enumerateSubsequentPlays(whist: Whist): List[Trick] = enumerateSubsequentPlays(whist.deal, whist.openingLeader, whist.strain).invariant(ts => ts.nonEmpty)
 
   /**
     * Determine if the declaring side still has a play left in this trick.
@@ -274,6 +274,9 @@ case class CardPlay(deal: Deal, strain: Option[Suit], hand: Int, suit: Suit, pri
         throw CardException(s"CardPlay (deal=${deal.title}, hand=$hand, suit=$suit, priority=$priority) cannot find actual card.")
     }
 
+  /**
+    * Find the sequence (lazily) that this CardPlay is from.
+    */
   lazy val findSequence: Option[Sequence] = for (h <- deal.hands(hand).holdings.get(suit); s <- h.sequence(priority)) yield s
 
   override def toString: String = s"Play: $hand $asCard"

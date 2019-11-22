@@ -26,7 +26,7 @@ class TrickSpec extends FlatSpec with Matchers {
   }
 
   it should "history" in {
-    val deal = Deal("test", 0L)
+    val deal = Deal("test", 0L, adjustForPartnerships = false)
     val whist0 = Whist(deal, 0)
     val state0 = State(whist0)
     val states = state0.enumeratePlays
@@ -51,7 +51,7 @@ class TrickSpec extends FlatSpec with Matchers {
   it should "append" in {
     val index = 0
     val nothing = Trick(index, Nil, None)
-    val deal = Deal("test", 0L)
+    val deal = Deal("test", 0L, adjustForPartnerships = false)
     val play = CardPlay(deal, None, 0, Spades, 5)
     val target = nothing :+ play
     target.plays shouldBe Seq(play)
@@ -65,14 +65,14 @@ class TrickSpec extends FlatSpec with Matchers {
   }
 
   it should "not append" in {
-    val deal = Deal("test", 0L)
+    val deal = Deal("test", 0L, adjustForPartnerships = false)
     val play1 = CardPlay(deal, None, 0, Spades, 5) // S9
     a[CardException] should be thrownBy Trick.empty :+ play1 :+ play1
   }
 
   it should "pick correct winner0" in {
     val index = 0
-    val deal = Deal("test", 0L)
+    val deal = Deal("test", 0L, adjustForPartnerships = false)
     val play1 = CardPlay(deal, None, index, Hearts, 10) // H4
     val play2 = CardPlay(deal, None, index + 1, Hearts, 0) // HA
     val play3 = CardPlay(deal, None, index + 2, Diamonds, 12) // D2
@@ -83,7 +83,7 @@ class TrickSpec extends FlatSpec with Matchers {
 
   it should "pick correct winner1" in {
     val index = 0
-    val deal = Deal("test", 0L)
+    val deal = Deal("test", 0L, adjustForPartnerships = false)
     val play1 = CardPlay(deal, None, index, Spades, 5) // S9
     val play2 = CardPlay(deal, None, index + 1, Spades, 1) // SK
     val play3 = CardPlay(deal, None, index + 2, Diamonds, 12) // D2
@@ -94,7 +94,7 @@ class TrickSpec extends FlatSpec with Matchers {
 
   it should "pick correct winner2" in {
     val index = 0
-    val deal = Deal("test", 0L)
+    val deal = Deal("test", 0L, adjustForPartnerships = false)
     val play1 = CardPlay(deal, None, index, Spades, 5) // S9
     val play2 = CardPlay(deal, None, index + 1, Diamonds, 11) // D3
     val play3 = CardPlay(deal, None, index + 2, Spades, 0) // SA
@@ -105,7 +105,7 @@ class TrickSpec extends FlatSpec with Matchers {
 
   it should "pick correct winner3" in {
     val index = 0
-    val deal = Deal("test", 0L)
+    val deal = Deal("test", 0L, adjustForPartnerships = false)
     val play1 = CardPlay(deal, Some(Diamonds), index, Spades, 5) // S9
     val play2 = CardPlay(deal, Some(Diamonds), index + 1, Diamonds, 11) // D3
     val play3 = CardPlay(deal, Some(Diamonds), index + 2, Spades, 0) // SA
@@ -148,14 +148,14 @@ class TrickSpec extends FlatSpec with Matchers {
     secondHandPlay1.priority shouldBe 0
     val trick3alternatives: List[Trick] = trick20.enumerateSubsequentPlays(whist20)
     val state3alternatives: Seq[State] = state20.enumeratePlays
-    state3alternatives.size shouldBe 3
+    state3alternatives.size shouldBe 2
     whist20.makeStates(state20.tricks, trick3alternatives) shouldBe state3alternatives
     val state30 = state3alternatives.head
     val state4alternatives = state30.enumeratePlays
     state4alternatives.size shouldBe 2
     val state40: State = state4alternatives.head
     val state5alternatives = state40.enumeratePlays
-    state5alternatives.size shouldBe 4
+    state5alternatives.size shouldBe 3
     val state50 = state5alternatives.head
     state50.whist.deal.nCards shouldBe 47
     state50.trick.index shouldBe 2

@@ -135,7 +135,7 @@ class HoldingSpec extends FlatSpec with Matchers {
   }
 
   it should "apply fourth best lead strategy" in {
-    val deal = Deal("test", 0L)
+    val deal = Deal("test", 0L, adjustForPartnerships = false)
     val holding: Holding = deal.hands.head.longestSuit
     val suit = holding.suit
     suit shouldBe Hearts
@@ -148,7 +148,7 @@ class HoldingSpec extends FlatSpec with Matchers {
   }
 
   it should "apply win it strategy" in {
-    val deal = Deal("test", 0L)
+    val deal = Deal("test", 0L, adjustForPartnerships = false)
     val holding: Holding = deal.hands.head.longestSuit
     val leads: Seq[CardPlay] = holding.choosePlays(deal, None, 0, FourthBest, None)
     leads.size shouldBe 3
@@ -268,7 +268,7 @@ class HoldingSpec extends FlatSpec with Matchers {
   }
 
   it should "choose Play" in {
-    val deal = Deal("test", 0L)
+    val deal = Deal("test", 0L, adjustForPartnerships = false)
     val hand1 = deal.hands(1)
     val holding: Holding = deal.hands.head.longestSuit
     holding.suit shouldBe Hearts

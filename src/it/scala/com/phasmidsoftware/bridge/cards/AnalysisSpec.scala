@@ -65,7 +65,7 @@ class AnalysisSpec extends FlatSpec with Matchers with TimeLimitedTests {
     analyzeMakableContracts(game)
   }
 
-  ignore should "analyze deal 16" in {
+  it should "analyze deal 16" in {
     val game = pbn(15)
     analyzeMakableContracts(game)
   }

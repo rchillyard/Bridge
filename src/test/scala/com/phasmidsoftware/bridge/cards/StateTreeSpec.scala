@@ -28,7 +28,7 @@ class StateTreeSpec extends FlatSpec with Matchers {
 
   behavior of "Tree"
 
-  private val deal0 = Deal("test", 0L)
+  private val deal0 = Deal("test", 0L, adjustForPartnerships = false)
   private val whist00 = Whist(deal0, 0)
 
   def alwaysNone(n: State): Option[Boolean] = None
@@ -41,7 +41,7 @@ class StateTreeSpec extends FlatSpec with Matchers {
     implicit val whistGoal: GoalDriven[State] = Whist.goal(0, _directionNS = true, 1)
     val root = StateNode(State(whist00, trick, Tricks.zero), so = None, Nil)
     val target = StateTree(root)
-    target.root.state.deal shouldBe deal0
+    target.root.state.deal shouldBe deal0.quit
     target.root.state.trick shouldBe trick
     target.root shouldBe root
   }
@@ -68,7 +68,7 @@ class StateTreeSpec extends FlatSpec with Matchers {
 
   it should "expand 1" in {
     implicit val whistGoal: GoalDriven[State] = Whist.goal(1, _directionNS = true, 1)
-    val deal = Deal("test", 2L)
+    val deal = Deal("test", 2L, adjustForPartnerships = false)
     val whist = Whist(deal, 0)
     val target = StateTree(whist)
 
@@ -89,7 +89,7 @@ class StateTreeSpec extends FlatSpec with Matchers {
       def goalImpossible(t: State, moves: Int): Boolean = false
     }
     implicit val expandable: PlainEnumerationExpandable = new PlainEnumerationExpandable() {}
-    val deal = Deal("test", 2L)
+    val deal = Deal("test", 2L, adjustForPartnerships = false)
     val whist = Whist(deal, 0)
     val target = StateTree(whist)
 
@@ -110,7 +110,7 @@ class StateTreeSpec extends FlatSpec with Matchers {
       def goalImpossible(t: State, moves: Int): Boolean = false
     }
     implicit val expandable: PlainEnumerationExpandable = new PlainEnumerationExpandable() {}
-    val deal = Deal("test", 2L)
+    val deal = Deal("test", 2L, adjustForPartnerships = false)
     val whist = Whist(deal, 0)
     val target = StateTree(whist)
 
@@ -130,7 +130,7 @@ class StateTreeSpec extends FlatSpec with Matchers {
       def goalImpossible(t: State, moves: Int): Boolean = false
     }
     implicit val expandable: PlainEnumerationExpandable = new PlainEnumerationExpandable() {}
-    val deal = Deal("test", 2L)
+    val deal = Deal("test", 2L, adjustForPartnerships = false)
     val whist = Whist(deal, 0)
     val target = StateTree(whist)
 
@@ -145,7 +145,7 @@ class StateTreeSpec extends FlatSpec with Matchers {
 
   it should "expand 5" in {
     implicit val whistGoal: GoalDriven[State] = Whist.goal(1, _directionNS = true, 1)
-    val deal = Deal("test", 2L)
+    val deal = Deal("test", 2L, adjustForPartnerships = false)
     val whist = Whist(deal, 0)
     val target = StateTree(whist)
 
@@ -159,7 +159,7 @@ class StateTreeSpec extends FlatSpec with Matchers {
 
   it should "expand 6" in {
     implicit val whistGoal: GoalDriven[State] = Whist.goal(1, _directionNS = true, 2)
-    val deal = Deal("test", 2L)
+    val deal = Deal("test", 2L, adjustForPartnerships = false)
     val whist = Whist(deal, 0)
     val target = StateTree(whist)
 
@@ -173,7 +173,7 @@ class StateTreeSpec extends FlatSpec with Matchers {
 
   it should "expand 7" in {
     implicit val whistGoal: GoalDriven[State] = Whist.goal(1, _directionNS = true, 2)
-    val deal = Deal("test", 2L)
+    val deal = Deal("test", 2L, adjustForPartnerships = false)
     val whist = Whist(deal, 0)
     val target = StateTree(whist)
 
@@ -183,7 +183,7 @@ class StateTreeSpec extends FlatSpec with Matchers {
   }
 
   it should "expand 9a" in {
-    val deal = Deal("test", 2L)
+    val deal = Deal("test", 2L, adjustForPartnerships = false)
     val whist = Whist(deal, 0)
 
     implicit val se: Expandable[State] = new OldStyleExpandable(
@@ -200,7 +200,7 @@ class StateTreeSpec extends FlatSpec with Matchers {
   }
 
   it should "expand 9b" in {
-    val deal = Deal("test", 2L)
+    val deal = Deal("test", 2L, adjustForPartnerships = false)
     val whist = Whist(deal, 0)
 
     implicit val se: Expandable[State] = (t: State) => t.enumeratePlays
@@ -213,7 +213,7 @@ class StateTreeSpec extends FlatSpec with Matchers {
   }
 
   it should "expand 13" in {
-    val deal = Deal("test", 2L)
+    val deal = Deal("test", 2L, adjustForPartnerships = false)
     val whist = Whist(deal, 0)
 
     implicit val whistGoal: GoalDriven[State] = Whist.goal(3, _directionNS = true, 4)

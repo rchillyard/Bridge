@@ -132,7 +132,7 @@ object State {
   def apply(whist: Whist): State = apply(whist, Trick.empty)
 
   /**
-    * CONSIDER moving this into State.
+    * CONSIDER moving this into State (or Trick)
     *
     * Method to create a new State based on the outcome of the current trick.
     * If the current trick is complete then we create a new State based on:

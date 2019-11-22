@@ -16,7 +16,7 @@ class WhistFuncSpec extends FlatSpec with Matchers with TimeLimitedTests {
   behavior of "double dummy"
   // 1.5 seconds
   it should "analyzeDoubleDummy0" in {
-    val target = Deal("test", 0L)
+    val target = Deal("test", 0L, adjustForPartnerships = false)
     val whist = Whist(target, 0)
     whist.analyzeDoubleDummy(9, directionNS = false) shouldBe Some(true)
   }
