@@ -50,8 +50,10 @@ object StateTree {
     * @param whist the game.
     * @return a new Tree based on the given game.
     */
-  def apply(whist: Whist)(implicit ev1: Expandable[State], ev2: GoalDriven[State], ev3: Show[State]): StateTree =
+  def apply(whist: Whist)(implicit ev1: Expandable[State], ev2: GoalDriven[State], ev3: Show[State]): StateTree = {
+    State.count = 0
     StateTree(StateNode(State(whist), None, Nil))
+  }
 }
 
 

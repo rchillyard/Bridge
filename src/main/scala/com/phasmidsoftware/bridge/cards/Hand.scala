@@ -10,9 +10,8 @@ import scala.language.implicitConversions
 
 /**
   * A (non-empty) sequence of cards forming part of a Holding.
-  *
-  * NOTE: the priority of a sequence treats all three other Hands as being antagonists.
-  * An optimization could be developed such that sequences are effectively combined for a partnership, not just a player.
+  * In practice, partners "cooperate" with each other such that they mutually form sequences.
+  * This reduces the total number of sequences in a deal, which speeds up processing.
   *
   * @param priority the number of higher-ranking cards in the suit.
   * @param cards    the cards.
@@ -237,7 +236,7 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     def createPlay(priority: Int): CardPlay = CardPlay(deal, strain, hand, suit, priority)
 
     lazy val priorityToBeat = (currentWinner map (_.priorityToBeat(hand))).getOrElse(Rank.lowestPriority)
-    lazy val isPartnerWinning: Boolean = currentWinner exists (_.partnerIsWinning(hand))
+    lazy val isPartnerWinning = currentWinner exists (_.partnerIsWinning(hand))
     strategy match {
       case Ruff if isPartnerWinning =>
         choosePlays(deal, strain, hand, Discard, currentWinner)

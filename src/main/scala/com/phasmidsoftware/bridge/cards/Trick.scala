@@ -163,13 +163,8 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     * @return a minimum number of moves that will be required.
     */
   def sufficientMovesRemaining(moves: Int, directionNS: Boolean, neededTricks: Int, tricks: Tricks): Boolean = {
-    val canWin = declaringSideCanWin(directionNS)
-    val additionalTricksNeeded = neededTricks - (if (directionNS) tricks.ns else tricks.ew)
-    val z = additionalTricksNeeded * Deal.CardsPerTrick
-    val result = moves >= z || (canWin && (plays.size >= z - moves))
-    //    if (!result)
-    //      println(s"impossible: insufficientMovesRemaining: $this, moves=$moves, directionNS=$directionNS, neededTricks=$neededTricks, tricks=$tricks")
-    result
+    val requiredMoves = (neededTricks - (if (directionNS) tricks.ns else tricks.ew)) * Deal.CardsPerTrick
+    moves >= requiredMoves || (declaringSideCanWin(directionNS) && (plays.size >= requiredMoves - moves))
   }
 
   /**
@@ -222,8 +217,11 @@ case class Winner(play: CardPlay, complete: Boolean) {
 
   def priorityToBeat(hand: Int): Int = if (sameSide(hand)) Rank.lowestPriority else play.priority
 
-  // TODO this looks very suspicious
+  // TODO this looks a bit suspicious, but it is indeed used to prioritize plays!
   def partnerIsWinning(hand: Int): Boolean = play.isHonor && sameSide(hand)
+
+  // NOTE: the following logical looking alternative doesn't work well.
+  //    (play.isHonor || play.isRuff) && sameSide(hand)
 
   def isDeclaringSide(NS: Boolean): Boolean = Hand.isDeclaringSide(NS, play.hand)
 }
@@ -254,6 +252,8 @@ case class CardPlay(deal: Deal, strain: Option[Suit], hand: Int, suit: Suit, pri
   lazy val validate: Boolean = asCard.suit == suit
 
   /**
+    * NOTE: this seems to be totally arbitrary
+    *
     * @return true if the top card of the sequence indicated is at least a ten.
     */
   lazy val isHonor: Boolean = Sequence.isHonor(priority)

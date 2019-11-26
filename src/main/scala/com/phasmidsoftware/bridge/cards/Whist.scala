@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.decisiontree.{Expandable, GoalDriven, StateNode}
+import com.phasmidsoftware.decisiontree.{Expandable, GoalDriven}
 import com.phasmidsoftware.util._
 
 import scala.language.implicitConversions
@@ -60,17 +60,14 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None) ex
     *         If the result is None, it means that no solution of any sort was found.
     */
   def analyzeDoubleDummy(tricks: Int, directionNS: Boolean): Option[Boolean] = {
-    State.count = 0
     implicit val sg: GoalDriven[State] = Whist.goal(tricks, directionNS)
     //    implicit val se: Expandable[State] = (t: State) => t.enumeratePlays
     implicit val se: Expandable[State] = new Expandable[State] {
       def successors(t: State): List[State] = t.enumeratePlays
 
-      override def runaway(t: State): Boolean = t.sequence > 500000
+      override def runaway(t: State): Boolean = t.sequence > Whist.MAX_STATES
     }
-    val tree = StateTree(this)
-    val node: StateNode[State] = tree.expand()
-    node.so flatMap (sn => sn.tricks.decide(tricks, directionNS))
+    StateTree(this).expand().so flatMap (sn => sn.tricks.decide(tricks, directionNS))
   }
 
   override def toString: String = s"Whist($deal, ${Hand.name(openingLeader)}, $sStrain)"
@@ -103,20 +100,17 @@ trait WhistGoalDriven extends GoalDriven[State] {
   val totalTricks: Int
 
   def goalAchieved(t: State): Boolean = t.tricks.decide(neededTricks, directionNS) match {
-    case Some(x) =>
-      if (x) println(s"goalAchieved: $t: $x")
-      x
-    //      true // We ignore the Boolean value for now.
-    case None =>
-      false
+    case Some(x) => x
+    case None => false
   }
 
   def goalImpossible(t: State, moves: Int): Boolean =
     !t.trick.sufficientMovesRemaining(moves, directionNS, neededTricks, t.tricks)
-
 }
 
 object Whist {
+
+  val MAX_STATES = 1000000
 
   implicit object LoggableWhist extends Loggable[Whist] with Loggables {
     def toLog(t: Whist): String = s"${implicitly[Loggable[Deal]].toLog(t.deal)}@${Hand.name(t.openingLeader)}:${t.sStrain}"
