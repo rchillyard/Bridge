@@ -123,8 +123,6 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
 
   private def followingSuit(p: CardPlay) = suit contains p.suit
 
-  import com.phasmidsoftware.util.SmartValueOps._
-
   /**
     * Enumerate the possible plays to follow the current play.
     *
@@ -135,7 +133,7 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     *         (1) the current trick if we are following;
     *         (2) a new trick if we are leading.
     */
-  def enumerateSubsequentPlays(whist: Whist): List[Trick] = enumerateSubsequentPlays(whist.deal, whist.openingLeader, whist.strain).invariant(ts => ts.nonEmpty)
+  def enumerateSubsequentPlays(whist: Whist): List[Trick] = enumerateSubsequentPlays(whist.deal, whist.openingLeader, whist.strain) //.invariant(ts => ts.nonEmpty)
 
   /**
     * Determine if the declaring side still has a play left in this trick.
@@ -144,9 +142,17 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     * @return true if fewer than three cards have been played; or if the leader is None, or leader belongs to the opposition.
     */
   def declaringSideStillToPlay(directionNS: Boolean): Boolean = size < 3 || (leader match {
-    case Some(x) => x % 2 == 1 ^ directionNS
+    case Some(x) => !Hand.isDeclaringSide(directionNS, x)
     case None => true
   })
+
+  /**
+    * Determine if the declaring side still has a play left in this trick.
+    *
+    * @param directionNS true if NS is the declaring side.
+    * @return true if fewer than three cards have been played; or if the leader is None, or leader belongs to the opposition.
+    */
+  def declaringSideCanWin(directionNS: Boolean): Boolean = declaringSideStillToPlay(directionNS) || Winner.isDeclaringSideWinning(winner, directionNS)
 
   /**
     * Determine the number of remaining moves that are required to build up sufficient tricks.
@@ -156,10 +162,14 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     * @param tricks       the current state of tricks
     * @return a minimum number of moves that will be required.
     */
-  def movesRequired(directionNS: Boolean, neededTricks: Int, tricks: Tricks): Int = {
-    val movesByDeclarerThisTrick = if (declaringSideStillToPlay(directionNS)) 1 else 0
+  def sufficientMovesRemaining(moves: Int, directionNS: Boolean, neededTricks: Int, tricks: Tricks): Boolean = {
+    val canWin = declaringSideCanWin(directionNS)
     val additionalTricksNeeded = neededTricks - (if (directionNS) tricks.ns else tricks.ew)
-    (additionalTricksNeeded - movesByDeclarerThisTrick) * Deal.CardsPerTrick
+    val z = additionalTricksNeeded * Deal.CardsPerTrick
+    val result = moves >= z || (canWin && (plays.size >= z - moves))
+    //    if (!result)
+    //      println(s"impossible: insufficientMovesRemaining: $this, moves=$moves, directionNS=$directionNS, neededTricks=$neededTricks, tricks=$tricks")
+    result
   }
 
   /**
@@ -212,7 +222,17 @@ case class Winner(play: CardPlay, complete: Boolean) {
 
   def priorityToBeat(hand: Int): Int = if (sameSide(hand)) Rank.lowestPriority else play.priority
 
+  // TODO this looks very suspicious
   def partnerIsWinning(hand: Int): Boolean = play.isHonor && sameSide(hand)
+
+  def isDeclaringSide(NS: Boolean): Boolean = Hand.isDeclaringSide(NS, play.hand)
+}
+
+object Winner {
+  def isDeclaringSideWinning(maybeWinner: Option[Winner], NS: Boolean): Boolean = maybeWinner match {
+    case Some(w) => w.isDeclaringSide(NS)
+    case None => false
+  }
 }
 
 /**

@@ -18,7 +18,7 @@ class WhistPBNSpec extends FlatSpec with Matchers with TimeLimitedTests {
   // NOTE: in the previous version, the limit was 3 seconds.
   // We are doing a lot more now (5 strains instead of just NT).
   // But the main problem is that one particular test is going very slowly.
-  val timeLimit = Span(45, Seconds)
+  val timeLimit = Span(25, Seconds)
 
   private val py: Try[PBN] = PBNParser.parsePBN(Source.fromResource("com/phasmidsoftware/bridge/director/LEXINGTON 2016.2.9.PBN"))
   private val pbn: PBN = py.get
@@ -67,6 +67,7 @@ class WhistPBNSpec extends FlatSpec with Matchers with TimeLimitedTests {
 
   private def analyzeMakableContracts(game: Game): Unit = {
     val deal: Deal = game("Deal").value.asInstanceOf[DealValue].deal
+    if (deal.validate) {
     val board = game("Board").toInt
     val declarerTricksR = """([NESW])\s*(NT|S|H|D|C)\s*(\d+)""".r
     game("OptimumResultTable").detail foreach {
@@ -80,14 +81,19 @@ class WhistPBNSpec extends FlatSpec with Matchers with TimeLimitedTests {
         }
         val tricks = n.toInt
         println(s"analyzeDoubleDummy: board=$board tricks=$tricks, strain=${strain.getOrElse("NT")} declarer=$l, leader=$leader")
-        // NOTE: problem cases. Ignore for now.
+        //         NOTE: problem cases. Ignore for now.
         if (board == 3 && tricks == 10 && strain.contains(Spades) && declarer == 1 && leader == 2 ||
           board == 7 && tricks == 10 && strain.contains(Hearts) && declarer == 0 && leader == 1
         ) {
-          System.err.println("Skipping this test")
-          return
+
+          println(deal.neatOutput)
+          //                  System.err.println("Skipping this test")
+          //                  return
         }
         Whist(deal, leader, strain).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0) shouldBe Some(true)
     }
+
+    }
+    else fail(s"Invalid deal: $deal")
   }
 }

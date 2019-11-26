@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.decisiontree.{Expandable, GoalDriven}
+import com.phasmidsoftware.decisiontree.{Expandable, GoalDriven, StateNode}
 import com.phasmidsoftware.util._
 
 import scala.language.implicitConversions
@@ -60,10 +60,16 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None) ex
     *         If the result is None, it means that no solution of any sort was found.
     */
   def analyzeDoubleDummy(tricks: Int, directionNS: Boolean): Option[Boolean] = {
+    State.count = 0
     implicit val sg: GoalDriven[State] = Whist.goal(tricks, directionNS)
-    implicit val se: Expandable[State] = (t: State) => t.enumeratePlays
+    //    implicit val se: Expandable[State] = (t: State) => t.enumeratePlays
+    implicit val se: Expandable[State] = new Expandable[State] {
+      def successors(t: State): List[State] = t.enumeratePlays
+
+      override def runaway(t: State): Boolean = t.sequence > 500000
+    }
     val tree = StateTree(this)
-    val node = tree.expand()
+    val node: StateNode[State] = tree.expand()
     node.so flatMap (sn => sn.tricks.decide(tricks, directionNS))
   }
 
@@ -97,11 +103,17 @@ trait WhistGoalDriven extends GoalDriven[State] {
   val totalTricks: Int
 
   def goalAchieved(t: State): Boolean = t.tricks.decide(neededTricks, directionNS) match {
-    case Some(_) => true // We ignore the Boolean value for now.
-    case None => false
+    case Some(x) =>
+      if (x) println(s"goalAchieved: $t: $x")
+      x
+    //      true // We ignore the Boolean value for now.
+    case None =>
+      false
   }
 
-  def goalImpossible(t: State, moves: Int): Boolean = moves < t.trick.movesRequired(directionNS, neededTricks, t.tricks)
+  def goalImpossible(t: State, moves: Int): Boolean =
+    !t.trick.sufficientMovesRemaining(moves, directionNS, neededTricks, t.tricks)
+
 }
 
 object Whist {

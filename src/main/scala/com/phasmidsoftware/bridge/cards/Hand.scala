@@ -712,6 +712,15 @@ object Hand {
     */
   def sameSide(hand: Int, other: Int): Boolean = (other - hand) % 2 == 0
 
+  /**
+    * Method to determine if the given hand is declarer or dummy.
+    *
+    * @param directionNS true if NS is declaring.
+    * @param index       the hand index.
+    * @return true if the hand is on declaring side.
+    */
+  def isDeclaringSide(directionNS: Boolean, index: Int): Boolean = (index % 2 == 1) ^ directionNS
+
   implicit val z: Loggable[Hand] = (t: Hand) => t.neatOutput
 
   /**
