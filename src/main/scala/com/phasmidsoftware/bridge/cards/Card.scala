@@ -134,7 +134,7 @@ trait Priority {
   */
 abstract class BaseRank(val priority: Int, val isHonor: Boolean) extends Rank with Priority {
 
-  override def toString: String = if (isHonor) List("A", "K", "Q", "J", "T")(priority) else (14 - priority).toString
+  override def toString: String = if (isHonor) List("A", "K", "Q", "J", "T")(priority) else (Rank.lowestPriority - priority).toString
 
   private def canEqual(other: Any): Boolean = other.isInstanceOf[BaseRank]
 
@@ -215,7 +215,7 @@ object Rank {
   val honorPriority: Int = Ten.priority
 
   /**
-    * The priority of the fictional zero card: 14
+    * The priority of the lowest card, the fictional zero: 14
     */
   val lowestPriority: Int = 14
 

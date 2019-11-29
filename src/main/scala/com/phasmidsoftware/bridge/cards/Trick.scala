@@ -6,6 +6,7 @@ package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.util.{Loggable, Loggables, Output, Outputable}
 
+import scala.collection.immutable
 import scala.language.postfixOps
 
 /**
@@ -70,8 +71,6 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     else if (next contains play.hand) Trick(index, plays :+ play, maybePrior)
     else throw CardException(s"play $play cannot be added to this trick: $this ")
 
-  //		Trick(if (isComplete || index == 0) index + 1 else index, plays :+ play, if (isComplete) Some(this) else None)
-
   /**
     * @return true if the first card in this trick is an honor.
     */
@@ -105,7 +104,6 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
   lazy val winner: Option[Winner] =
     if (started) {
       val winningPlay = plays maxBy score
-      //      println(s"$this: winner = $winningPlay")
       Some(Winner(winningPlay, isComplete))
     }
     else None
@@ -170,6 +168,8 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
   /**
     * NOTE: this doesn't look right
     *
+    * TODO: this entire mechanism of generating plays needs a complete re-write!
+    *
     * @param deal the deal.
     * @param leader the opening leader.
     * @param strain the trump suit, if any.
@@ -188,8 +188,23 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
 
   private def enumerateLeads(deal: Deal, leader: Int, strain: Option[Suit]) = for (q <- chooseLeads(deal, leader, strain)) yield Trick(index + 1, List(q), Some(this))
 
+  private def leadStrategy(s: Suit, h: Holding, strain: Option[Suit]): Strategy = h.nCards match {
+    case 0 => Invalid
+    case 1 if strain.nonEmpty && !strain.contains(s) => Stiff
+    case _ => StandardOpeningLead
+  }
+
   // TODO make private
-  def chooseLeads(deal: Deal, leader: Int, strain: Option[Suit]): List[CardPlay] = deal.hands(leader).longestSuit.choosePlays(deal, strain, leader, FourthBest, None)
+  def chooseLeads(deal: Deal, leader: Int, strain: Option[Suit]): List[CardPlay] = {
+    val z: immutable.List[(CardPlay, Int)] = for {(s, h) <- deal.hands(leader).holdings.toList
+                                                  strategy = leadStrategy(s, h, strain)
+                                                  p <- h.choosePlays(deal, strain, leader, strategy, None)}
+      yield p -> h.nCards
+    // TODO incorporate this into the code
+    val y: Seq[(Suit, List[(CardPlay, Int)])] = z.groupBy { case (p, _) => p.suit }.toSeq
+    val (q, _) = z.sortWith((x, _) => x._1.isStiff(x._2)).sortBy(x => -x._2).unzip
+    q
+  }
 
   lazy val value: Option[Double] = for (w <- winner; if w.complete) yield if (w.sameSide(0)) 1 else 0
 
@@ -242,7 +257,7 @@ object Winner {
   * @param suit     rhe suit from which the card is to be played.
   * @param priority the priority of the sequence from which the card is to be played.
   */
-case class CardPlay(deal: Deal, strain: Option[Suit], hand: Int, suit: Suit, priority: Int) extends Ordered[CardPlay] with Outputable[Deal] {
+case class CardPlay(deal: Deal, strain: Option[Suit], hand: Int, suit: Suit, priority: Int) extends Outputable[Deal] {
 
   require(findSequence isDefined, s"impossible CardPlay: cannot locate card with suit: $suit, priority: $priority in hand $hand of ${deal.neatOutput}")
 
@@ -258,28 +273,20 @@ case class CardPlay(deal: Deal, strain: Option[Suit], hand: Int, suit: Suit, pri
     */
   lazy val isHonor: Boolean = Sequence.isHonor(priority)
 
-  /**
-    * Comparison between this and other.
-    *
-    * @param other the other CardPlay.
-    * @return the usual less-than, equals, or greater-than.
-    */
-  def compare(other: CardPlay): Int = Sequence.compare(priority, other.priority)
-
-  /**
-    * Method to determine whether this CardPlay beats the other CardPlay in whist-type game.
-    *
-    * @param other the other CardPlay.
-    * @return true if this beats other.
-    */
-  def beats(other: CardPlay): Boolean = compare(other) < 0
-
-  /**
+   /**
     * Method to determine if this play is actually a ruff.
     *
     * @return true if ruffing else false.
     */
   lazy val isRuff: Boolean = strain contains suit
+
+  /**
+    * Method to determine if this play is a singleton in a plain suit against a trump contract, looking for a ruff.
+    *
+    * @param nCards the number of cards in the suit.
+    * @return true if it's a stiff lead.
+    */
+  def isStiff(nCards: Int): Boolean = nCards == 1 && strain.nonEmpty && !strain.contains(suit)
 
   /**
     * Yield the actual card to be played for this CardPlay (we arbitrarily choose the top card of a sequence)
@@ -306,6 +313,7 @@ case class CardPlay(deal: Deal, strain: Option[Suit], hand: Int, suit: Suit, pri
 
 object CardPlay {
 
+  // NOTE: not used
   implicit object LoggableCardPlay extends Loggable[CardPlay] with Loggables {
     val loggable: Loggable[CardPlay] = toLog4((deal: Deal, hand: Int, suit: Suit, priority: Int) => CardPlay.apply(deal, None, hand, suit, priority), List("deal", "hand", "suit", "priority"))
 

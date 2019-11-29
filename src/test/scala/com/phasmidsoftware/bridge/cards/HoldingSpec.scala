@@ -162,6 +162,7 @@ class HoldingSpec extends FlatSpec with Matchers {
     Holding.applyFollowSuitStrategy(WinIt, wo.get.play.priority, 7) shouldBe 7
   }
 
+  // TODO sort this out.
   //  it should "apply cover strategy" in {
   //    val deal = Deal("test", 0L)
   //    val holding: Holding = deal.hands.head.longestSuit

@@ -17,11 +17,9 @@ class ProblemSpec extends FlatSpec with Matchers {
   private val py: Option[PBN] = for (s <- so; p <- PBNParser.parsePBN(s).toOption) yield p
   private val pbn: PBN = py.get
 
-  //  Flog.enabled = false
-
   behavior of "double dummy analysis"
   // NOTE: there is another copy of this test in the functional specs. It currently takes 19 seconds to run this test.
-  ignore should "analyze deal 16" in {
+  it should "analyze deal 16" in {
     val game = pbn(15)
     println(game)
     analyzeMakableContracts(game)

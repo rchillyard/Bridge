@@ -54,6 +54,7 @@ class StateTreeSpec extends FlatSpec with Matchers {
     writer.spilled shouldBe 9
   }
 
+  // TODO sort this out.
 //  it should "enumerateFollows" in {
 //    val deal = Deal("test", 2L)
 //    deal.output(Output(System.out)).close()

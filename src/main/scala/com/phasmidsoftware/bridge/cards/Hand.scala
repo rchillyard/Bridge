@@ -21,14 +21,46 @@ case class Sequence(priority: Int, cards: List[Card]) extends Evaluatable with R
   require(cards.nonEmpty)
 
   /**
-    * @return true if the top card of the sequence indicated is at least a ten.
-    */
-  lazy val isHonor: Boolean = Sequence.isHonor(priority)
-
-  /**
     * @return the length of this sequence times one-half to the power of priority.
     */
   def evaluate: Double = _evaluate
+
+  /**
+    *
+    * @return a Sequence based on the cards, ignoring the current priority.
+    */
+  def reprioritize: Sequence = Sequence(cards)
+
+  /**
+    * @return a String primarily for debugging purposes.
+    */
+  override def toString: String = s"${cards.map(_.rank).mkString("")}[$priority]"
+
+  /**
+    * Merge this Sequence into a sequence of Sequences (ss).
+    * If ss is empty or its last element cannot be combined with this, then we simply add this to ss.
+    * Otherwise, we take the other elements of ss and add a combined Sequence from the last element and this.
+    *
+    * @param ss a sequence of Sequences.
+    * @return a new sequence of Sequences.
+    */
+  def merge(ss: List[Sequence]): List[Sequence] = if (ss.nonEmpty && ss.last.canCombine(this)) ss.init :+ (ss.last ++ this) else ss :+ this
+
+  /**
+    * Method to concatenate two Sequences.
+    *
+    * @param s the input Sequence
+    * @return the concatenation of this and s.
+    */
+  //noinspection ScalaStyle
+  def ++(s: Sequence): Sequence = if (canCombine(s)) Sequence(priority, cards ++ s.cards) else throw CardException(s"cannot combine Sequences: $this and $s")
+
+  /**
+    * TEST me
+    *
+    * @return true if the top card of the sequence indicated is at least a ten.
+    */
+  lazy val isHonor: Boolean = Sequence.isHonor(priority)
 
   /**
     * Method to truncate a Sequence (by playing a card: deemed to be the lowest card)
@@ -63,30 +95,6 @@ case class Sequence(priority: Int, cards: List[Card]) extends Evaluatable with R
     */
   lazy val promote: Sequence = if (canPromote) Sequence(priority - 1, cards) else throw CardException(s"cannot promote priority $this ")
 
-  /**
-    * Merge this Sequence into a sequence of Sequences (ss).
-    * If ss is empty or its last element cannot be combined with this, then we simply add this to ss.
-    * Otherwise, we take the other elements of ss and add a combined Sequence from the last element and this.
-    *
-    * @param ss a sequence of Sequences.
-    * @return a new sequence of Sequences.
-    */
-  def merge(ss: List[Sequence]): List[Sequence] = if (ss.nonEmpty && ss.last.canCombine(this)) ss.init :+ (ss.last ++ this) else ss :+ this
-
-  /**
-    * Method to concatenate two Sequences.
-    *
-    * @param s the input Sequence
-    * @return the concatenation of this and s.
-    */
-  //noinspection ScalaStyle
-  def ++(s: Sequence): Sequence = if (canCombine(s)) Sequence(priority, cards ++ s.cards) else throw CardException(s"cannot combine Sequences: $this and $s")
-
-  /**
-    * @return a String primarily for debugging purposes.
-    */
-  override def toString: String = s"${cards.map(_.rank).mkString("")}[$priority]"
-
   private lazy val canPromote = priority > 0
 
   private def canCombine(s: Sequence) = priority + length == s.priority
@@ -95,12 +103,6 @@ case class Sequence(priority: Int, cards: List[Card]) extends Evaluatable with R
     * NOTE: this gets more and more optimistic as more tricks are turned.
     */
   private lazy val _evaluate = cards.length * math.pow(0.5, priority)
-
-  /**
-    *
-    * @return a Sequence based on the cards, ignoring the current priority.
-    */
-  def reprioritize: Sequence = Sequence(cards)
 }
 
 object Sequence {
@@ -118,24 +120,6 @@ object Sequence {
   def isHonor(priority: Int): Boolean = priority <= Rank.honorPriority
 
   /**
-    * Method to compare two priorities.
-    *
-    * @param p1 the first priority.
-    * @param p2 the second priority.
-    * @return -1, 0, or 1 according to whether p1 is less than, equal to, or greater than p2.
-    */
-  def compare(p1: Int, p2: Int): Int = p1.compareTo(p2)
-
-  /**
-    * Method to determine if the priority of p1 is "higher" (less) than the priority of p2.
-    *
-    * @param p1 the first priority.
-    * @param p2 the second priority.
-    * @return true if p1 out ranks p2.
-    */
-  def higher(p1: Int, p2: Int): Boolean = compare(p1, p2) < 0
-
-  /**
     * An ordering for a Sequence.
     * Lower values of priority precede higher values.
     */
@@ -146,6 +130,8 @@ object Sequence {
   /**
     * An loggable for a Sequence.
     * Lower values of priority precede higher values.
+    *
+    * NOTE: not used
     */
   implicit object LoggableSequence extends Loggable[Sequence] with Loggables {
     implicit val cardSequenceLoggable: Loggable[List[Card]] = listLoggable[Card]
@@ -154,7 +140,6 @@ object Sequence {
 
     def toLog(t: Sequence): String = loggableSequence.toLog(t)
   }
-
 }
 
 /**
@@ -238,6 +223,10 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     lazy val priorityToBeat = (currentWinner map (_.priorityToBeat(hand))).getOrElse(Rank.lowestPriority)
     lazy val isPartnerWinning = currentWinner exists (_.partnerIsWinning(hand))
     strategy match {
+      case StandardOpeningLead if hasHonorSequence =>
+        choosePlays(deal, strain, hand, LeadTopOfSequence, currentWinner)
+      case StandardOpeningLead => // "Fourth best" although that's not followed precisely--we just lead low
+        chooseLeadSuitPlays(createPlay, strategy)
       case Ruff if isPartnerWinning =>
         choosePlays(deal, strain, hand, Discard, currentWinner)
       case Ruff | Discard =>
@@ -340,10 +329,6 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
 
   private lazy val realSequences = sequences filter (_.cards.lengthCompare(1) > 0)
 
-  //noinspection ScalaUnusedSymbol
-  // NOTE: never called
-  private def canWin(priorPlays: List[CardPlay]): Boolean = if (priorPlays.nonEmpty && !isVoid) priorPlays.min.priority > sequences.head.priority else true
-
   private lazy val maybeSuit: Option[Suit] = cards.headOption map (_.suit)
 
   private lazy val _evaluate: Double = {
@@ -359,6 +344,7 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     result
   }
 
+  // TODO Merge this with the following method
   private def chooseFollowSuitPlays(createPlay: Int => CardPlay, strategy: Strategy, priorityToBeat: Int): List[CardPlay] = {
     // XXX this function is used to sort the possible plays according to which fits the given strategy best (smallest resulting Int)
     def sortFunction(play: CardPlay): Int = Holding.applyFollowSuitStrategy(strategy, priorityToBeat, play.priority)
@@ -366,9 +352,16 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     (for (s <- sequences) yield createPlay(s.priority)).sortBy(sortFunction)
   }
 
+  private def chooseLeadSuitPlays(createPlay: Int => CardPlay, strategy: Strategy): List[CardPlay] = {
+    // XXX this function is used to sort the possible plays according to which fits the given strategy best (smallest resulting Int)
+    def sortFunction(play: CardPlay): Int = Holding.applyLeadSuitStrategy(strategy, play, sequence(play.priority))
+
+    (for (s <- sequences) yield createPlay(s.priority)).sortBy(sortFunction)
+  }
+
   private def getStrategyForFollowingSuit(trick: Trick): Strategy = trick.size match {
     // XXX this first case should never occur.
-    case 0 => if (hasHonorSequence) LeadHigh else FourthBest
+    case 0 => if (hasHonorSequence) LeadTopOfSequence else FourthBest
     case 1 => if (trick.isHonorLed || realSequences.nonEmpty) Cover else Duck
     case 2 => Finesse // XXX becomes WinIt if card to beat isn't an honor
     case 3 => Cover
@@ -428,12 +421,14 @@ object Holding {
 
   def ranksToString(ranks: Seq[Rank]): String = if (ranks.nonEmpty) ranks.mkString("", "", "") else "-"
 
+  // NOTE not used
   implicit object LoggableHolding extends Loggable[Holding] with Loggables {
     def toLog(t: Holding): String = t.neatOutput
   }
 
   /**
     * Method to assess the given strategy in the current situation.
+    * CHECK: Can include opening lead situations ??
     *
     * @param strategy      the required strategy.
     * @param currentWinner the priority of the card play which is currently winning this trick.
@@ -444,8 +439,7 @@ object Holding {
   def applyFollowSuitStrategy(strategy: Strategy, currentWinner: Int, priority: Int): Int = {
     lazy val rank = 2 * Rank.lowestPriority - priority // XXX the rank of the played card plus 14
 
-    // CONSIDER extracting this logic to a lazy val
-    def applyPotentialWinStrategy =
+    lazy val applyPotentialWinStrategy =
       if (strategy.conditional)
         currentWinner - priority // XXX prefer the card that wins by the slimmest margin (always positive)
       else if (strategy.win)
@@ -459,6 +453,28 @@ object Holding {
       rank // XXX play low.
   }
 
+  /**
+    * Method to assess the given strategy in the current situation.
+    * CHECK: Can include opening lead situations ??
+    *
+    * @param strategy the required strategy.
+    * @return a relatively low number (e.g. 0) if this matches the given strategy, otherwise a high number.
+    */
+  //	private
+  def applyLeadSuitStrategy(strategy: Strategy, play: CardPlay, maybeSequence: Option[Sequence]): Int = {
+    strategy match {
+      case LeadTopOfSequence => play.priority
+
+      // TODO need to implement this properly
+      case LeadSecond => play.priority
+
+      case FourthBest => Rank.lowestPriority - play.priority
+
+      case Stiff => maybeSequence.map(s => s.priority).getOrElse(14)
+
+      case _ => 10
+    }
+  }
 }
 
 /**
@@ -531,7 +547,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     }
 
     val plays = for {
-      // TODO exclude the trumps suit if there is one.
+      // TODO exclude the trump suit if there is one.
       // XXX get the holdings from each of the other suits.
       h: Holding <- holdings.flatMap { case (k, _) if k == trick.suit => None; case (_, v) => Some(v) }.toList
       // XXX determine the strategy for this holding (ruff or discard)
@@ -609,14 +625,8 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
   def quit: Hand = _quit
 
   /**
-    * CONSIDER eliminating: not used.
-    *
-    * @return the index of the next hand in sequence around the table.
-    */
-  lazy val next: Int = Hand.next(index)
-
-  /**
     * Method to output this object (and, recursively, all of its children).
+    * NOTE: never called.
     *
     * @param output the output to append to.
     * @param xo     an optional value of X, defaulting to None.
@@ -624,6 +634,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     */
   def output(output: Output, xo: Option[Unit]): Output = {
     // TODO figure out why we can't just import SuitOrdering from Suit
+    // NOTE: unused
     implicit object SuitOrdering extends Ordering[Suit] {
       override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
     }
@@ -631,8 +642,14 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     output ++ (for (k <- keys) yield holdings(k).output(output.copy))
   }
 
+  /**
+    * NOTE: never called.
+    *
+    * @return a debug string for this Hand.
+    */
   override def toString: String = {
     // TODO figure out why we can't just import SuitOrdering from Suit
+    // NOTE: unused
     implicit object SuitOrdering extends Ordering[Suit] {
       override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
     }

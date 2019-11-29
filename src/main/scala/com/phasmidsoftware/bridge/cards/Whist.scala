@@ -190,25 +190,37 @@ trait Strategy {
     */
   val win: Boolean
 
+  /**
+    * @return an indication of the level of aggression of this Strategy (particularly related to opening leads).
+    */
+  val aggression: Int
 }
 
-abstract class BaseStrategy(val win: Boolean, val conditional: Boolean) extends Strategy
+abstract class BaseStrategy(val win: Boolean, val conditional: Boolean, val aggression: Int) extends Strategy
 
-case object WinIt extends BaseStrategy(true, false)
+case object StandardOpeningLead extends BaseStrategy(false, false, 2)
 
-case object LeadHigh extends BaseStrategy(true, false)
+case object WinIt extends BaseStrategy(true, false, 3)
 
-case object Cover extends BaseStrategy(false, true)
+case object LeadTopOfSequence extends BaseStrategy(true, false, 4)
 
-case object Finesse extends BaseStrategy(true, true)
+case object LeadSecond extends BaseStrategy(true, false, 0)
 
-case object FourthBest extends BaseStrategy(false, false)
+case object Cover extends BaseStrategy(false, true, 2)
 
-case object Duck extends BaseStrategy(false, false)
+case object Finesse extends BaseStrategy(true, true, 3)
 
-case object Discard extends BaseStrategy(false, false)
+case object FourthBest extends BaseStrategy(false, false, 2)
 
-case object Ruff extends BaseStrategy(false, false)
+case object Duck extends BaseStrategy(false, false, 0)
+
+case object Discard extends BaseStrategy(false, false, 0)
+
+case object Ruff extends BaseStrategy(false, false, 4)
+
+case object Stiff extends BaseStrategy(false, false, 4)
+
+case object Invalid extends BaseStrategy(false, false, 0)
 
 /**
   * Trait to describe behavior of a type which can experience the play of a card.

@@ -23,6 +23,7 @@ class PBNParser extends JavaTokenParsers {
     */
   def pbn: Parser[PBN] = repsep(game, """\|\|\|\|\|\|\|\|\|\|\n""".r) ^^ { gs => PBN(gs) }
 
+  // TODO what's this?
   //	def pbn: Parser[PBN] = repsep(game, PBNParser.gameTerminatorR) ^^ ( gs => PBN(gs) )
 
   def game: Parser[Game] = repsep(tagPair, emptySpace) ^^ { ps =>

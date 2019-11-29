@@ -189,6 +189,7 @@ object Howell extends App {
     showGroupedEncounters("Board set", groupEncounters(e => e.b))
     checkEncounters(groupEncounters(e => e.b))
 
+    // TODO sort this all out!
     def showGroupedEncounters(w: String, groups: Map[Int, Seq[Encounter]]): Unit = {
       println(s"Check validity grouped by $w")
       //        checkValidity("Pairs", _.pairsInOrder)

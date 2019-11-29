@@ -123,9 +123,9 @@ class StateSpec extends FlatSpec with Matchers {
   it should "enumeratePlays" in {
     val target = State(whist)
     val plays: Seq[State] = target.enumeratePlays
-    plays.size shouldBe 3
+    plays.size shouldBe 10
     plays.head.trick.plays.size shouldBe 1
-    plays.head.trick.plays.head should matchPattern { case CardPlay(_, None, `north`, Hearts, 10) => }
+    plays.head.trick.plays.head should matchPattern { case CardPlay(_, None, `north`, Hearts, 2) => }
     //    plays.head.trick.plays.head shouldBe CardPlay(deal, None, north, Hearts, 10)
   }
 
@@ -147,8 +147,7 @@ class StateSpec extends FlatSpec with Matchers {
     val state5alternatives = state40.enumeratePlays
     val target = state5alternatives.head
     target.neatOutput shouldBe
-      """State: Trick History: "T1 0 {H2, H7, HK, H5}, T2 2 {S6}" 1:0 4.8 Deal test (47) List(S95 HQ943 D64 CT652, SK742 HA DT93 CAQJ7, SAJT8 HT8 DK82 CK3, SQ3 HJ6 DAQJ75 C984)""".stripMargin
-    //      """State: Trick History: "T1 0 {H2, H7, H8, H5}, T2 2 {S6}" 1:0 5.4 Deal test (47) List(S95 HQ943 D64 CT652, SK742 HA DT93 CAQJ7, SAJT8 HKT DK82 CK3, SQ3 HJ6 DAQJ75 C984)""".stripMargin
+      """State: Trick History: "T1 0 {HQ, HA, H8, H5}, T2 1 {SK}" 0:1 4.8 Deal test (47) List(S95 H9432 D64 CT652, S742 H7 DT93 CAQJ7, SAJT86 HKT DK82 CK3, SQ3 HJ6 DAQJ75 C984)""".stripMargin
   }
 
 }

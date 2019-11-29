@@ -119,17 +119,17 @@ class TrickSpec extends FlatSpec with Matchers {
     val whist0 = Whist(deal, 0)
     val state0 = State(whist0)
     val states = state0.enumeratePlays
-    states.size shouldBe 3
+    states.size shouldBe 10
     val state1 = states.head
     val trick1 = state1.trick
     trick1.size shouldBe 1
     val whist1 = state1.whist
     whist1.deal.nCards shouldBe 51
     val openingLead = trick1.led.get
-    openingLead.priority shouldBe 10
+    openingLead.priority shouldBe 2
     openingLead.suit shouldBe Hearts
     openingLead.hand shouldBe 0
-    openingLead.asCard shouldBe Card("H2")
+    openingLead.asCard shouldBe Card("HQ")
     val trick2alternatives = trick1.enumerateSubsequentPlays(whist1)
     trick2alternatives.size shouldBe 2
     val state2alternatives = whist1.makeStates(state1.tricks, trick2alternatives)
@@ -139,13 +139,13 @@ class TrickSpec extends FlatSpec with Matchers {
     //		trick20.cardsPlayed shouldBe 2
     val secondHandPlay0 = trick20.last
     secondHandPlay0.suit shouldBe Hearts
-    secondHandPlay0.priority shouldBe 7
+    secondHandPlay0.priority shouldBe 0
     val trick21 = trick2alternatives.last
     trick21.cardsPlayed shouldBe 2
-    trick21.winner.get.play.asCard shouldBe Card("HA")
+    trick21.winner.get.play.asCard shouldBe Card("HQ")
     val secondHandPlay1 = trick21.last
     secondHandPlay1.suit shouldBe Hearts
-    secondHandPlay1.priority shouldBe 0
+    secondHandPlay1.priority shouldBe 7
     val trick3alternatives: List[Trick] = trick20.enumerateSubsequentPlays(whist20)
     val state3alternatives: Seq[State] = state20.enumeratePlays
     state3alternatives.size shouldBe 2
@@ -155,7 +155,7 @@ class TrickSpec extends FlatSpec with Matchers {
     state4alternatives.size shouldBe 2
     val state40: State = state4alternatives.head
     val state5alternatives = state40.enumeratePlays
-    state5alternatives.size shouldBe 3
+    state5alternatives.size shouldBe 9
     val state50 = state5alternatives.head
     state50.whist.deal.nCards shouldBe 47
     state50.trick.index shouldBe 2
@@ -165,17 +165,17 @@ class TrickSpec extends FlatSpec with Matchers {
     val whist0 = Whist(deal, 0, Some(Clubs))
     val state0 = State(whist0)
     val states = state0.enumeratePlays
-    states.size shouldBe 2
+    states.size shouldBe 4
     val state1 = states.head
     val trick1 = state1.trick
     trick1.size shouldBe 1
     val whist1 = state1.whist
     whist1.deal.nCards shouldBe 15
     val openingLead = trick1.led.get
-    openingLead.priority shouldBe 2
+    openingLead.priority shouldBe 0
     openingLead.suit shouldBe Spades
     openingLead.hand shouldBe 0
-    openingLead.asCard shouldBe Card("SQ")
+    openingLead.asCard shouldBe Card("SA")
     val trick2alternatives = trick1.enumerateSubsequentPlays(whist1)
     trick2alternatives.size shouldBe 2
     val state2alternatives = whist1.makeStates(state1.tricks, trick2alternatives)
@@ -184,12 +184,12 @@ class TrickSpec extends FlatSpec with Matchers {
     val trick20 = trick2alternatives.head
     val secondHandPlay0 = trick20.last
     secondHandPlay0.suit shouldBe Spades
-    secondHandPlay0.priority shouldBe 1
+    secondHandPlay0.priority shouldBe 11
     val trick21 = trick2alternatives.last
     trick21.cardsPlayed shouldBe 2
     val secondHandPlay1 = trick21.last
     secondHandPlay1.suit shouldBe Spades
-    secondHandPlay1.priority shouldBe 11
+    secondHandPlay1.priority shouldBe 1
     val trick3alternatives: List[Trick] = trick20.enumerateSubsequentPlays(whist20)
     val state3alternatives: Seq[State] = state20.enumeratePlays
     state3alternatives.size shouldBe 3
@@ -200,7 +200,7 @@ class TrickSpec extends FlatSpec with Matchers {
     state4alternatives.size shouldBe 3
     val state40: State = state4alternatives.head
     val state5alternatives = state40.enumeratePlays
-    state5alternatives.size shouldBe 1
+    state5alternatives.size shouldBe 3
     val state50 = state5alternatives.head
     state50.whist.deal.nCards shouldBe 11
     state50.trick.index shouldBe 2

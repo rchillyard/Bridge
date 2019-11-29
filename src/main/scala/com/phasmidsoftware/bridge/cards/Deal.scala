@@ -86,20 +86,6 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
   lazy val nCards: Int = hands map (_.nCards) sum
 
   /**
-    * Promote the given Hand in the given suit, below the given priority and return a new Deal.
-    *
-    * NOTE: the concept of promotion used here views the four players independently.
-    * CONSIDER: it probably makes sense to have another value of priority in a Holding which takes into account
-    * the fact that two opposite players are partners.
-    *
-    * @param hand     the Hand.
-    * @param suit     the Suit.
-    * @param priority the priority.
-    * @return a new Deal where the suit holding in the hand has been promoted (if appropriate).
-    */
-  def promote(hand: Hand, suit: Suit, priority: Int): Deal = Deal(title, hands map (h => if (h == hand) h else h.promote(suit, priority)))
-
-  /**
     * Output this Deal.
     *
     * @param output the output to append to.
@@ -210,17 +196,6 @@ object Deal {
   }
 
   /**
-    * Construct a Deal from a sequence of Cards.
-    * Adjusts for Partnerships.
-    * *
-    *
-    * @param title a title for the new Deal.
-    * @param cs    the cards dealt in sequence.
-    * @return a new Deal.
-    */
-  def fromCards(title: String, cs: Seq[Card]): Deal = fromCards(title, cs, adjust = true)
-
-  /**
     * Construct a Deal of sequence of a sequence of Card representations.
     *
     * @param title the title for the deal.
@@ -261,6 +236,4 @@ object Deal {
   implicit object LoggableDeal extends Loggable[Deal] with Loggables {
     def toLog(t: Deal): String = s"Deal ${t.title}/${t.nCards}"
   }
-
-
 }

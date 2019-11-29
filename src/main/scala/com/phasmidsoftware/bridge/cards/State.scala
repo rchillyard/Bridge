@@ -50,6 +50,8 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
     *
     * Method to validate this State.
     *
+    * TODO test this.
+    *
     * @return true if all the plays of the trick are validated
     */
   def validate: Boolean = _validate
@@ -77,8 +79,6 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
     * @return a compact String
     */
   def neatOutput: String = s"""State: Trick History: "${trick.history.mkString("", ", ", "")}" $tricks $fitness ${deal.neatOutput}"""
-
-  //	override def toString: String = super.toString
 
   /**
     * Invokes output on the trick, passing it Some(deal) and appending the fitness in parentheses.
@@ -268,6 +268,8 @@ case class Tricks(ns: Int, ew: Int) extends Evaluatable {
   def counterGoal(tricks: Int): Boolean = ew >= Deal.TricksPerDeal + 1 - tricks
 
   /**
+    * TODO test this.
+    *
     * @return a Double representing the value of this Tricks.
     */
   def evaluate: Double = _evaluate

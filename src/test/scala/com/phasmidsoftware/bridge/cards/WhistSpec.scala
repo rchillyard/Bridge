@@ -122,7 +122,8 @@ class WhistSpec extends FlatSpec with Matchers {
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
     val states: Seq[State] = state0.enumeratePlays
-    states.size shouldBe 3
+    println(states)
+    states.size shouldBe 10
   }
 
   it should "enumeratePlays to two levels" in {
@@ -130,9 +131,9 @@ class WhistSpec extends FlatSpec with Matchers {
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
     val states1: Seq[State] = state0.enumeratePlays
-    states1.size shouldBe 3
+    states1.size shouldBe 10
     val states2: Seq[State] = for (p <- states1; q <- p.enumeratePlays) yield q
-    states2.size shouldBe 6
+    states2.size shouldBe 27
   }
 
   it should "enumeratePlays to three levels" in {
@@ -140,11 +141,11 @@ class WhistSpec extends FlatSpec with Matchers {
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
     val states1: Seq[State] = state0.enumeratePlays
-    states1.size shouldBe 3
+    states1.size shouldBe 10
     val states2: Seq[State] = for (p <- states1; q <- p.enumeratePlays) yield q
-    states2.size shouldBe 6
+    states2.size shouldBe 25
     val states3: Seq[State] = for (p <- states2; q <- p.enumeratePlays) yield q
-    states3.size shouldBe 12
+    states3.size shouldBe 60
   }
 
   it should "enumeratePlays to four levels" in {
@@ -152,13 +153,13 @@ class WhistSpec extends FlatSpec with Matchers {
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
     val states1: Seq[State] = state0.enumeratePlays
-    states1.size shouldBe 3
+    states1.size shouldBe 10
     val states2: Seq[State] = for (p <- states1; q <- p.enumeratePlays) yield q
-    states2.size shouldBe 6
+    states2.size shouldBe 25
     val states3: Seq[State] = for (p <- states2; q <- p.enumeratePlays) yield q
-    states3.size shouldBe 12
+    states3.size shouldBe 60
     val states4: Seq[State] = for (p <- states3; q <- p.enumeratePlays) yield q
-    states4.size shouldBe 24
+    states4.size shouldBe 144
   }
 
   it should "enumeratePlays to five levels" in {
@@ -166,15 +167,15 @@ class WhistSpec extends FlatSpec with Matchers {
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
     val states1: Seq[State] = state0.enumeratePlays
-    states1.size shouldBe 3
+    states1.size shouldBe 10
     val states2: Seq[State] = for (p <- states1; q <- p.enumeratePlays) yield q
-    states2.size shouldBe 6
+    states2.size shouldBe 25
     val states3: Seq[State] = for (p <- states2; q <- p.enumeratePlays) yield q
-    states3.size shouldBe 12
+    states3.size shouldBe 60
     val states4: Seq[State] = for (p <- states3; q <- p.enumeratePlays) yield q
-    states4.size shouldBe 24
+    states4.size shouldBe 144
     val states5: Seq[State] = for (p <- states4; q <- p.enumeratePlays) yield q
-    states5.size shouldBe 72
+    states5.size shouldBe 1310
   }
 
   behavior of "double dummy"
