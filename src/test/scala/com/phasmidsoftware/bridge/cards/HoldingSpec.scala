@@ -279,7 +279,7 @@ class HoldingSpec extends FlatSpec with Matchers {
     val trick0 = Trick(1, List(lead), None)
     val wo = trick0.winner
     wo should matchPattern { case Some(Winner(`lead`, false)) => }
-    val holding1 = hand1.holdings(trick0.suit.get)
+    val holding1 = hand1.holdings(trick0.maybeSuit.get)
     val plays = holding1.choosePlays(deal, None, 1, WinIt, wo)
     plays.size shouldBe 2
     plays.head shouldBe CardPlay(deal, None, 1, Hearts, 0)

@@ -31,7 +31,7 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     */
   val started: Boolean = plays.nonEmpty
 
-  lazy val suit: Option[Suit] = plays.headOption.map(_.suit)
+  lazy val maybeSuit: Option[Suit] = plays.headOption.map(_.suit)
 
   lazy val leader: Option[Int] = plays.headOption.map(_.hand)
 
@@ -123,7 +123,7 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     base - p.priority
   }
 
-  private def followingSuit(p: CardPlay) = suit contains p.suit
+  private def followingSuit(p: CardPlay) = maybeSuit contains p.suit
 
   /**
     * Enumerate the possible plays to follow the current play.

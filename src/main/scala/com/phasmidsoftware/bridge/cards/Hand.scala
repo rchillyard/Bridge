@@ -80,8 +80,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     val plays = for {
       // TODO exclude the trump suit if there is one.
       // XXX get the holdings from each of the other suits.
-      // FIXME
-      h: Holding <- holdings.flatMap { case (k, _) if k == trick.suit => None; case (_, v) => Some(v) }.toList
+      h: Holding <- holdings.flatMap { case (k, _) if trick.maybeSuit.contains(k) => None; case (_, v) => Some(v) }.toList
       // XXX determine the strategy for this holding (ruff or discard)
       s = strategy(h.suit, h.length)
       // XXX for each holding, get the lowest ranked card according to the strategy
@@ -101,7 +100,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     */
   def choosePlays(deal: Deal, trick: Trick, strain: Option[Suit]): List[CardPlay] =
     if (trick.started) {
-      val holding = holdings(trick.suit.get)
+      val holding = holdings(trick.maybeSuit.get)
       if (holding.isVoid) discardOrRuff(deal, strain, trick)
       else holding.chooseFollowSuitPlays(deal, strain, index, trick)
     }

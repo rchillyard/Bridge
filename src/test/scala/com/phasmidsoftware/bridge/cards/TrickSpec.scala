@@ -17,7 +17,7 @@ class TrickSpec extends FlatSpec with Matchers {
     target.index shouldBe index
     target.plays shouldBe Nil
     target.started shouldBe false
-    target.suit shouldBe None
+    target.maybeSuit shouldBe None
     target.winner shouldBe None
     target.isComplete shouldBe false
     target.evaluate shouldBe 0.5
@@ -56,7 +56,7 @@ class TrickSpec extends FlatSpec with Matchers {
     val target = nothing :+ play
     target.plays shouldBe Seq(play)
     target.started shouldBe true
-    target.suit shouldBe Some(Spades)
+    target.maybeSuit shouldBe Some(Spades)
     target.winner should matchPattern { case Some(Winner(_, false)) => }
     target.isComplete shouldBe false
     target.evaluate shouldBe 0.5
