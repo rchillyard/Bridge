@@ -18,6 +18,8 @@ class IntegrationAnalysisSpec extends FlatSpec with Matchers {
 
   behavior of "double dummy analysis"
   it should "analyze all deals" in {
+    // NOTE: this currently takes 4 minutes, 26 seconds in total
+    // NOTE: one specific case has to be skipped as it does not appear to terminate (or at least not in reasonable time).
     for (game <- pbn) analyzeMakableContracts(game)
   }
 
@@ -37,7 +39,7 @@ class IntegrationAnalysisSpec extends FlatSpec with Matchers {
         System.out.flush()
         // FIXME
 
-        val result = if (board == 16 || board == 15 && leader == 0) None
+        val result = if (board == 15 && leader == 0) None
         else Whist(deal, leader).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0)
         result match {
           case Some(ok) =>

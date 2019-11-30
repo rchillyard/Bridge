@@ -14,7 +14,7 @@ import scala.io.Source
 //noinspection ScalaStyle
 class AnalysisSpec extends FlatSpec with Matchers with TimeLimitedTests {
 
-  val timeLimit = Span(23, Seconds)
+  val timeLimit = Span(25, Seconds)
 
   State.count = 0
   private val so = Option(getClass.getResourceAsStream("westwood_20190625_1.pbn")) map (Source.fromInputStream(_))
