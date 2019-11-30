@@ -9,6 +9,10 @@ import com.phasmidsoftware.util.{Loggable, Loggables}
 import scala.language.implicitConversions
 
 /**
+  * This module contains Card, Rank, Suit, Priority, Spot,
+  */
+
+/**
   * This class models a playing card.
   *
   * CONSIDER removing the priority variable because priority can be encoded into a sequence instead.
@@ -23,9 +27,84 @@ case class Card(suit: Suit, rank: Rank) {
 }
 
 /**
+  * Companion object for Card.
+  */
+object Card {
+  /**
+    * Explicit conversion of String to Card
+    *
+    * @param s the String.
+    * @return the Card.
+    */
+  def apply(s: String): Card = {
+    val suit = s.head match {
+      case 'S' | 's' => Spades
+      case 'H' | 'h' => Hearts
+      case 'D' | 'd' => Diamonds
+      case 'C' | 'c' => Clubs
+      case c => throw CardException(s"$c is not a suit symbol")
+    }
+    val rank = Rank(s.tail)
+    Card(suit, rank)
+  }
+
+  /**
+    * Implicit conversion of String to Card.
+    *
+    * @param s the String.
+    * @return the Card.
+    */
+  implicit def convertStringToCard(s: String): Card = apply(s)
+
+  /**
+    * Defines an ordering of Ranks
+    */
+  implicit object CardOrdering extends Ordering[Card] {
+    override def compare(x: Card, y: Card): Int = {
+      import Rank._
+      import Suit._
+      val cf = SuitOrdering.compare(x.suit, y.suit)
+      if (cf != 0) cf
+      else RankOrdering.compare(x.rank, y.rank)
+    }
+  }
+
+  implicit object LoggableCard extends Loggable[Card] with Loggables {
+    def toLog(t: Card): String = t.toString
+  }
+
+
+  private[cards] def bool2Int(b: Boolean): Int = if (b) 1 else 0
+
+  private[cards] val parser = new RankParser
+}
+
+/**
+  * Trait defining the priority: the number of objects which precede this object in the ordering.
+  */
+sealed trait Priority {
+  /**
+    * The priority of this object.
+    * For Rank, Ace: 0, King: 1, Deuce: 2.
+    * TODO check the following:
+    * For Suit, Spades: 0, Clubs: 3.
+    *
+    * @return
+    */
+  def priority: Int
+}
+
+/**
+  * Case class corresponding to a spot Rank.
+  *
+  * @param spot the spot value.
+  */
+sealed case class Spot(spot: Int) extends BaseRank(Rank.lowestPriority - spot, spot > 9)
+
+/**
   * Trait defining the properties of a suit
   */
-trait Suit {
+sealed trait Suit {
   /**
     * True if this Suit is Hearts or Clubs.
     */
@@ -36,41 +115,6 @@ trait Suit {
     */
   val isRed: Boolean
 }
-
-/**
-  * Trait defining the properties of a rank
-  */
-trait Rank extends Priority {
-  /**
-    * True if this Rank is an honor (AKQJT)
-    */
-  val isHonor: Boolean
-}
-
-/**
-  * Abstract base class for Suit.
-  *
-  * @param isRound true if this is hearts or clubs.
-  * @param isRed   true if this is hearts or diamonds.
-  */
-abstract class BaseSuit(val isRound: Boolean, val isRed: Boolean) extends Suit with Priority {
-  /**
-    * @return the priority of this Suit
-    */
-  def priority: Int = _priority
-
-  override def toString: String = List("S", "H", "D", "C")(priority)
-
-  private lazy val _priority = Card.bool2Int(isRound) + 2 * Card.bool2Int(isRound ^ isRed)
-}
-
-case object Spades extends BaseSuit(false, false)
-
-case object Hearts extends BaseSuit(true, true)
-
-case object Diamonds extends BaseSuit(false, true)
-
-case object Clubs extends BaseSuit(true, false)
 
 /**
   * Companion object for Suit.
@@ -112,45 +156,38 @@ object Suit {
 }
 
 /**
-  * Trait defining the priority: the number of objects which precede this object in the ordering.
+  * Abstract base class for Suit.
+  *
+  * @param isRound true if this is hearts or clubs.
+  * @param isRed   true if this is hearts or diamonds.
   */
-trait Priority {
+abstract class BaseSuit(val isRound: Boolean, val isRed: Boolean) extends Suit with Priority {
   /**
-    * The priority of this object.
-    * For Rank, Ace: 0, King: 1, Deuce: 2.
-    * TODO check the following:
-    * For Suit, Spades: 0, Clubs: 3.
-    *
-    * @return
+    * @return the priority of this Suit
     */
-  def priority: Int
+  def priority: Int = _priority
+
+  override def toString: String = List("S", "H", "D", "C")(priority)
+
+  private lazy val _priority = Card.bool2Int(isRound) + 2 * Card.bool2Int(isRound ^ isRed)
 }
 
+case object Spades extends BaseSuit(false, false)
+
+case object Hearts extends BaseSuit(true, true)
+
+case object Diamonds extends BaseSuit(false, true)
+
+case object Clubs extends BaseSuit(true, false)
+
 /**
-  * Abstract base class for Rank.
-  *
-  * @param priority the priority of this Rank.
-  * @param isHonor  true if this Rank is an honor.
+  * Trait defining the properties of a rank
   */
-abstract class BaseRank(val priority: Int, val isHonor: Boolean) extends Rank with Priority {
-
-  override def toString: String = if (isHonor) List("A", "K", "Q", "J", "T")(priority) else (Rank.lowestPriority - priority).toString
-
-  private def canEqual(other: Any): Boolean = other.isInstanceOf[BaseRank]
-
-  override def equals(other: Any): Boolean = other match {
-    case that: BaseRank =>
-      (that canEqual this) &&
-        priority == that.priority
-    case _ => false
-  }
-
-  private lazy val _hashCode = {
-    val state = Seq(priority)
-    state.map(_.hashCode()).foldLeft(0)((a, b) => 31 * a + b)
-  }
-
-  override def hashCode(): Int = _hashCode
+sealed trait Rank extends Priority {
+  /**
+    * True if this Rank is an honor (AKQJT)
+    */
+  val isHonor: Boolean
 }
 
 /**
@@ -229,11 +266,31 @@ object Rank {
 }
 
 /**
-  * Case class corresponding to a spot Rank.
+  * Abstract base class for Rank.
   *
-  * @param spot the spot value.
+  * @param priority the priority of this Rank.
+  * @param isHonor  true if this Rank is an honor.
   */
-case class Spot(spot: Int) extends BaseRank(Rank.lowestPriority - spot, spot > 9)
+abstract class BaseRank(val priority: Int, val isHonor: Boolean) extends Rank with Priority {
+
+  override def toString: String = if (isHonor) List("A", "K", "Q", "J", "T")(priority) else (Rank.lowestPriority - priority).toString
+
+  private def canEqual(other: Any): Boolean = other.isInstanceOf[BaseRank]
+
+  override def equals(other: Any): Boolean = other match {
+    case that: BaseRank =>
+      (that canEqual this) &&
+        priority == that.priority
+    case _ => false
+  }
+
+  private lazy val _hashCode = {
+    val state = Seq(priority)
+    state.map(_.hashCode()).foldLeft(0)((a, b) => 31 * a + b)
+  }
+
+  override def hashCode(): Int = _hashCode
+}
 
 //noinspection ScalaStyle
 case object Deuce extends BaseRank(12, false)
@@ -263,59 +320,6 @@ case object King extends BaseRank(1, true)
 case object Ace extends BaseRank(0, true)
 
 /**
-  * Companion object for Card.
-  */
-object Card {
-  /**
-    * Explicit conversion of String to Card
-    *
-    * @param s the String.
-    * @return the Card.
-    */
-  def apply(s: String): Card = {
-    val suit = s.head match {
-      case 'S' | 's' => Spades
-      case 'H' | 'h' => Hearts
-      case 'D' | 'd' => Diamonds
-      case 'C' | 'c' => Clubs
-      case c => throw CardException(s"$c is not a suit symbol")
-    }
-    val rank = Rank(s.tail)
-    Card(suit, rank)
-  }
-
-  /**
-    * Implicit conversion of String to Card.
-    *
-    * @param s the String.
-    * @return the Card.
-    */
-  implicit def convertStringToCard(s: String): Card = apply(s)
-
-  /**
-    * Defines an ordering of Ranks
-    */
-  implicit object CardOrdering extends Ordering[Card] {
-    override def compare(x: Card, y: Card): Int = {
-      import Rank._
-      import Suit._
-      val cf = SuitOrdering.compare(x.suit, y.suit)
-      if (cf != 0) cf
-      else RankOrdering.compare(x.rank, y.rank)
-    }
-  }
-
-  implicit object LoggableCard extends Loggable[Card] with Loggables {
-    def toLog(t: Card): String = t.toString
-  }
-
-
-  private[cards] def bool2Int(b: Boolean): Int = if (b) 1 else 0
-
-  private[cards] val parser = new RankParser
-}
-
-/**
   * Exception defined for this module.
   *
   * @param w the message.
@@ -327,7 +331,7 @@ import scala.util.parsing.combinator.JavaTokenParsers
 /**
   * Parser of rank strings.
   */
-class RankParser extends JavaTokenParsers {
+private class RankParser extends JavaTokenParsers {
 
   /**
     * Method to parse ranks as a sequence of Rank

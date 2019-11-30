@@ -91,6 +91,22 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None) ex
   lazy val sStrain: String = strain map (_.toString) getOrElse "NT"
 }
 
+object Whist {
+
+  val MAX_STATES = 1000000
+
+  implicit object LoggableWhist extends Loggable[Whist] with Loggables {
+    def toLog(t: Whist): String = s"${implicitly[Loggable[Deal]].toLog(t.deal)}@${Hand.name(t.openingLeader)}:${t.sStrain}"
+  }
+
+  def goal(_neededTricks: Int, _directionNS: Boolean, _totalTricks: Int = Deal.TricksPerDeal): WhistGoalDriven = new WhistGoalDriven {
+    val neededTricks: Int = _neededTricks
+    val directionNS: Boolean = _directionNS
+    val totalTricks: Int = _totalTricks
+  }
+
+}
+
 /**
   * Trait to customize the behavior of GoalDriven for a whist/bridge game.
   */
@@ -106,22 +122,6 @@ trait WhistGoalDriven extends GoalDriven[State] {
 
   def goalImpossible(t: State, moves: Int): Boolean =
     !t.trick.sufficientMovesRemaining(moves, directionNS, neededTricks, t.tricks)
-}
-
-object Whist {
-
-  val MAX_STATES = 1000000
-
-  implicit object LoggableWhist extends Loggable[Whist] with Loggables {
-    def toLog(t: Whist): String = s"${implicitly[Loggable[Deal]].toLog(t.deal)}@${Hand.name(t.openingLeader)}:${t.sStrain}"
-  }
-
-  def goal(_neededTricks: Int, _directionNS: Boolean, _totalTricks: Int = Deal.TricksPerDeal): WhistGoalDriven = new WhistGoalDriven {
-    val neededTricks: Int = _neededTricks
-    val directionNS: Boolean = _directionNS
-    val totalTricks: Int = _totalTricks
-  }
-
 }
 
 /**
@@ -170,57 +170,6 @@ trait Reprioritizable[X] {
     */
   def reprioritize: X
 }
-
-/**
-  * Trait to model the behavior of play-choosing strategy.
-  * We aim to choose the most favorable play each time so that we can achieve our goal quicker.
-  *
-  * In general, we check these values in the same sequence as they are defined below.
-  */
-trait Strategy {
-  /**
-    * @return true if the card played depends on its whether we can beat the current winner;
-    *         false if we always play the same card.
-    */
-  val conditional: Boolean
-
-  /**
-    * @return true if we want to try to win the trick if possible.
-    *         false if we are OK with not winning the trick.
-    */
-  val win: Boolean
-
-  /**
-    * @return an indication of the level of aggression of this Strategy (particularly related to opening leads).
-    */
-  val aggression: Int
-}
-
-abstract class BaseStrategy(val win: Boolean, val conditional: Boolean, val aggression: Int) extends Strategy
-
-case object StandardOpeningLead extends BaseStrategy(false, false, 2)
-
-case object WinIt extends BaseStrategy(true, false, 3)
-
-case object LeadTopOfSequence extends BaseStrategy(true, false, 4)
-
-case object LeadSecond extends BaseStrategy(true, false, 0)
-
-case object Cover extends BaseStrategy(false, true, 2)
-
-case object Finesse extends BaseStrategy(true, true, 3)
-
-case object FourthBest extends BaseStrategy(false, false, 2)
-
-case object Duck extends BaseStrategy(false, false, 0)
-
-case object Discard extends BaseStrategy(false, false, 0)
-
-case object Ruff extends BaseStrategy(false, false, 4)
-
-case object Stiff extends BaseStrategy(false, false, 4)
-
-case object Invalid extends BaseStrategy(false, false, 0)
 
 /**
   * Trait to describe behavior of a type which can experience the play of a card.

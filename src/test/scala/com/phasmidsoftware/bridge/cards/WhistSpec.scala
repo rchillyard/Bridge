@@ -178,6 +178,7 @@ class WhistSpec extends FlatSpec with Matchers {
     states5.size shouldBe 1310
   }
 
+  // CONSIDER moving this to it because it takes almost 1/4 second.
   behavior of "double dummy"
   it should "analyzeDoubleDummy2" in {
     val target = Deal("test", 2L, adjustForPartnerships = false)
