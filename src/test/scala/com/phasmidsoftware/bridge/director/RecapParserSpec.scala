@@ -92,7 +92,7 @@ class RecapParserSpec extends FlatSpec with Matchers {
     val r = parser.parseAll(parser.pair, "1 N Erithacus Rubecula & Esox Lucius")
     r should matchPattern { case parser.Success(_, _) => }
     r.get.number shouldBe 1
-    r.get.direction shouldBe "N"
+    r.get.maybeDirection shouldBe Some("N")
     r.get.players should matchPattern { case (_, _) => }
     r.get.players._1 shouldBe Player("Erithacus Rubecula")
   }
@@ -220,7 +220,7 @@ class RecapParserSpec extends FlatSpec with Matchers {
     event.title shouldBe "Test Section 2016/04/12"
     event.sections.size shouldBe 1
     val section: Section = event.sections.head
-    section.preamble shouldBe Preamble("A", None, Seq(Pair(1, "N", Player("Erithacus Rubecula") -> Player("Esox Lucius"))))
+    section.preamble shouldBe Preamble("A", None, Seq(Pair(1, Some("N"), Player("Erithacus Rubecula") -> Player("Esox Lucius"))))
   }
 
   it should "parse single-winner event" in {
@@ -266,7 +266,7 @@ class RecapParserSpec extends FlatSpec with Matchers {
     val pair = pairs.head
     pair.number shouldBe 1
     pair.players shouldBe(Player("Sue"), Player("Jim"))
-    pair.direction shouldBe "N"
+    pair.maybeDirection shouldBe Some("N")
   }
 }
 

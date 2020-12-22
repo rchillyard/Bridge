@@ -16,17 +16,17 @@ import scala.language.higherKinds
   */
 /**
   * tables is the total number of tables, including phantom tables (should be an odd number).
-  * For a complete movement, the number of pairs is the number of tables plus one.
+  * For a complete movement, the number of participating pairs is the number of tables plus one.
   * The number of true (physical) tables is half the number of pairs.
   * The number of board sets is the same as the number of tables.
   * All positions are 0-based
   */
-case class Howell(tables: Int, movePlan: MovePlan) {
+case class Howell(name: String, tables: Seq[Table], movePlan: MovePlan) {
   def moves(current: Position, movement: Movement): (Position, Movement) = {
     val head = movement.head
     val tail = movement.tail
     val result = for (e <- current.encounters) yield e.move(head, current)
-    implicit val t: Int = tables
+    implicit val t: Int = tables.length
     (Position(result), Movement(tail))
   }
 
@@ -38,13 +38,19 @@ case class Howell(tables: Int, movePlan: MovePlan) {
       case _ => loop(positions :+ posMov._1, this.moves(posMov._1, posMov._2), moves - 1)
     }
 
-    implicit val t: Int = tables
-    loop(List(), (start, getMovement), tables)
+    implicit val t: Int = tables.length
+    loop(List(), (start, getMovement), t)
   }
+
+  def showTable(x: Int): String = tables(x - 1).toString
 }
 
 case class Position(encounters: Seq[Encounter]) {
   override def toString: String = encounters mkString " "
+}
+
+case class Round(round: Int, position: Position) {
+  override def toString: String = s"Round $round: $position"
 }
 
 abstract class MappedProduct3[T, F[_]](_1: T, _2: T, _3: T) extends Product3[T, T, T] {
@@ -82,45 +88,164 @@ object Movement {
     Movement(Triple.zip(x))
 }
 
+case class Table(number: Int, phantom: Boolean) {
+  override def toString: String = s"T$number" + (if (phantom) "*" else " ")
+}
+
+object Table {
+  //  def apply(x: Int): Table = Table(x, phantom = false)
+  //  def phantom(x: Int): Table = Table(x, phantom = true)
+
+  def tables(phantoms: Int*)(implicit tables: Int): Seq[Table] = for (i <- 1 to tables) yield Table(i, phantoms contains i)
+}
+
 //noinspection ScalaStyle
 object Howell extends App {
   type Trio = Triple[Int]
   type MovePlan = Triple[Seq[Int]]
   type Moves = Triple[Stream[Int]]
 
-  def howell7: (Howell, Position) = {
-    implicit val tables: Int = 7
-    val howell = Howell(tables, Triple(Seq(-3), Seq(-2), Seq(-1)))
-    val start = Position(Seq(Encounter(1, 1, 1, 1), Encounter(2, 1, 1, 2), Encounter(3, 1, 2, 3), Encounter(4, 2, 1, 4), Encounter(5, 2, 1, 5), Encounter(6, 1, 1, 6), Encounter(7, 1, 1, 7)))
+  lazy val howell7: (Howell, Position) = {
+    implicit val n: Int = 7
+    implicit val tables: Seq[Table] = Table.tables(4, 6, 7)
+    val howell = Howell("4-Table", tables, Triple(Seq(-3), Seq(-2), Seq(-1)))
+    val start = Position(Seq(
+      Encounter(1, 1, 1, 1),
+      Encounter(2, 6, 5, 2),
+      Encounter(3, 4, 2, 3),
+      Encounter(4, 2, 6, 4),
+      Encounter(5, 7, 3, 5),
+      Encounter(6, 5, 7, 6),
+      Encounter(7, 3, 4, 7)))
     (howell, start)
   }
 
-  def howell9: (Howell, Position) = {
-    implicit val tables: Int = 9
-    val howell = Howell(tables, Triple(Seq(-3, -3, -2), Seq(-2), Seq(-1)))
-    val start = Position(Seq(Encounter(1, 1, 1, 1), Encounter(2, 1, 1, 2), Encounter(3, 1, 2, 3), Encounter(4, 2, 1, 4), Encounter(5, 2, 1, 5), Encounter(6, 1, 1, 6), Encounter(7, 1, 1, 7), Encounter(8, 1, 1, 8), Encounter(9, 1, 1, 9)))
+  lazy val howell9: (Howell, Position) = {
+    implicit val n: Int = 9
+    implicit val tables: Seq[Table] = Table.tables(3, 5, 7, 8) // 3 dups
+    //    implicit val tables = Table.tables(3, 5, 7, 9) // 2 dups
+    //    implicit val tables = Table.tables(3, 5, 6, 8) // 3 dups
+    val howell = Howell("5-table", tables, Triple(Seq(-3, -3, -2), Seq(-2), Seq(-1)))
+    val start = Position(Seq(
+      Encounter(1, 1, 1, 1),
+      Encounter(2, 8, 6, 2),
+      Encounter(3, 5, 2, 3),
+      Encounter(4, 2, 7, 4),
+      Encounter(5, 9, 3, 5),
+      Encounter(6, 6, 8, 6),
+      Encounter(7, 3, 4, 7),
+      Encounter(8, 7, 9, 8),
+      Encounter(9, 4, 5, 9)))
     (howell, start)
   }
 
-  val (h, s) = howell7
-  for ((r, p) <- labelPositions(h.positions(s)))
-    println(s"Round $r: $p")
+  lazy val howell9a: (Howell, Position) = {
+    implicit val n: Int = 9
+    //  implicit val tables = Table.tables(3, 5, 7, 8) // 1 dups
+    implicit val tables: Seq[Table] = Table.tables(3, 5, 6, 8) // 2 dups
+    val howell = Howell("5-table", tables, Triple(Seq(-3, -3, -4), Seq(-2), Seq(-1)))
+    val start = Position(Seq(
+      Encounter(1, 1, 1, 1),
+      Encounter(2, 4, 6, 2),
+      Encounter(3, 7, 2, 3),
+      Encounter(4, 2, 7, 4),
+      Encounter(5, 5, 3, 5),
+      Encounter(6, 8, 8, 6),
+      Encounter(7, 3, 4, 7),
+      Encounter(8, 6, 9, 8),
+      Encounter(9, 9, 5, 9)))
+    (howell, start)
+  }
+  lazy val howell9b: (Howell, Position) = {
+    implicit val n: Int = 9
+    implicit val tables: Seq[Table] = Table.tables(3, 5, 6, 8) // 2 dups
+    val howell = Howell("5-table", tables, Triple(Seq(1), Seq(-2), Seq(-1)))
+    val start = Position(Seq(
+      Encounter(1, 1, 1, 1),
+      Encounter(2, 9, 6, 2),
+      Encounter(3, 8, 2, 3),
+      Encounter(4, 7, 7, 4),
+      Encounter(5, 6, 3, 5),
+      Encounter(6, 5, 8, 6),
+      Encounter(7, 4, 4, 7),
+      Encounter(8, 3, 9, 8),
+      Encounter(9, 2, 5, 9)))
+    (howell, start)
+  }
 
-  def labelPositions(positions: List[Position]): List[(Int, Position)] = for ((p, r) <- positions zip Stream.from(1)) yield (r, p)
+
+  //    showMovement(howell7)
+  showMovement(howell9b)
+
+  private def showMovement(hp: (Howell, Position)): Unit = {
+    val (h, p) = hp
+    println(s"\n${h.name} Howell movement")
+    val rounds = for (r <- evaluateRounds(h.positions(p))) yield r
+    rounds foreach println
+
+    showGroupedEncounters("Table", groupEncounters(e => e.table))
+    showGroupedEncounters("N/S", groupEncounters(e => e.n))
+    showGroupedEncounters("E/W", groupEncounters(e => e.e))
+    showGroupedEncounters("Board set", groupEncounters(e => e.b))
+    checkEncounters(groupEncounters(e => e.b))
+
+    // TODO sort this all out!
+    def showGroupedEncounters(w: String, groups: Map[Int, Seq[Encounter]]): Unit = {
+      println(s"Check validity grouped by $w")
+      //        checkValidity("Pairs", _.pairsInOrder)
+      //        checkValidity("Boards/Pairs", _.boardPairs)
+
+      for ((k, es) <- groups.toSeq.sortBy(_._1)) println(s"""$w $k: ${es.mkString(", ")}""")
+
+      //        def checkValidity(u: String, f: Encounter => Seq[(Int, Int)]): Unit = {
+      //          val nes: Seq[(Int, (Int, Int))] = for ((k, es) <- groups.toSeq; e <- es; if e.real; z <- f(e)) yield k -> z
+      //                  println(s"""$w/$u: $nes""")
+      //          val distinct = nes.distinct
+      //          val duplicates = nes.diff(distinct).distinct
+      //          if (nes.size != distinct.size) println(s"""*** Duplicate encounters: ${nes.diff(distinct).distinct}""")
+      //        }
+    }
+
+    def checkEncounters(groups: Map[Int, Seq[Encounter]]): Unit = {
+      val triples: Seq[(Int, Seq[(Int, Int)])] = for ((k, es) <- groups.toSeq; e <- es; if e.real) yield k -> e.pairsInOrder.sorted
+      println(s"""Triples: $triples""")
+      val distinct = triples.distinct
+      val duplicates = triples.diff(distinct).distinct
+      if (triples.size != distinct.size) println(s"""*** Duplicate encounters: ${triples.diff(distinct).distinct}""")
+    }
+
+    def groupEncounters(f: Encounter => Int) = (for (r <- rounds; e <- r.position.encounters) yield e) groupBy f
+
+  }
+
+  def evaluateRounds(positions: List[Position]): List[Round] = for ((p, r) <- positions zip Stream.from(1)) yield Round(r, p)
 }
 
-case class Encounter(table: Int, n: Int, e: Int, b: Int)(implicit tables: Int) {
+case class Encounter(table: Int, n: Int, e: Int, b: Int)(implicit tables: Seq[Table]) {
+  def real: Boolean = !tables(table - 1).phantom
+
+  implicit val nTables: Int = tables.length
+
   def move(moves: Trio, current: Position): Encounter = {
     val x = moves map { i => current.encounters(modulo(table - i) - 1) }
     Encounter.fromPrevious(table, x)
   }
 
   // Transforms a number n in the range 1-tables..infinity into the range 1..tables
-  def modulo(n: Int): Int = (n + tables - 1) % tables + 1
+  def modulo(n: Int): Int = (n + nTables - 1) % nTables + 1
 
-  override def toString: String = s"T$table: $n-$e@#$b"
+  /**
+    * Adjust for the situation where the N/S and E/W pairs of a team meet.
+    * In this case, the N/S is bumped by the pair with number nTables+1
+    */
+  private val x = if (n == e) nTables + 1 else n
+
+  val pairsInOrder: Seq[(Int, Int)] = Seq(if (e < x) e -> x else x -> e)
+  val boardPairs: Seq[(Int, Int)] = Seq(b -> x, b -> e)
+
+  override def toString: String = s"${tables(table - 1)}: $x-$e@#$b"
 }
 
 object Encounter {
-  def fromPrevious(table: Int, et: Triple[Encounter])(implicit tables: Int): Encounter = apply(table, et._1.n, et._2.e, et._3.b)
+  def fromPrevious(table: Int, et: Triple[Encounter])(implicit tables: Seq[Table]): Encounter = apply(table, et._1.n, et._2.e, et._3.b)
 }

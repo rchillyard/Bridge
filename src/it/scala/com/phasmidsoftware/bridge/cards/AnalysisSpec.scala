@@ -21,8 +21,6 @@ class AnalysisSpec extends FlatSpec with Matchers with TimeLimitedTests {
   private val py: Option[PBN] = for (s <- so; p <- PBNParser.parsePBN(s).toOption) yield p
   private val pbn: PBN = py.get
 
-  //  Flog.enabled = false
-
   behavior of "double dummy analysis"
   it should "analyze deal 0" in {
     val game = pbn.head
@@ -39,7 +37,7 @@ class AnalysisSpec extends FlatSpec with Matchers with TimeLimitedTests {
     analyzeMakableContracts(game)
   }
 
-  // 22 seconds
+  // 5 seconds
   it should "analyze deal 3" in {
     val game = pbn(3)
     analyzeMakableContracts(game)

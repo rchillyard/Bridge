@@ -150,7 +150,7 @@ class ScoreSpec extends FlatSpec with Matchers {
     val mps = t.matchpointIt
     mps.head.mp shouldBe Some(Rational.zero[Int])
     mps.tail.head.mp shouldBe Some(Rational(3, 4))
-    Score.mpsAsString(mps.tail.head.mp.get, 2) shouldBe "1.50"
+    Card.mpsAsString(mps.tail.head.mp.get, 2) shouldBe " 1.50"
     mps.tail.tail.head.mp shouldBe Some(Rational(3, 4))
   }
   it should "calculate BAM mps" in {
@@ -283,13 +283,13 @@ class ScoreSpec extends FlatSpec with Matchers {
     val t = Traveler(1, Seq())
     p1.matchpoints(t) shouldBe Some(Rational(2, 5))
   }
-  "mpsAsPercentage" should "work" in {
+  "percentageAsString" should "work" in {
     val r = Rational(3, 4)
-    Score.mpsAsPercentage(r, 1) shouldBe "75.00%"
+    Card(r, 1, 0).toStringPercent shouldBe "75.00%"
   }
   "mpsAsString" should "work" in {
     val r = Rational(3, 4)
-    Score.mpsAsString(r, 6) shouldBe "4.50"
+    Card.mpsAsString(r, 6) shouldBe " 4.50"
   }
 
   behavior of "Play"
@@ -304,10 +304,10 @@ class ScoreSpec extends FlatSpec with Matchers {
 
   it should "apply with pickups" in {
     val pairs = Seq(
-      director.Pair(1, "N", (Player("tweedledum"), Player("tweedledee"))),
-      director.Pair(2, "N", (Player("James Clark Maxwell"), Player("Albert Einstein"))),
-      director.Pair(1, "E", (Player("Tristan"), Player("Isolde"))),
-      director.Pair(2, "E", (Player("Romeo"), Player("Juliet")))
+      director.Pair(1, Some("N"), (Player("tweedledum"), Player("tweedledee"))),
+      director.Pair(2, Some("N"), (Player("James Clark Maxwell"), Player("Albert Einstein"))),
+      director.Pair(1, Some("E"), (Player("Tristan"), Player("Isolde"))),
+      director.Pair(2, Some("E"), (Player("Romeo"), Player("Juliet")))
     )
     val preamble = Preamble("A", None, pairs)
     val bd1 = 1
@@ -334,20 +334,20 @@ class ScoreSpec extends FlatSpec with Matchers {
 
   it should "work" in {
     def checkResult(result: Result, directionNS: Boolean): Unit = {
-      result.isNS shouldBe directionNS
+      result.isNS shouldBe Some(directionNS)
       result.top shouldBe 1
-      val cards: Map[Int, (Rational[Int], Int)] = result.cards
+      val cards: Map[Int, Card] = result.cards
       cards.size shouldBe 2
-      val total: Rational[Int] = (for ((r, _) <- cards.values) yield r).sum
+      val total: Rational[Int] = (for (Card(r, _, _) <- cards.values) yield r).sum
       total shouldBe Rational[Int](2).invert * cards.size * (result.top + 1)
-      for ((_, (_, t)) <- cards) t shouldBe result.top + 1
+      for ((_, Card(_, t, _)) <- cards) t shouldBe result.top + 1
     }
 
     val pairs = Seq(
-      director.Pair(1, "N", (Player("tweedledum"), Player("tweedledee"))),
-      director.Pair(2, "N", (Player("James Clark Maxwell"), Player("Albert Einstein"))),
-      director.Pair(1, "E", (Player("Tristan"), Player("Isolde"))),
-      director.Pair(2, "E", (Player("Romeo"), Player("Juliet")))
+      director.Pair(1, Some("N"), (Player("tweedledum"), Player("tweedledee"))),
+      director.Pair(2, Some("N"), (Player("James Clark Maxwell"), Player("Albert Einstein"))),
+      director.Pair(1, Some("E"), (Player("Tristan"), Player("Isolde"))),
+      director.Pair(2, Some("E"), (Player("Romeo"), Player("Juliet")))
     )
     val travelers: Seq[Traveler] = Seq(
       Traveler(1, Seq(Play(1, 1, PlayResult(Right(110))), Play(2, 2, PlayResult(Right(100))))),
@@ -377,17 +377,18 @@ class ScoreSpec extends FlatSpec with Matchers {
     val resultsA: Seq[Result] = rso.get
     resultsA.size shouldBe 2
     val resultANS: Result = resultsA.head
-    resultANS.isNS shouldBe true
+    resultANS.isNS shouldBe Some(true)
     resultANS.top shouldBe 5
-    val cards: Map[Int, (Rational[Int], Int)] = resultANS.cards
+    val cards: Map[Int, Card] = resultANS.cards
     cards.size shouldBe 6
-    val total: Rational[Int] = (for ((r, _) <- cards.values) yield r).sum
+    val total: Rational[Int] = (for (Card(r, _, _) <- cards.values) yield r).sum
     total shouldBe Rational[Int](2).invert * cards.size * (resultANS.top + 1)
     val scores = for (score <- cards.keys) yield cards(score)
     scores.size shouldBe 6
-    for ((_, (_, t)) <- cards) t shouldBe resultANS.top + 1
+    for ((_, Card(_, t, _)) <- cards) t shouldBe resultANS.top + 1
   }
 
+  // TODO sort this out.
   // This file seems to be incorrect so maybe it's not a problem that this test doesn't succeed
   //	ignore should "read travelers.lexington.2016.0503 as a resource" in {
   //		val resource = "travelers.lexington.2016.0503"
@@ -418,19 +419,23 @@ class ScoreSpec extends FlatSpec with Matchers {
   behavior of "Score"
   it should "read travelers.lexington.2017.0404 as a resource" in {
     val writer = MockWriter(8192)
-    val output = Output(writer)
-    for (o <- Score.doScoreResource("travelers.lexington.2017.0404", output)) o.close()
-    writer.spilled shouldBe 2327
+    for (o <- Score.doScoreResource("travelers.lexington.2017.0404", Output(writer))) o.close()
+    writer.spilled shouldBe 2325
   }
   it should "read travelers.lexington.2017.0404P as a resource (includes pickup slips)" in {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreResource("travelers.lexington.2017.0404P", Output(writer))) o.close()
-    writer.spilled shouldBe 2327
+    writer.spilled shouldBe 2325
   }
   it should "read travelers.lexington.2017.0404 as a file" in {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/travelers.lexington.2017.0404", Output(writer))) o.close()
-    writer.spilled shouldBe 2327
+    writer.spilled shouldBe 2325
+  }
+  it should "read ConcordCountryClub20191007.txt" in {
+    val writer = MockWriter(8192)
+    for (o <- Score.doScoreResource("ConcordCountryClub20191007.txt", Output(writer))) o.close()
+    writer.spilled shouldBe 2642
   }
 
   //noinspection SpellCheckingInspection
@@ -439,8 +444,38 @@ class ScoreSpec extends FlatSpec with Matchers {
     //noinspection SpellCheckingInspection
     for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/keremshalom.2019.0509.txt", Output(writer))) o.close()
     //noinspection SpellCheckingInspection
-    writer.spillway shouldBe "Kerem Shalom Beginner Duplicate: May 9th 2019\nSection A\nResults for direction: N/S\n1 : 6.00 : 75.00% : Dan & Tenley\n3 : 5.67 : 56.67% : Chris & Kathy\n2 : 5.17 : 43.06% : Irene & Robin\n4 : 3.17 : 31.67% : Tom & Jane\nResults for direction: E/W\n4 : 6.83 : 68.33% : Ghilaine & Bill\n3 : 5.00 : 41.67% : Wendy & Ruth\n1 : 4.33 : 43.33% : Marian & Patty\n2 : 3.83 : 47.92% : JoAnn & Margaret\n=====================================================\n=====================================================\nKerem Shalom Beginner Duplicate: May 9th 2019\nA\n1N: Dan & Tenley\n1E: Marian & Patty\n2N: Irene & Robin\n2E: JoAnn & Margaret\n3N: Chris & Kathy\n3E: Wendy & Ruth\n4N: Tom & Jane\n4E: Ghilaine & Bill\n\nBoard: 1 with 4 plays\nNS: 1, EW: 1, score: 450, MP: 1.50\nNS: 2, EW: 3, score: 450, MP: 1.50\nNS: 4, EW: 4, score: 450, MP: 1.50\nNS: 3, EW: 2, score: 450, MP: 1.50\nBoard: 2 with 3 plays\nNS: 1, EW: 1, score: -980, MP: 1.00\nNS: 2, EW: 3, score: -1010, MP: 0.00\nNS: 3, EW: 2, score: -510, MP: 2.00\nBoard: 3 with 4 plays\nNS: 2, EW: 2, score: -650, MP: 1.00\nNS: 4, EW: 4, score: -650, MP: 1.00\nNS: 1, EW: 3, score: 50, MP: 3.00\nNS: 3, EW: 1, score: -650, MP: 1.00\nBoard: 4 with 3 plays\nNS: 2, EW: 2, score: -100, MP: 0.50\nNS: 4, EW: 4, score: -100, MP: 0.50\nNS: 1, EW: 3, score: 1430, MP: 2.00\nBoard: 5 with 3 plays\nNS: 3, EW: 3, score: 50, MP: 1.00\nNS: 2, EW: 1, score: 50, MP: 1.00\nNS: 4, EW: 4, score: 50, MP: 1.00\nBoard: 6 with 3 plays\nNS: 3, EW: 3, score: 450, MP: 1.00\nNS: 2, EW: 1, score: 480, MP: 2.00\nNS: 4, EW: 4, score: -50, MP: 0.00\n"
-    writer.spilled shouldBe 1523
+    writer.spillway shouldBe "Kerem Shalom Beginner Duplicate: May 9th 2019\nSection A\nResults for direction N/S\n1 :  6.00 : 75.00% : Dan & Tenley\n3 :  5.67 : 56.67% : Chris & Kathy\n2 :  5.17 : 43.06% : Irene & Robin\n4 :  3.17 : 31.67% : Tom & Jane\nResults for direction E/W\n4 :  6.83 : 68.33% : Ghilaine & Bill\n2 :  3.83 : 47.92% : JoAnn & Margaret\n1 :  4.33 : 43.33% : Marian & Patty\n3 :  5.00 : 41.67% : Wendy & Ruth\n=====================================================\n=====================================================\nKerem Shalom Beginner Duplicate: May 9th 2019\nA\n1N: Dan & Tenley\n1E: Marian & Patty\n2N: Irene & Robin\n2E: JoAnn & Margaret\n3N: Chris & Kathy\n3E: Wendy & Ruth\n4N: Tom & Jane\n4E: Ghilaine & Bill\n\nBoard: 1 with 4 plays\nNS: 1, EW: 1, score: 450, MP: 1.50\nNS: 2, EW: 3, score: 450, MP: 1.50\nNS: 4, EW: 4, score: 450, MP: 1.50\nNS: 3, EW: 2, score: 450, MP: 1.50\nBoard: 2 with 3 plays\nNS: 1, EW: 1, score: -980, MP: 1.00\nNS: 2, EW: 3, score: -1010, MP: 0.00\nNS: 3, EW: 2, score: -510, MP: 2.00\nBoard: 3 with 4 plays\nNS: 2, EW: 2, score: -650, MP: 1.00\nNS: 4, EW: 4, score: -650, MP: 1.00\nNS: 1, EW: 3, score: 50, MP: 3.00\nNS: 3, EW: 1, score: -650, MP: 1.00\nBoard: 4 with 3 plays\nNS: 2, EW: 2, score: -100, MP: 0.50\nNS: 4, EW: 4, score: -100, MP: 0.50\nNS: 1, EW: 3, score: 1430, MP: 2.00\nBoard: 5 with 3 plays\nNS: 3, EW: 3, score: 50, MP: 1.00\nNS: 2, EW: 1, score: 50, MP: 1.00\nNS: 4, EW: 4, score: 50, MP: 1.00\nBoard: 6 with 3 plays\nNS: 3, EW: 3, score: 450, MP: 1.00\nNS: 2, EW: 1, score: 480, MP: 2.00\nNS: 4, EW: 4, score: -50, MP: 0.00\n"
+    writer.spilled shouldBe 1529
+  }
+
+  behavior of "Card"
+
+  it should "toStringPercent" in {
+    val target = Card(Rational(5, 2), 5, 0)
+    target.toStringPercent shouldBe "50.00%"
+  }
+
+  it should "toStringPercentDNP" in {
+    val target = Card(Rational(4, 2), 4, 1)
+    target.toStringPercent shouldBe "50.00%"
+  }
+
+  it should "toStringMps" in {
+    val target = Card(Rational(5), 5, 0)
+    target.toStringMps(2) shouldBe "10.00"
+  }
+
+  it should "toStringMpsDNP" in {
+    val target = Card(Rational(5), 4, 1)
+    target.toStringMps(2) shouldBe "12.50"
+  }
+
+  behavior of "Rational"
+
+  it should "render" in {
+    Score.rationalToString(Score.asPercent(Rational(1, 2), 1)) shouldBe "50.00"
+    Score.rationalToString(Rational(2, 1)) shouldBe " 2.00"
+    Score.rationalToString(Rational(1, 2)) shouldBe " 0.50"
   }
 
 }

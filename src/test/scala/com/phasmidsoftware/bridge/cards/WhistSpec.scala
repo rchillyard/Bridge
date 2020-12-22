@@ -11,10 +11,10 @@ class WhistSpec extends FlatSpec with Matchers {
 
   behavior of "Whist"
   it should "" in {
-    val deal0 = Deal("test", 0L)
+    val deal0 = Deal("test", 0L, adjustForPartnerships = false)
     val north = 0
     val whist00 = Whist(deal0, north)
-    whist00.deal shouldBe deal0
+    whist00.deal shouldBe deal0.quit
     whist00.openingLeader shouldBe north
     val state = State(whist00, Trick.empty)
     whist00.createState shouldBe state
@@ -42,21 +42,21 @@ class WhistSpec extends FlatSpec with Matchers {
   }
 
   it should "play" in {
-    val deal = Deal("test", 0L)
+    val deal = Deal("test", 0L, adjustForPartnerships = false)
     val target = deal.hands.head
     target.nCards shouldBe 13
-    val result = target.play(CardPlay(deal, 0, Spades, 5))
+    val result = target.play(CardPlay(deal, None, 0, Spades, 5))
     result.nCards shouldBe 12
   }
 
   it should "playAll CardPlays" in {
 
-    val deal = Deal("test", 0L)
+    val deal = Deal("test", 0L, adjustForPartnerships = false)
     val hands = deal.hands
     hands.size shouldBe 4
     val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
     val trick =
-      Trick.create(0, CardPlay(deal, 0, Spades, priority1S), CardPlay(deal, 1, Spades, priority2S), CardPlay(deal, 2, Spades, priority3S), CardPlay(deal, 3, Spades, priority4S))
+      Trick.create(0, CardPlay(deal, None, 0, Spades, priority1S), CardPlay(deal, None, 1, Spades, priority2S), CardPlay(deal, None, 2, Spades, priority3S), CardPlay(deal, None, 3, Spades, priority4S))
     val target0 = deal.north
     target0.nCards shouldBe 13
     target0.playAll(trick).nCards shouldBe 12
@@ -82,47 +82,58 @@ class WhistSpec extends FlatSpec with Matchers {
   }
 
   behavior of "State"
-  it should "create" in {
-    val deal0 = Deal("test", 0L)
+  it should "create1" in {
+    val deal0 = Deal("test", 0L, adjustForPartnerships = false)
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
     state0.deal.nCards shouldBe 52
-    //		state0.isConsistent shouldBe true
+    state0.isConsistent shouldBe true
     val hands = deal0.hands
-    val Seq(priority1S, priority2S, _, _) = hands map (_.holdings(Spades).sequences.last.priority)
-    val trick1 = Trick.create(1, CardPlay(deal0, 0, Spades, priority1S))
+    val Seq(priority1S, _, _, _) = hands map (_.holdings(Spades).sequences.last.priority)
+    val trick1 = Trick.create(1, CardPlay(deal0, None, 0, Spades, priority1S))
     val state1 = state0.next(trick1)
     state1.deal.nCards shouldBe 51
-    //		state1.isConsistent shouldBe true
+    state1.isConsistent shouldBe true
     state1.trick.isComplete shouldBe false
     state1.trick shouldBe trick1
     state1.deal should not be deal0
-    val trick2 = Trick.create(1, CardPlay(deal0, 0, Spades, priority1S), CardPlay(deal0, 1, Spades, priority2S))
-    val state2 = state1.next(trick2)
+  }
+
+  it should "create2" in {
+    val deal0 = Deal("test", 0L, adjustForPartnerships = false)
+    val whist00 = Whist(deal0, 0)
+    val deal00 = whist00.deal
+    val state0 = State(whist00)
+    val hands = deal00.hands
+    val Seq(priority1S, priority2S, _, _) = hands map (_.holdings(Spades).sequences.last.priority)
+    val trick1 = Trick.create(1, CardPlay(deal00, None, 0, Spades, priority1S))
+    val trick2 = Trick.create(1, CardPlay(deal00, None, 0, Spades, priority1S), CardPlay(deal00, None, 1, Spades, priority2S))
+    val state2 = state0.next(trick1).next(trick2)
     state2.deal.nCards shouldBe 50
     //		state2.isConsistent shouldBe true
     state2.trick.isComplete shouldBe false
     state2.trick shouldBe trick2
-    state2.deal should not be deal0
+    state2.deal should not be deal00
 
   }
 
   it should "enumeratePlays to one level" in {
-    val deal0 = Deal("test", 0L)
+    val deal0 = Deal("test", 0L, adjustForPartnerships = false)
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
     val states: Seq[State] = state0.enumeratePlays
-    states.size shouldBe 3
+    println(states)
+    states.size shouldBe 10
   }
 
   it should "enumeratePlays to two levels" in {
-    val deal0 = Deal("test", 0L)
+    val deal0 = Deal("test", 0L, adjustForPartnerships = false)
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
     val states1: Seq[State] = state0.enumeratePlays
-    states1.size shouldBe 3
+    states1.size shouldBe 10
     val states2: Seq[State] = for (p <- states1; q <- p.enumeratePlays) yield q
-    states2.size shouldBe 6
+    states2.size shouldBe 27
   }
 
   it should "enumeratePlays to three levels" in {
@@ -130,11 +141,11 @@ class WhistSpec extends FlatSpec with Matchers {
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
     val states1: Seq[State] = state0.enumeratePlays
-    states1.size shouldBe 3
+    states1.size shouldBe 10
     val states2: Seq[State] = for (p <- states1; q <- p.enumeratePlays) yield q
-    states2.size shouldBe 6
+    states2.size shouldBe 25
     val states3: Seq[State] = for (p <- states2; q <- p.enumeratePlays) yield q
-    states3.size shouldBe 18
+    states3.size shouldBe 60
   }
 
   it should "enumeratePlays to four levels" in {
@@ -142,13 +153,13 @@ class WhistSpec extends FlatSpec with Matchers {
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
     val states1: Seq[State] = state0.enumeratePlays
-    states1.size shouldBe 3
+    states1.size shouldBe 10
     val states2: Seq[State] = for (p <- states1; q <- p.enumeratePlays) yield q
-    states2.size shouldBe 6
+    states2.size shouldBe 25
     val states3: Seq[State] = for (p <- states2; q <- p.enumeratePlays) yield q
-    states3.size shouldBe 18
+    states3.size shouldBe 60
     val states4: Seq[State] = for (p <- states3; q <- p.enumeratePlays) yield q
-    states4.size shouldBe 36
+    states4.size shouldBe 144
   }
 
   it should "enumeratePlays to five levels" in {
@@ -156,21 +167,28 @@ class WhistSpec extends FlatSpec with Matchers {
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
     val states1: Seq[State] = state0.enumeratePlays
-    states1.size shouldBe 3
+    states1.size shouldBe 10
     val states2: Seq[State] = for (p <- states1; q <- p.enumeratePlays) yield q
-    states2.size shouldBe 6
+    states2.size shouldBe 25
     val states3: Seq[State] = for (p <- states2; q <- p.enumeratePlays) yield q
-    states3.size shouldBe 18
+    states3.size shouldBe 60
     val states4: Seq[State] = for (p <- states3; q <- p.enumeratePlays) yield q
-    states4.size shouldBe 36
+    states4.size shouldBe 144
     val states5: Seq[State] = for (p <- states4; q <- p.enumeratePlays) yield q
-    states5.size shouldBe 134
+    states5.size shouldBe 1310
   }
 
+  // CONSIDER moving this to it because it takes almost 1/4 second.
   behavior of "double dummy"
   it should "analyzeDoubleDummy2" in {
-    val target = Deal("test", 2L)
+    val target = Deal("test", 2L, adjustForPartnerships = false)
     val whist = Whist(target, 3)
+    whist.analyzeDoubleDummy(9, directionNS = true) shouldBe Some(true)
+  }
+
+  it should "analyzeDoubleDummy for suit" in {
+    val target = Deal("test", 2L, adjustForPartnerships = false)
+    val whist = Whist(target, 3, Some(Clubs))
     whist.analyzeDoubleDummy(9, directionNS = true) shouldBe Some(true)
   }
 }

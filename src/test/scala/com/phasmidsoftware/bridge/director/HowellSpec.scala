@@ -7,13 +7,16 @@ package com.phasmidsoftware.bridge.director
 import com.phasmidsoftware.bridge.director
 import org.scalatest.{FlatSpec, Inside, Matchers}
 
+import scala.collection.immutable
+
 /**
   * @author robinhillyard
   */
 
 class HowellSpec extends FlatSpec with Matchers with Inside {
   "modulo" should "work on 1-n, etc." in {
-    implicit val tables: Int = 4
+    implicit val n: Int = 4
+    implicit val tables: Seq[Table] = Table.tables(3) // TODO this is not correct
     val e = Encounter(1, 2, 3, 4)
     e.modulo(-3) shouldBe 1
     e.modulo(-2) shouldBe 2
@@ -22,7 +25,8 @@ class HowellSpec extends FlatSpec with Matchers with Inside {
     e.modulo(0) shouldBe 4
   }
   "move" should "work on Encounter" in {
-    implicit val tables: Int = 4
+    implicit val n: Int = 4
+    implicit val tables: Seq[Table] = Table.tables(3) // TODO this is not correct
     val e = Encounter(1, 2, 3, 4)
     val p = Position(Seq(Encounter(1, 3, 2, 1), Encounter(2, 1, 4, 2), Encounter(3, 4, 1, 3), Encounter(4, 2, 3, 4)))
     val moves = director.Triple(-3, -2, -1)
@@ -31,28 +35,30 @@ class HowellSpec extends FlatSpec with Matchers with Inside {
   }
 
   "Howell" should "work with 4 tables" in {
-    implicit val tables: Int = 4
-    val howell = Howell(tables, director.Triple(Seq(-3), Seq(-2), Seq(-1)))
+    implicit val n: Int = 4
+    implicit val tables: Seq[Table] = Table.tables(3) // TODO this is not correct
+    val howell = Howell("", tables, director.Triple(Seq(-3), Seq(-2), Seq(-1)))
     val start = Position(Seq(Encounter(1, 3, 2, 1), Encounter(2, 1, 4, 2), Encounter(3, 4, 1, 3), Encounter(4, 2, 3, 4)))
     val positions = howell.positions(start)
     positions.size shouldBe 4
     positions.tail.head shouldBe Position(Seq(Encounter(1, 2, 1, 2), Encounter(2, 3, 3, 3), Encounter(3, 1, 2, 4), Encounter(4, 4, 4, 1)))
-    val labeledPositions = Howell.labelPositions(howell.positions(start))
+    val labeledPositions = Howell.evaluateRounds(howell.positions(start))
     labeledPositions.tail.tail.head should matchPattern {
-      case (3, Position(Seq(Encounter(1, 4, 2, 3), Encounter(2, 2, 4, 4), Encounter(3, 3, 1, 1), Encounter(4, 1, 3, 2)))) =>
+      case Round(3, Position(Seq(Encounter(1, 4, 2, 3), Encounter(2, 2, 4, 4), Encounter(3, 3, 1, 1), Encounter(4, 1, 3, 2)))) =>
     }
   }
 
   it should "work with 7 tables" in {
-    implicit val tables: Int = 7
-    val howell = director.Howell(tables, director.Triple(Seq(-3), Seq(-2), Seq(-1)))
+    implicit val n: Int = 7
+    implicit val tables: Seq[Table] = Table.tables(4, 6, 7)
+    val howell = director.Howell("", tables, director.Triple(Seq(-3), Seq(-2), Seq(-1)))
     val start = Position(Seq(Encounter(1, 1, 1, 1), Encounter(2, 6, 5, 2), Encounter(3, 4, 2, 3), Encounter(4, 2, 6, 4), Encounter(5, 7, 3, 5), Encounter(6, 5, 7, 6), Encounter(7, 3, 4, 7)))
     val positions = howell.positions(start)
     positions.size shouldBe 7
     positions.tail.head shouldBe Position(Seq(Encounter(1, 2, 2, 2), Encounter(2, 7, 6, 3), Encounter(3, 5, 3, 4), Encounter(4, 3, 7, 5), Encounter(5, 1, 4, 6), Encounter(6, 6, 1, 7), Encounter(7, 4, 5, 1)))
-    val labeledPositions = Howell.labelPositions(howell.positions(start))
-    for ((r, p) <- labeledPositions)
-      println(s"Round $r: $p")
+    val labeledPositions: immutable.Seq[Round] = Howell.evaluateRounds(howell.positions(start))
+    for (r <- labeledPositions)
+      println(s"Round ${r.round}: ${r.position}")
 
     //    labeledPositions.tail.tail.head should matchPattern { case (3,Position(Seq(Encounter(1,4,2,3),Encounter(2,2,4,4),Encounter(3,3,1,1),Encounter(4,1,3,2)))) => }
   }

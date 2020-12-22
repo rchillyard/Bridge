@@ -33,14 +33,6 @@ case class StateTree(override val root: StateNode[State]) extends Tree[State](ro
     * @return a StateNode.
     */
   def enumerateNoTrumpPlaysNS(nsTricks: Int): StateNode[State] = expand()
-
-  /**
-    * Choose the plays for this Deal, by running expand for 52 levels, and terminating when NS have nsTricks or when EW have more than 13-nsTricks.
-    *
-    * @return a StateNode.
-    */
-  def enumerateNoTrumpPlaysEW(ewTricks: Int): StateNode[State] = expand()
-
 }
 
 object StateTree {
@@ -50,10 +42,8 @@ object StateTree {
     * @param whist the game.
     * @return a new Tree based on the given game.
     */
-  def apply(whist: Whist)(implicit ev1: Expandable[State], ev2: GoalDriven[State], ev3: Show[State]): StateTree =
+  def apply(whist: Whist)(implicit ev1: Expandable[State], ev2: GoalDriven[State], ev3: Show[State]): StateTree = {
+    State.count = 0
     StateTree(StateNode(State(whist), None, Nil))
+  }
 }
-
-
-
-

@@ -18,7 +18,7 @@ class StateSpec extends FlatSpec with Matchers {
   private val whist = Whist(deal, north)
   private val trick0 = Trick.empty
   private val tricks0 = Tricks(0, 0)
-  private val play0 = CardPlay(deal, north, Spades, 9)
+  private val play0 = CardPlay(deal, None, north, Spades, 9)
 
   it should "apply" in {
     val target = State(whist, trick0, tricks0)
@@ -58,7 +58,7 @@ class StateSpec extends FlatSpec with Matchers {
 
   it should "deal" in {
     val target = State(whist)
-    target.deal shouldBe deal
+    target.deal shouldBe deal.quit
   }
 
   it should "trick" in {
@@ -79,18 +79,18 @@ class StateSpec extends FlatSpec with Matchers {
 
   it should "fitness" in {
     val target = State(whist)
-    target.fitness shouldBe 3.9 +- 0.00001
+    target.fitness shouldBe 4.0 +- 0.00001
   }
 
   it should "toString" in {
-    val target = State.create(whist, trick0 :+ play0, tricks0)
-    target.toString shouldBe "State(Whist(Deal test (51),0),T1 {S5},0:0)"
+    val target: State = State.create(whist, trick0 :+ play0, tricks0)
+    target.toString shouldBe "State(Whist(Deal test (51 cards and 39 sequences), N, NT),T1 0 {S5},0:0)"
   }
 
   it should "neatOutput" in {
     val target = State.create(whist, trick0 :+ play0, tricks0)
     target.neatOutput shouldBe
-      "State: Trick History: \"T1 {S5}\" 0:0 3.8 Deal test (51) List(S9 HQ9432 D64 CT652," +
+      "State: Trick History: \"T1 0 {S5}\" 0:0 4.0 Deal test (51) List(S9 HQ9432 D64 CT652," +
         " SK742 HA7 DT93 CAQJ7, SAJT86 HKT8 DK82 CK3, SQ3 HJ65 DAQJ75 C984)"
   }
 
@@ -104,7 +104,7 @@ class StateSpec extends FlatSpec with Matchers {
     val writer = MockWriter()
     target.output(Output(writer)).close()
     writer.spilled shouldBe 13
-    writer.spillway shouldBe "T1 N:S5 (3.8)"
+    writer.spillway shouldBe "T1 N:S5 (4.0)"
   }
 
 //  it should "enumerateFollows" in {
@@ -123,9 +123,10 @@ class StateSpec extends FlatSpec with Matchers {
   it should "enumeratePlays" in {
     val target = State(whist)
     val plays: Seq[State] = target.enumeratePlays
-    plays.size shouldBe 3
+    plays.size shouldBe 10
     plays.head.trick.plays.size shouldBe 1
-    plays.head.trick.plays.head shouldBe CardPlay(deal, north, Hearts, 10)
+    plays.head.trick.plays.head should matchPattern { case CardPlay(_, None, `north`, Hearts, 2) => }
+    //    plays.head.trick.plays.head shouldBe CardPlay(deal, None, north, Hearts, 10)
   }
 
   it should "get complex neat output" in {
@@ -146,7 +147,7 @@ class StateSpec extends FlatSpec with Matchers {
     val state5alternatives = state40.enumeratePlays
     val target = state5alternatives.head
     target.neatOutput shouldBe
-      """State: Trick History: "T1 {H2, H7, HK, H5}, T2 {S6}" 1:0 4.7 Deal test (47) List(S95 HQ943 D64 CT652, SK742 HA DT93 CAQJ7, SAJT8 HT8 DK82 CK3, SQ3 HJ6 DAQJ75 C984)""".stripMargin
+      """State: Trick History: "T1 0 {HQ, HA, H8, H5}, T2 1 {SK}" 0:1 4.8 Deal test (47) List(S95 H9432 D64 CT652, S742 H7 DT93 CAQJ7, SAJT86 HKT DK82 CK3, SQ3 HJ6 DAQJ75 C984)""".stripMargin
   }
 
 }
