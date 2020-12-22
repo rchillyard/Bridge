@@ -2,7 +2,7 @@ name := "Bridge"
 
 version := "1.0.2-SNAPSHOT"
 
-scalaVersion := "2.12.9"
+scalaVersion := "2.13.4"
 
 val scalaTestVersion = "3.1.1"
 
@@ -11,8 +11,7 @@ scalacOptions ++= Seq("-deprecation", "-feature")
 resolvers += "Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases/"
 
 libraryDependencies ++= Seq(
-  "com.phasmid" %% "lascala" % "1.0.11",
-  "com.phasmidsoftware" %% "decisiontree" % "1.0.1",
+  "com.phasmidsoftware" %% "decisiontree" % "1.0.4",
   "joda-time" % "joda-time" % "2.9.2",
   "org.scala-lang.modules" %% "scala-xml" % "1.3.0",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
