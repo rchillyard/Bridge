@@ -6,7 +6,7 @@ package com.phasmidsoftware.bridge.cards
 
 import java.io.Writer
 
-import com.phasmid.laScala.Shuffle
+import com.phasmidsoftware.misc.Shuffle
 import com.phasmidsoftware.util.{Loggable, Loggables, Output, Outputable}
 
 import scala.language.postfixOps
@@ -133,9 +133,9 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
   /**
     * TODO Should be private
     */
-  lazy val _cooperate = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.cooperate(partner(k)(s))))
+  lazy val _cooperate: Deal = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.cooperate(partner(k)(s))))
 
-  lazy val _reprioritize = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.reprioritize))
+  lazy val _reprioritize: Deal = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.reprioritize))
 
   private def outputHand(name: String, hand: Hand): Output = (Output(s"$name:\t") :+ hand.neatOutput).insertBreak()
 

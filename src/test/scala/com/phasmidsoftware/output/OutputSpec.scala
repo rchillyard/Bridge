@@ -6,8 +6,8 @@ package com.phasmidsoftware.output
 
 import java.io.Writer
 
-import com.phasmid.laScala.values.Rational
 import com.phasmidsoftware.bridge.director.Card
+import com.phasmidsoftware.misc.Rational
 import com.phasmidsoftware.util.{Output, OutputException}
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -24,15 +24,15 @@ class OutputSpec extends FlatSpec with Matchers {
     val writer = MockWriter()
     val output: Output = Output(writer)
 
-    def getResultsForDirection(preamble: (String, Option[String], Seq[(Int, String, String)]), r: (Boolean, Int, Map[Int, (Rational[Int], Int)]), top: Int): Output = {
-      def resultDetails(s: (Int, (Rational[Int], Int))): Output = Output(s"${s._1} : ${Card.mpsAsString(s._2._1, top)} : ${Card(s._2._1, s._2._2, 0).toStringPercent} : Tweedledum & Tweedledee").insertBreak()
+    def getResultsForDirection(preamble: (String, Option[String], Seq[(Int, String, String)]), r: (Boolean, Int, Map[Int, (Rational, Int)]), top: Int): Output = {
+      def resultDetails(s: (Int, (Rational, Int))): Output = Output(s"${s._1} : ${Card.mpsAsString(s._2._1, top)} : ${Card(s._2._1, s._2._2, 0).toStringPercent} : Tweedledum & Tweedledee").insertBreak()
 
       Output.foldLeft(r._3.toSeq.sortBy(_._2._1).reverse)()(_ ++ resultDetails(_))
     }
 
-    def getResults(k: (String, Option[String], Seq[(Int, String, String)]), r: (Boolean, Int, Map[Int, (Rational[Int], Int)])): Output = Output(s"Results for direction: ${if (r._1) "N/S" else "E/W"}").insertBreak ++ getResultsForDirection(k, r, r._2)
+    def getResults(k: (String, Option[String], Seq[(Int, String, String)]), r: (Boolean, Int, Map[Int, (Rational, Int)])): Output = Output(s"Results for direction: ${if (r._1) "N/S" else "E/W"}").insertBreak ++ getResultsForDirection(k, r, r._2)
 
-    def eventResults(e: (String, Seq[String]), k: (String, Option[String], Seq[(Int, String, String)]), rs: Seq[(Boolean, Int, Map[Int, (Rational[Int], Int)])]): Output = {
+    def eventResults(e: (String, Seq[String]), k: (String, Option[String], Seq[(Int, String, String)]), rs: Seq[(Boolean, Int, Map[Int, (Rational, Int)])]): Output = {
       val z = for (r <- rs) yield getResults(k, r)
       (Output(s"${e._1}\nSection ${k._1}").insertBreak ++ z :+
         "=====================================================\n" :+
@@ -43,7 +43,7 @@ class OutputSpec extends FlatSpec with Matchers {
     val ey = Try(("test", Seq("1", "2")))
 
     val zy: Try[Output] = for (e <- ey) yield {
-      val results = for ((k, rs) <- Seq(("test", None, Seq((1, "x", "y"))) -> Seq((true, 2, Map[Int, (Rational[Int], Int)]())))) yield eventResults(e, k, rs)
+      val results = for ((k, rs) <- Seq(("test", None, Seq((1, "x", "y"))) -> Seq((true, 2, Map[Int, (Rational, Int)]())))) yield eventResults(e, k, rs)
       (output :+ "XXX").insertBreak ++ results
     }
 

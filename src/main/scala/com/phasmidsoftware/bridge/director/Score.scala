@@ -6,8 +6,7 @@ package com.phasmidsoftware.bridge.director
 
 import java.io.PrintWriter
 
-import com.phasmid.laScala.fp.FP
-import com.phasmid.laScala.values.Rational
+import com.phasmidsoftware.misc.{FP, Rational}
 import com.phasmidsoftware.output.Util
 import com.phasmidsoftware.util.{Output, Outputable}
 
@@ -64,7 +63,7 @@ object Score extends App {
     * @param base the value corresponding to 100%.
     * @return r converted to a percentage of base.
     */
-  def asPercent(r: Rational[Int], base: Int): Rational[Int] = r * 100 / base
+  def asPercent(r: Rational, base: Int): Rational = r * 100 / base
 
   /**
     * Method to render a Rational (r).
@@ -75,11 +74,14 @@ object Score extends App {
     * @return r rendered in 5 spaces.
     */
   //noinspection SpellCheckingInspection
-  def rationalToString(r: Rational[Int]): String = r match {
-    case Rational(x, 1) => f"$x%2d.00"
-    case Rational(_, 0) => "infty"
-    case _ => f"${r.toDouble}%5.2f"
-  }
+  def rationalToString(r: Rational): String =
+    if (r.isWhole) f"${r.n}%2d.00" else if (r.isInfinity) "infty" else f"${r.toDouble}%5.2f"
+
+  //    r match {
+  //    case Rational(x, 1) => f"$x%2d.00"
+  //    case Rational(_, 0) => "infty"
+  //    case _ => f"${r.toDouble}%5.2f"
+  //  }
 }
 
 /**
@@ -138,7 +140,7 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler]) extends Outputa
 
   private lazy val recap: Seq[Matchpoints] = for (t <- travelers; m <- t.matchpointIt) yield m
 
-  private def all(n: Int, dir: Boolean): Seq[Option[Rational[Int]]] = recap.filter(_.matchesPair(n, dir)) map (_.getMatchpoints(dir))
+  private def all(n: Int, dir: Boolean): Seq[Option[Rational]] = recap.filter(_.matchesPair(n, dir)) map (_.getMatchpoints(dir))
 
   private def total(d: Boolean): Seq[(Int, Card)] = for {p <- preamble.pairs
                                                          ros = all(p.number, d)
@@ -237,7 +239,7 @@ case class Player(name: String) {
   override def toString: String = name
 }
 
-case class Card(totalMps: Rational[Int], played: Int, notPlayed: Int) extends Ordered[Card] {
+case class Card(totalMps: Rational, played: Int, notPlayed: Int) extends Ordered[Card] {
 
   def toStringMps(top: Int): String = Card.mpsAsString(scaledMps, top)
 
@@ -247,18 +249,18 @@ case class Card(totalMps: Rational[Int], played: Int, notPlayed: Int) extends Or
 
   lazy val toStringPercent: String = Score.rationalToString(percentage) + "%"
 
-  lazy val percentage: Rational[Int] = Score.asPercent(totalMps, played)
+  lazy val percentage: Rational = Score.asPercent(totalMps, played)
 
   private def scaledMps = totalMps * (played + notPlayed) / played
 }
 
 object Card {
-  def apply(ros: Seq[Option[Rational[Int]]]): Card = {
-    val irs: Seq[Rational[Int]] = ros.flatten
+  def apply(ros: Seq[Option[Rational]]): Card = {
+    val irs: Seq[Rational] = ros.flatten
     Card(irs.sum, irs.size, ros.size - irs.size)
   }
 
-  def mpsAsString(r: Rational[Int], top: Int): String = Score.rationalToString(r * top)
+  def mpsAsString(r: Rational, top: Int): String = Score.rationalToString(r * top)
 }
 
 /**
@@ -302,10 +304,10 @@ case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
   * @param mp     (optionally) the matchpoints earned by ns for this boardResult
   * @param top    the maximum number of matchpoints possible
   */
-case class Matchpoints(ns: Int, ew: Int, result: PlayResult, mp: Option[Rational[Int]], top: Int) {
+case class Matchpoints(ns: Int, ew: Int, result: PlayResult, mp: Option[Rational], top: Int) {
   def matchesPair(n: Int, dir: Boolean): Boolean = if (dir) n == ns else n == ew
 
-  def getMatchpoints(dir: Boolean): Option[Rational[Int]] = if (dir) mp else invert
+  def getMatchpoints(dir: Boolean): Option[Rational] = if (dir) mp else invert
 
   // CONSIDER extending Outputable and putting this logic into output method.
   override def toString: String = mp match {
@@ -333,9 +335,9 @@ case class Traveler(board: Int, ps: Seq[Play]) extends Outputable[Unit] with Ord
 
   def matchpointIt: Seq[Matchpoints] = for (p <- ps) yield Matchpoints(p.ns, p.ew, p.result, p.matchpoints(this), top)
 
-  def matchpoint(x: Play): Option[Rational[Int]] = if (isPlayed) {
+  def matchpoint(x: Play): Option[Rational] = if (isPlayed) {
     val isIs = (for (p <- ps; if p != x; io = p.compare(x.result); i <- io) yield (i, 2)) unzip;
-    Some(Rational.normalize(isIs._1.sum, isIs._2.sum))
+    Some(Rational(isIs._1.sum, isIs._2.sum))
   }
   else None
 
@@ -433,7 +435,7 @@ case class Play(ns: Int, ew: Int, result: PlayResult) {
     case _ => None
   }
 
-  def matchpoints(t: Traveler): Option[Rational[Int]] = result.matchpoints(t.matchpoint(this))
+  def matchpoints(t: Traveler): Option[Rational] = result.matchpoints(t.matchpoint(this))
 
 }
 
@@ -462,7 +464,7 @@ case class PlayResult(r: Either[String, Int]) {
     * @param f call-by-name value of the matchpoints where the result is an an Int
     * @return an optional Rational
     */
-  def matchpoints(f: => Option[Rational[Int]]): Option[Rational[Int]] = r match {
+  def matchpoints(f: => Option[Rational]): Option[Rational] = r match {
     case Right(_) => f
     case Left("A-") => Some(Rational(2, 5))
     case Left("A") => Some(Rational(1, 2))
