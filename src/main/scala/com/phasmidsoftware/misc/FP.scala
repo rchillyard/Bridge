@@ -8,7 +8,7 @@ package com.phasmidsoftware.misc
 import scala.annotation.tailrec
 import scala.collection.immutable.ListMap
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.{higherKinds, postfixOps}
+import scala.language.postfixOps
 import scala.util._
 import scala.util.control.NonFatal
 
@@ -133,11 +133,11 @@ object FP {
   /**
     * TODO unit test
     *
-    * @param xys a Stream of Try[X] values
+    * @param xys a LazyList of Try[X] values
     * @tparam X the underlying type
-    * @return a Stream[X] wrapped in a Try
+    * @return a LazyList[X] wrapped in a Try
     */
-  def sequence[X](xys: Stream[Try[X]]): Try[Stream[X]] = (Try(Stream[X]()) /: xys) {
+  def sequence[X](xys: LazyList[Try[X]]): Try[LazyList[X]] = (Try(LazyList[X]()) /: xys) {
     (xsy, xy) => for (xs <- xsy; x <- xy) yield xs :+ x
   }
 
@@ -218,10 +218,10 @@ object FP {
     * @tparam B the underlying type of bs
     * @return a Tuple3 which contains: the zip of as and bs; the remaining elements of as (if any); the remaining elements of bs (if any)
     */
-  def zippy[A, B](as: Iterable[A], bs: Iterable[B]): (Traversable[(A, B)], Traversable[A], Traversable[B]) = {
+  def zippy[A, B](as: Iterable[A], bs: Iterable[B]): (Iterable[(A, B)], Iterable[A], Iterable[B]) = {
     val (nas, nbs) = (as.size, bs.size)
     val n = math.min(nas, nbs)
-    (((as.iterator take n) zip bs.iterator).toTraversable, (as.iterator drop n).toTraversable, (bs.iterator drop n).toTraversable)
+    (((as.iterator take n) zip bs.iterator).to(Iterable), (as.iterator drop n).to(Iterable), (bs.iterator drop n).to(Iterable))
   }
 
   /**
@@ -246,7 +246,7 @@ object FP {
     * @return a String representing the first "limit" elements of as
     */
   def renderLimited[A](as: => Seq[A])(implicit limit: Int = as.length * 5): String = {
-    val iterator = as.toStream.toIterator
+    val iterator = as.to(LazyList).iterator
     val buffer = new StringBuilder("(")
     while (iterator.hasNext && buffer.length < limit) {
       if (buffer.length > 1) buffer append ", "

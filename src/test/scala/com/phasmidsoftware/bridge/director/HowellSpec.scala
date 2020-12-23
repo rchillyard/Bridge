@@ -70,15 +70,15 @@ class HowellSpec extends flatspec.AnyFlatSpec with should.Matchers with Inside {
     stream.head shouldBe director.Triple(1, 2, 3)
     stream.tail.head shouldBe director.Triple(2, 3, 4)
   }
-  "Triple.toStreams" should "work" in {
+  "Triple.toLazyLists" should "work" in {
     val ist = director.Triple(Seq(1), Seq(2), Seq(1, 2))
-    val streams = director.Triple.toLazyLists(ist)
-    streams._1.head shouldBe 1
-    streams._2.head shouldBe 2
-    streams._3.head shouldBe 1
-    streams._1.tail.head shouldBe 1
-    streams._2.tail.head shouldBe 2
-    streams._3.tail.head shouldBe 2
+    val lazyLists = director.Triple.toLazyLists(ist)
+    lazyLists._1.head shouldBe 1
+    lazyLists._2.head shouldBe 2
+    lazyLists._3.head shouldBe 1
+    lazyLists._1.tail.head shouldBe 1
+    lazyLists._2.tail.head shouldBe 2
+    lazyLists._3.tail.head shouldBe 2
   }
 }
   

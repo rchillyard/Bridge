@@ -195,7 +195,7 @@ case class Preamble(identifier: String, maybeModifier: Option[String], pairs: Se
   }
 
   override def toString: String = {
-    val result = StringBuilder.newBuilder
+    val result = new StringBuilder()
     result.append(s"$identifier\n")
     for (p <- pairs) result.append(s"$p\n")
     result.toString
@@ -359,7 +359,7 @@ case class Traveler(board: Int, ps: Seq[Play]) extends Outputable[Unit] with Ord
     * @return a new instance of Output.
     */
   def output(output: Output, xo: Option[Unit] = None): Output = {
-    val result = StringBuilder.newBuilder
+    val result = new StringBuilder
     result.append(s"Board: $board with ${ps.size} plays\n")
     for (m <- matchpointIt) result.append(s"$m\n")
     output :+ result.toString
