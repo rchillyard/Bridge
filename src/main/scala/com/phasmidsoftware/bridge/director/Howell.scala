@@ -7,9 +7,6 @@ package com.phasmidsoftware.bridge.director
 import com.phasmidsoftware.bridge.director.Howell.{MovePlan, Moves, Trio}
 
 import scala.annotation.tailrec
-import scala.collection.generic.CanBuildFrom
-import scala.collection.mutable
-import scala.language.higherKinds
 
 /**
   * @author robinhillyard
@@ -30,7 +27,7 @@ case class Howell(name: String, tables: Seq[Table], movePlan: MovePlan) {
     (Position(result), Movement(tail))
   }
 
-  private def getMovement(implicit tables: Int): Movement = Movement(Triple.toStreams(movePlan))
+  private def getMovement(implicit tables: Int): Movement = Movement(Triple.toLazyLists(movePlan))
 
   def positions(start: Position): List[Position] = {
     @tailrec def loop(positions: List[Position], posMov: (Position, Movement), moves: Int): List[Position] = moves match {
@@ -53,17 +50,18 @@ case class Round(round: Int, position: Position) {
   override def toString: String = s"Round $round: $position"
 }
 
-abstract class MappedProduct3[T, F[_]](_1: T, _2: T, _3: T) extends Product3[T, T, T] {
-  def map[U](f: T => U)(implicit cbf: CanBuildFrom[F[U], U, F[U]]): F[U] = {
-    val ts = productIterator
-    val us = for (t <- ts) yield f(t.asInstanceOf[T])
-    val x: mutable.Builder[U, F[U]] = cbf()
-    for (u <- us) x += u
-    x.result()
-  }
-
-  override def toString: String = s"n:${_1} e:${_2} b:${_3}"
-}
+//
+//abstract class MappedProduct3[T, F[_]](_1: T, _2: T, _3: T) extends Product3[T, T, T] {
+//  def map[U](f: T => U)(implicit cbf: BuildFrom[F[U], U, F[U]]): F[U] = {
+//    val ts = productIterator
+//    val us = for (t <- ts) yield f(t.asInstanceOf[T])
+//    val x: mutable.Builder[U, F[U]] = cbf()
+//    for (u <- us) x += u
+//    x.result()
+//  }
+//
+//  override def toString: String = s"n:${_1} e:${_2} b:${_3}"
+//}
 
 case class Triple[T](_1: T, _2: T, _3: T) extends Product3[T, T, T] {
   def map[U](f: T => U): Triple[U] = Triple(f(_1), f(_2), f(_3))
@@ -72,15 +70,15 @@ case class Triple[T](_1: T, _2: T, _3: T) extends Product3[T, T, T] {
 }
 
 object Triple {
-  def zip[U](ust: Triple[Stream[U]]): Stream[Triple[U]] = ust._1 zip ust._2 zip ust._3 map { case ((x, y), z) => Triple(x, y, z) }
+  def zip[U](ust: Triple[LazyList[U]]): LazyList[Triple[U]] = ust._1 zip ust._2 zip ust._3 map { case ((x, y), z) => Triple(x, y, z) }
 
-  def toStreams[U](ust: Triple[Seq[U]]): Triple[Stream[U]] = ust.map(us => Stream.continually(us).flatten)
+  def toLazyLists[U](ust: Triple[Seq[U]]): Triple[LazyList[U]] = ust.map(us => LazyList.continually(us).flatten)
 }
 
-case class Movement(moves: Stream[Trio]) {
+case class Movement(moves: LazyList[Trio]) {
   def head: Trio = moves.head
 
-  def tail: Stream[Trio] = moves.tail
+  def tail: LazyList[Trio] = moves.tail
 }
 
 object Movement {
@@ -103,7 +101,7 @@ object Table {
 object Howell extends App {
   type Trio = Triple[Int]
   type MovePlan = Triple[Seq[Int]]
-  type Moves = Triple[Stream[Int]]
+  type Moves = Triple[LazyList[Int]]
 
   lazy val howell7: (Howell, Position) = {
     implicit val n: Int = 7
@@ -210,7 +208,7 @@ object Howell extends App {
       val triples: Seq[(Int, Seq[(Int, Int)])] = for ((k, es) <- groups.toSeq; e <- es; if e.real) yield k -> e.pairsInOrder.sorted
       println(s"""Triples: $triples""")
       val distinct = triples.distinct
-      val duplicates = triples.diff(distinct).distinct
+      //      val duplicates = triples.diff(distinct).distinct
       if (triples.size != distinct.size) println(s"""*** Duplicate encounters: ${triples.diff(distinct).distinct}""")
     }
 
@@ -218,7 +216,7 @@ object Howell extends App {
 
   }
 
-  def evaluateRounds(positions: List[Position]): List[Round] = for ((p, r) <- positions zip Stream.from(1)) yield Round(r, p)
+  def evaluateRounds(positions: List[Position]): List[Round] = for ((p, r) <- positions zip LazyList.from(1)) yield Round(r, p)
 }
 
 case class Encounter(table: Int, n: Int, e: Int, b: Int)(implicit tables: Seq[Table]) {

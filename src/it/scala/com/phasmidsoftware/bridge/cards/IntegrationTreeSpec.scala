@@ -1,10 +1,9 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.decisiontree.{Expandable, GoalDriven, StateNode}
-import org.scalatest.{FlatSpec, Matchers}
 
 //noinspection ScalaStyle
-class IntegrationTreeSpec extends FlatSpec with Matchers {
+class IntegrationTreeSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   def success(n: StateNode[State]): Boolean = false
 

@@ -9,10 +9,11 @@ import java.io.{BufferedWriter, File, FileWriter, PrintWriter}
 import com.phasmidsoftware.bridge.pbn.PBNParser
 import com.phasmidsoftware.output.MockWriter
 import com.phasmidsoftware.util.Output
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec
+import org.scalatest.matchers.should
 
 //noinspection ScalaStyle
-class DealSpec extends FlatSpec with Matchers {
+class DealSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   behavior of "Deal"
 

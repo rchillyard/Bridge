@@ -4,7 +4,8 @@
 
 package com.phasmidsoftware.bridge.pbn
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec
+import org.scalatest.matchers.should
 
 import scala.io.Source
 import scala.util.Success
@@ -12,7 +13,7 @@ import scala.util.Success
 /**
   * @author scalaprof
   */
-class PBNParserSpec extends FlatSpec with Matchers {
+class PBNParserSpec extends flatspec.AnyFlatSpec with should.Matchers {
   val parser = new PBNParser
 
   behavior of "endOfLine"

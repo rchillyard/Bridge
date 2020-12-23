@@ -5,7 +5,8 @@
 package com.phasmidsoftware.bridge.director
 
 import com.phasmidsoftware.misc.Rational
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec
+import org.scalatest.matchers.should
 
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
@@ -13,7 +14,7 @@ import scala.util.{Failure, Success, Try}
 /**
   * @author scalaprof
   */
-class RecapParserSpec extends FlatSpec with Matchers {
+class RecapParserSpec extends flatspec.AnyFlatSpec with should.Matchers {
   behavior of "endOfLine"
   it should "parse" in {
     val parser = new RecapParser
@@ -235,9 +236,9 @@ class RecapParserSpec extends FlatSpec with Matchers {
     section.travelers.size shouldBe 8
   }
 
-  it should "parse double-winner event with tabs" in {
+  ignore should "parse double-winner event with tabs" in {
     val parser = new RecapParser
-    val r: parser.ParseResult[Event] = parser.parseAll(parser.event, "Lexington: Apr 4th 2017\nA DW\n1\tN Michele & Jean\n2   N Kathryn & Terry\n3\tN Kathy & Thornton\n3   E Dave & Bill\n2\tE Homer & Chuck\n1   E Glen & Janis\n23\tN Ray & Shelly\n21  N Teunis & John\n22\tN Linda & Chris\n22  E Barbara & Cynthia\n21\tE Kim & Clay\n23 E Jennifer & Karolyn\nT 1\n1\t1 450\n2\t3 -50\n3\t2 -50\n21\t21 -50\n22\t23 980\n23\t22 510\n\nT 2\n1\t1 50\n2\t3  50\n3\t2  50\n21\t21 50\n22\t23 -420\n23\t22 50\n\nT 3\n1\t3 400\n2\t2 150\n3\t1 120\n21\t23 -50\n22\t22 -50\n23\t21 -100\n\nT 4\n1\t3 200\n2\t2 200\n3\t1  -110\n21\t23 -110\n22\t22 300\n23\t21 100\n\nT 5\n1\t2 -300\n2\t1 -200\n3\t3 -500\n21\t22 -50\n22\t21 -300\n23\t23 110\n\nT 6\n1\t2 -680\n2\t1 -1430\n3\t3 -650\n21\t22 -1460\n22\t21 -1430\n23\t23 -650\n\n")
+    val r: parser.ParseResult[Event] = parser.parseAll(parser.event, """Lexington: Apr 4th 2017\nA DW\n1\tN Michele & Jean\n2   N Kathryn & Terry\n3\tN Kathy & Thornton\n3   E Dave & Bill\n2\tE Homer & Chuck\n1   E Glen & Janis\n23\tN Ray & Shelly\n21  N Teunis & John\n22\tN Linda & Chris\n22  E Barbara & Cynthia\n21\tE Kim & Clay\n23 E Jennifer & Karolyn\nT 1\n1\t1 450\n2\t3 -50\n3\t2 -50\n21\t21 -50\n22\t23 980\n23\t22 510\n\nT 2\n1\t1 50\n2\t3  50\n3\t2  50\n21\t21 50\n22\t23 -420\n23\t22 50\n\nT 3\n1\t3 400\n2\t2 150\n3\t1 120\n21\t23 -50\n22\t22 -50\n23\t21 -100\n\nT 4\n1\t3 200\n2\t2 200\n3\t1  -110\n21\t23 -110\n22\t22 300\n23\t21 100\n\nT 5\n1\t2 -300\n2\t1 -200\n3\t3 -500\n21\t22 -50\n22\t21 -300\n23\t23 110\n\nT 6\n1\t2 -680\n2\t1 -1430\n3\t3 -650\n21\t22 -1460\n22\t21 -1430\n23\t23 -650\n\n""")
     r should matchPattern { case parser.Success(_, _) => }
     val event: Event = r.get
     event.title shouldBe "Lexington: Apr 4th 2017"

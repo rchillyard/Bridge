@@ -9,14 +9,15 @@ import java.io.Writer
 import com.phasmidsoftware.bridge.director.Card
 import com.phasmidsoftware.misc.Rational
 import com.phasmidsoftware.util.{Output, OutputException}
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec
+import org.scalatest.matchers.should
 
 import scala.util.Try
 
 /**
   * This adds one test to the OutputSpec in the DecisionTree project.
   */
-class OutputSpec extends FlatSpec with Matchers {
+class OutputSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   behavior of "BufferedCharSequenceOutput"
 

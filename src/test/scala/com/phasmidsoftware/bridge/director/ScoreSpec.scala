@@ -8,7 +8,8 @@ import com.phasmidsoftware.bridge.director
 import com.phasmidsoftware.misc.Rational
 import com.phasmidsoftware.output.MockWriter
 import com.phasmidsoftware.util.Output
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec
+import org.scalatest.matchers.should
 
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
@@ -16,7 +17,7 @@ import scala.util.{Failure, Success, Try}
 /**
   * @author scalaprof
   */
-class ScoreSpec extends FlatSpec with Matchers {
+class ScoreSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   behavior of "PlayResult"
   it should """apply("110")""" in {

@@ -6,13 +6,14 @@ package com.phasmidsoftware.output
 
 import com.phasmidsoftware.bridge.cards.{Deal, State, Whist}
 import com.phasmidsoftware.util.Loggable
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec
+import org.scalatest.matchers.should
 
 /**
   * This adds one test to LoggableSpec in DecisionTree.
   */
 //noinspection ScalaStyle
-class LoggableSpec extends FlatSpec with Matchers {
+class LoggableSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   behavior of "Loggable"
 
