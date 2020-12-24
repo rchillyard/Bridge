@@ -4,7 +4,9 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.decisiontree.tree.LazyTree
+import com.phasmidsoftware.decisiontree.tree.Tree.TreeOps
+import com.phasmidsoftware.decisiontree.tree.{Goal, LazyTree}
+import com.phasmidsoftware.util.{Output, Outputable}
 
 import scala.language.postfixOps
 
@@ -14,7 +16,23 @@ import scala.language.postfixOps
   *
   * @param state the state of the root of the tree.
   */
-case class RevisedStateTree(state: State) extends LazyTree[State](state)(RevisedStateTree.nextMoves) {
+case class RevisedStateTree(state: State)(implicit goal: Goal[State]) extends LazyTree[State](state)(RevisedStateTree.nextMoves) with Outputable[Unit] {
+
+  self =>
+
+  /**
+    * Output this Tree to the given Output.
+    *
+    * @param output the output to append to.
+    * @param xo     an optional value of X, defaulting to None.
+    * @return a new instance of Output.
+    */
+  def output(output: Output, xo: Option[Unit] = None): Output = {
+    def empty(s: State): Boolean = goal(s).isEmpty
+
+    val z: Iterable[Output] = self.inOrder(empty).map(_.toString).map(Output(_)).take(10)
+    (output :+ "XXX").insertBreak ++ z
+  }
 
   //  /**
   //    * Expand the states of this Tree.
