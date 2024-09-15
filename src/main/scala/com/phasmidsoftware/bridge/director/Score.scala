@@ -4,13 +4,12 @@
 
 package com.phasmidsoftware.bridge.director
 
-import java.io.PrintWriter
-
 import com.phasmid.laScala.fp.FP
 import com.phasmid.laScala.values.Rational
-import com.phasmidsoftware.output.Util
+import com.phasmidsoftware.output.{Using, Util}
 import com.phasmidsoftware.util.{Output, Outputable}
 
+import java.io.PrintWriter
 import scala.io.{BufferedSource, Source}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, _}
@@ -20,14 +19,16 @@ import scala.util.{Failure, Success, _}
   *
   */
 object Score extends App {
-  if (args.length > 0) {
-    val filename = args.head
-    doScore(Source.fromFile(filename)) match {
+  if (args.length > 0)
+    doScoreFromName(isResource = false, args.head) match {
       case Success(o) => o.close()
-      case Failure(x) => System.err.println(s"Score $filename threw an exception: $x")
+      case Failure(x) => System.err.println(s"Score ${args.mkString} threw an exception: $x")
     }
-  }
   else System.err.println("Syntax: Score filename")
+
+  def doScoreFromName(isResource: Boolean, name: String, output: Output = Output(new PrintWriter(System.out))): Try[Output] = Using(
+    if (isResource) Source.fromResource(name) else Source.fromFile(name)
+  ) { s => doScore(s, output) }
 
   // TODO use the methods in Result
   def doScoreResource(resource: String, output: Output = Output(new PrintWriter(System.out))): Try[Output] =
@@ -247,7 +248,7 @@ case class Card(totalMps: Rational[Int], played: Int, notPlayed: Int) extends Or
 
   lazy val toStringPercent: String = Score.rationalToString(percentage) + "%"
 
-  lazy val percentage: Rational[Int] = Score.asPercent(totalMps, played)
+  private lazy val percentage: Rational[Int] = Score.asPercent(totalMps, played)
 
   private def scaledMps = totalMps * (played + notPlayed) / played
 }

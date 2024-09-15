@@ -1,22 +1,23 @@
 name := "Bridge"
 
-version := "1.0.2-SNAPSHOT"
+version := "1.0.3-SNAPSHOT"
 
 scalaVersion := "2.12.20"
 
 val scalaTestVersion = "3.0.5"
 
-resolvers += "Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases/"
+resolvers += Resolver.mavenLocal
+resolvers += "Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases"
 
 libraryDependencies ++= Seq(
   "com.phasmid" %% "lascala" % "1.0.11",
   "com.phasmidsoftware" %% "decisiontree" % "1.0.1",
-  "joda-time" % "joda-time" % "2.9.2",
-  "org.scala-lang.modules" %% "scala-xml" % "1.0.5",
-  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.5",
+  "joda-time" % "joda-time" % "2.12.7",
+  "org.scala-lang.modules" %% "scala-xml" % "1.3.1",
+  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
   "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
-  "ch.qos.logback" % "logback-classic" % "1.2.3" % "runtime",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
+  "ch.qos.logback" % "logback-classic" % "1.5.8" % "runtime",
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
 )
 
 val sprayGroup = "io.spray"

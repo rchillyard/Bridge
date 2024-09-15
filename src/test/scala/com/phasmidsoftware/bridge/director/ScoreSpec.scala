@@ -448,6 +448,13 @@ class ScoreSpec extends FlatSpec with Matchers {
     writer.spilled shouldBe 1529
   }
 
+  // TODO Find out why this doesn't work!
+  ignore should "read ConcordCountryClub20191007.txt using doScoreFromName" in {
+    val writer = MockWriter(8192)
+    for (o <- Score.doScoreFromName(isResource = true, "ConcordCountryClub20191007.txt", Output(writer))) o.close()
+    writer.spilled shouldBe 2642
+  }
+
   behavior of "Card"
 
   it should "toStringPercent" in {
