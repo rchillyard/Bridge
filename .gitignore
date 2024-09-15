@@ -15,3 +15,4 @@ lib/
 src/test/resources/com/phasmidsoftware/bridge/director/keremshalom.2019.1003.txt
 
 src/test/scala/com/phasmidsoftware/bridge/director/CardTest.scala
+/.bsp/

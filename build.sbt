@@ -2,11 +2,11 @@ name := "Bridge"
 
 version := "1.0.2-SNAPSHOT"
 
-scalaVersion := "2.12.5"
+scalaVersion := "2.12.20"
 
 val scalaTestVersion = "3.0.5"
 
-resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
+resolvers += "Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases/"
 
 libraryDependencies ++= Seq(
   "com.phasmid" %% "lascala" % "1.0.11",
