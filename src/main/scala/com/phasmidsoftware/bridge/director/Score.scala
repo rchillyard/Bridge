@@ -214,7 +214,7 @@ object Preamble {
   */
 case class Pair(number: Int, maybeDirection: Option[String], players: (Player, Player)) {
 
-  override def toString: String = s"$number$direction: $brief"
+  override def toString: String = s"""$number$direction\t$brief"""
 
   // CONSIDER making this more elegant
   def valid(x: Option[String]): Boolean = x match {
@@ -285,12 +285,14 @@ case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
   }
 
   private def getResultsForDirection(nameFunction: Int => String) = {
-    def resultDetails(s: (Int, Card)): Output = {
-      val (pairNumber, card) = s
-      Output(s"$pairNumber : ${card.toStringMps(top)} : ${card.toStringPercent} : ${nameFunction(pairNumber)}").insertBreak()
+    def resultDetails(s: ((Int, Card), Int)): Output = {
+      val ((pairNumber, card), rank) = s
+      Output(s"""$rank\t$pairNumber\t${card.toStringMps(top)}\t${card.toStringPercent}\t${nameFunction(pairNumber)}""").insertBreak()
     }
 
-    Output.foldLeft(cards.toSeq.sortBy(_._2).reverse)()(_ ++ resultDetails(_))
+    val header = Output(s"""Rank\tPair\tMPs\tPercent\tNames\n""")
+    val ranking: Seq[((Int, Card), Int)] = cards.toSeq.sortBy(_._2).reverse.zip(Stream.from(1))
+    Output.foldLeft(ranking)(header)(_ ++ resultDetails(_))
   }
 }
 
@@ -310,7 +312,7 @@ case class Matchpoints(ns: Int, ew: Int, result: PlayResult, mp: Option[Rational
 
   // CONSIDER extending Outputable and putting this logic into output method.
   override def toString: String = mp match {
-    case Some(x) => s"NS: $ns, EW: $ew, score: $result, MP:${Card.mpsAsString(x, top)}"
+    case Some(x) => s"""$ns\t$ew\t$result\t${Card.mpsAsString(x, top)}"""
     case _ => ""
   }
 
@@ -360,6 +362,7 @@ case class Traveler(board: Int, ps: Seq[Play]) extends Outputable[Unit] with Ord
   def output(output: Output, xo: Option[Unit] = None): Output = {
     val result = StringBuilder.newBuilder
     result.append(s"Board: $board with ${ps.size} plays\n")
+    result.append(s"""NS pair\tEW pair\tNS score\tNS MPs\n""")
     for (m <- matchpointIt) result.append(s"$m\n")
     output :+ result.toString
   }
