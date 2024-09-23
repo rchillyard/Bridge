@@ -5,7 +5,9 @@
 package com.phasmidsoftware.bridge.director
 
 import com.phasmidsoftware.bridge.director
-import org.scalatest.{FlatSpec, Inside, Matchers}
+import org.scalatest.Inside
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should
 
 import scala.collection.immutable
 
@@ -13,7 +15,7 @@ import scala.collection.immutable
   * @author robinhillyard
   */
 
-class HowellSpec extends FlatSpec with Matchers with Inside {
+class HowellSpec extends AnyFlatSpec with should.Matchers with Inside {
   "modulo" should "work on 1-n, etc." in {
     implicit val n: Int = 4
     implicit val tables: Seq[Table] = Table.tables(3) // TODO this is not correct

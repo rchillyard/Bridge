@@ -4,8 +4,9 @@
 
 package com.phasmidsoftware.bridge.director
 
-import com.phasmid.laScala.values.Rational
-import org.scalatest.{FlatSpec, Matchers}
+import com.phasmidsoftware.number.core.Rational
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should
 
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
@@ -13,7 +14,7 @@ import scala.util.{Failure, Success, Try}
 /**
   * @author scalaprof
   */
-class RecapParserSpec extends FlatSpec with Matchers {
+class RecapParserSpec extends AnyFlatSpec with should.Matchers {
   behavior of "endOfLine"
   it should "parse" in {
     val parser = new RecapParser
@@ -179,7 +180,7 @@ class RecapParserSpec extends FlatSpec with Matchers {
     val t = r.get
     val firstEntry = t.ps.head
     val mps = firstEntry.matchpoints(t)
-    mps shouldBe Some(Rational.zero[Int])
+    mps shouldBe Some(Rational.zero)
   }
   it should "calculate mps" in {
     val traveler = "   T 1\n    1 1 420\n    2 2 420\n    3 4 420\n    4 3 140\n    5 5 170\n    6 6 -50\n    7 6 420\n\n"

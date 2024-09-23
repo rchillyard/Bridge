@@ -4,11 +4,12 @@
 
 package com.phasmidsoftware.bridge.director
 
-import com.phasmid.laScala.values.Rational
 import com.phasmidsoftware.bridge.director
+import com.phasmidsoftware.number.core.Rational
 import com.phasmidsoftware.output.MockWriter
 import com.phasmidsoftware.util.Output
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should
 
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
@@ -16,7 +17,7 @@ import scala.util.{Failure, Success, Try}
 /**
   * @author scalaprof
   */
-class ScoreSpec extends FlatSpec with Matchers {
+class ScoreSpec extends AnyFlatSpec with should.Matchers {
 
   behavior of "PlayResult"
   it should """apply("110")""" in {
@@ -48,19 +49,19 @@ class ScoreSpec extends FlatSpec with Matchers {
   it should "apply(A)" in {
     val target = PlayResult("A")
     target.r.isRight shouldBe false
-    target.matchpoints(None) shouldBe Some(Rational[Int](1) / 2)
+    target.matchpoints(None) shouldBe Some(Rational(1) / 2)
     target.toString shouldBe "A"
   }
   it should "apply(A+)" in {
     val target = PlayResult("A+")
     target.r.isRight shouldBe false
-    target.matchpoints(None) shouldBe Some(Rational[Int](3) / 5)
+    target.matchpoints(None) shouldBe Some(Rational(3) / 5)
     target.toString shouldBe "A+"
   }
   it should "apply(A-)" in {
     val target = PlayResult("A-")
     target.r.isRight shouldBe false
-    target.matchpoints(None) shouldBe Some(Rational[Int](2) / 5)
+    target.matchpoints(None) shouldBe Some(Rational(2) / 5)
     target.toString shouldBe "A-"
   }
 
@@ -131,16 +132,16 @@ class ScoreSpec extends FlatSpec with Matchers {
     val p1 = Play(2, 1, PlayResult(Right(130)))
     val p2 = Play(1, 2, PlayResult(Right(150)))
     val t = Traveler(1, Seq(p1, p2))
-    t.matchpoint(p1) shouldBe Some(Rational.zero[Int])
-    t.matchpoint(p2) shouldBe Some(Rational.one[Int])
+    t.matchpoint(p1) shouldBe Some(Rational.zero)
+    t.matchpoint(p2) shouldBe Some(Rational.one)
   }
   it should "matchpoint properly (2)" in {
     val p1 = Play(2, 1, PlayResult(Right(130)))
     val p2 = Play(1, 2, PlayResult(Right(150)))
     val t = Traveler(1, Seq(p1, p2))
     val mps = t.matchpointIt
-    mps.head.mp shouldBe Some(Rational.zero[Int])
-    mps.tail.head.mp shouldBe Some(Rational.one[Int])
+    mps.head.mp shouldBe Some(Rational.zero)
+    mps.tail.head.mp shouldBe Some(Rational.one)
   }
   it should "matchpoint properly (3)" in {
     val p1 = Play(2, 1, PlayResult(Right(130)))
@@ -148,7 +149,7 @@ class ScoreSpec extends FlatSpec with Matchers {
     val p3 = Play(3, 3, PlayResult(Right(150)))
     val t = Traveler(1, Seq(p1, p2, p3))
     val mps = t.matchpointIt
-    mps.head.mp shouldBe Some(Rational.zero[Int])
+    mps.head.mp shouldBe Some(Rational.zero)
     mps.tail.head.mp shouldBe Some(Rational(3, 4))
     Card.mpsAsString(mps.tail.head.mp.get, 2) shouldBe " 1.50"
     mps.tail.tail.head.mp shouldBe Some(Rational(3, 4))
@@ -161,7 +162,7 @@ class ScoreSpec extends FlatSpec with Matchers {
     val t = r.get
     val firstEntry = t.ps.head
     val mps = firstEntry.matchpoints(t)
-    mps shouldBe Some(Rational.zero[Int])
+    mps shouldBe Some(Rational.zero)
   }
   it should "calculate mps" in {
     val traveler = "   T 1\n    1 1 420\n    2 2 420\n    3 4 420\n    4 3 140\n    5 5 170\n    6 6 -50\n    7 6 420\n\n"
@@ -225,8 +226,8 @@ class ScoreSpec extends FlatSpec with Matchers {
     val play1 = Play(13, 17, PlayResult("110"))
     val play2 = Play(14, 16, PlayResult("100"))
     val target = Traveler(5, Seq(play1, play2))
-    target.matchpoint(play1) shouldBe Some(Rational[Int](1))
-    target.matchpoint(play2) shouldBe Some(Rational[Int](0))
+    target.matchpoint(play1) shouldBe Some(Rational(1))
+    target.matchpoint(play2) shouldBe Some(Rational(0))
   }
   it should "matchpointIt" in {
     val score1 = "110"
@@ -240,8 +241,8 @@ class ScoreSpec extends FlatSpec with Matchers {
     val ew2 = 16
     val target = Traveler(bd, Seq(Play(ns1, ew1, result1), Play(ns2, ew2, result2)))
     val top = 1
-    val matchpoints1 = Matchpoints(ns1, ew1, result1, Some(Rational[Int](1)), top)
-    val matchpoints2 = Matchpoints(ns2, ew2, result2, Some(Rational[Int](0)), top)
+    val matchpoints1 = Matchpoints(ns1, ew1, result1, Some(Rational(1)), top)
+    val matchpoints2 = Matchpoints(ns2, ew2, result2, Some(Rational(0)), top)
     target.matchpointIt shouldBe Seq(matchpoints1, matchpoints2)
   }
   it should ":+" in {
@@ -342,8 +343,8 @@ class ScoreSpec extends FlatSpec with Matchers {
       result.top shouldBe 1
       val cards: Map[Int, Card] = result.cards
       cards.size shouldBe 2
-      val total: Rational[Int] = (for (Card(r, _, _) <- cards.values) yield r).sum
-      total shouldBe Rational[Int](2).invert * cards.size * (result.top + 1)
+      val total: Rational = (for (Card(r, _, _) <- cards.values) yield r).sum
+      total shouldBe Rational(2).invert * cards.size * (result.top + 1)
       for ((_, Card(_, t, _)) <- cards) t shouldBe result.top + 1
     }
 
@@ -385,8 +386,8 @@ class ScoreSpec extends FlatSpec with Matchers {
     resultANS.top shouldBe 5
     val cards: Map[Int, Card] = resultANS.cards
     cards.size shouldBe 6
-    val total: Rational[Int] = (for (Card(r, _, _) <- cards.values) yield r).sum
-    total shouldBe Rational[Int](2).invert * cards.size * (resultANS.top + 1)
+    val total: Rational = (for (Card(r, _, _) <- cards.values) yield r).sum
+    total shouldBe Rational(2).invert * cards.size * (resultANS.top + 1)
     val scores = for (score <- cards.keys) yield cards(score)
     scores.size shouldBe 6
     for ((_, Card(_, t, _)) <- cards) t shouldBe resultANS.top + 1
@@ -410,12 +411,12 @@ class ScoreSpec extends FlatSpec with Matchers {
   //		val resultANS: Result = resultsA.head
   //		resultANS.isNS shouldBe true
   //		resultANS.top shouldBe 5
-  //		val cards: Map[Int, (Rational[Int], Int)] = resultANS.cards
+  //		val cards: Map[Int, (Rational, Int)] = resultANS.cards
   //		cards.size shouldBe 14
   //		val scores = (for (score <- cards.keys) yield cards(score)).toSeq
   //		scores.size shouldBe 12
-  //		val total: Rational[Int] = (for ((r, _) <- cards.values) yield r).sum
-  //		total shouldBe Rational[Int](2).invert * cards.size * (resultANS.top + 1)
+  //		val total: Rational = (for ((r, _) <- cards.values) yield r).sum
+  //		total shouldBe Rational(2).invert * cards.size * (resultANS.top + 1)
   //		scores.size shouldBe 6
   //		for ((_, (_, t)) <- cards) t shouldBe resultANS.top + 1
   //	}

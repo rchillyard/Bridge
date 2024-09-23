@@ -4,15 +4,16 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import java.io.{BufferedWriter, File, FileWriter, PrintWriter}
-
 import com.phasmidsoftware.bridge.pbn.PBNParser
 import com.phasmidsoftware.output.MockWriter
 import com.phasmidsoftware.util.Output
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should
+
+import java.io.{BufferedWriter, File, FileWriter, PrintWriter}
 
 //noinspection ScalaStyle
-class DealSpec extends FlatSpec with Matchers {
+class DealSpec extends AnyFlatSpec with should.Matchers {
 
   behavior of "Deal"
 

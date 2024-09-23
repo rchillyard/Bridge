@@ -4,10 +4,11 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should
 
 //noinspection ScalaStyle
-class WhistSpec extends FlatSpec with Matchers {
+class WhistSpec extends AnyFlatSpec with should.Matchers {
 
   behavior of "Whist"
   it should "" in {

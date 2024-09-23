@@ -6,10 +6,11 @@ package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.output.MockWriter
 import com.phasmidsoftware.util.Output
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should
 
 //noinspection ScalaStyle
-class StateSpec extends FlatSpec with Matchers {
+class StateSpec extends AnyFlatSpec with should.Matchers {
 
   behavior of "StateSpec"
 
@@ -146,8 +147,9 @@ class StateSpec extends FlatSpec with Matchers {
     val state40: State = state4alternatives.head
     val state5alternatives = state40.enumeratePlays
     val target = state5alternatives.head
+    // NOTE the trick history had SK in T2 1 first position previously. Now, it is CA.
     target.neatOutput shouldBe
-      """State: Trick History: "T1 0 {HQ, HA, H8, H5}, T2 1 {SK}" 0:1 4.8 Deal test (47) List(S95 H9432 D64 CT652, S742 H7 DT93 CAQJ7, SAJT86 HKT DK82 CK3, SQ3 HJ6 DAQJ75 C984)""".stripMargin
+      """State: Trick History: "T1 0 {HQ, HA, H8, H5}, T2 1 {CA}" 0:1 4.8 Deal test (47) List(S95 H9432 D64 CT652, SK742 H7 DT93 CQJ7, SAJT86 HKT DK82 CK3, SQ3 HJ6 DAQJ75 C984)""".stripMargin
   }
 
 }

@@ -4,8 +4,6 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.util._
-
 import scala.language.postfixOps
 
 /**
@@ -102,11 +100,11 @@ case class Tricks(ns: Int, ew: Int) extends Evaluatable {
 
 object Tricks {
   val zero = Tricks(0, 0)
-
-  implicit object LoggableTricks extends Loggable[Tricks] with Loggables {
-    val loggable: Loggable[Tricks] = toLog2(Tricks.apply, List("ns", "ew"))
-
-    def toLog(t: Tricks): String = s"${t.ns}:${t.ew}"
-  }
+  //
+  //  implicit object LoggableTricks extends Loggable[Tricks] with Loggables {
+  //    val loggable: Loggable[Tricks] = toLog2(Tricks.apply, List("ns", "ew"))
+  //
+  //    def toLog(t: Tricks): String = s"${t.ns}:${t.ew}"
+  //  }
 
 }

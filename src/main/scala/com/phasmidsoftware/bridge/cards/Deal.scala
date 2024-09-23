@@ -4,11 +4,9 @@
 
 package com.phasmidsoftware.bridge.cards
 
+import com.phasmidsoftware.util.{Output, Outputable, Shuffle}
+
 import java.io.Writer
-
-import com.phasmid.laScala.Shuffle
-import com.phasmidsoftware.util.{Loggable, Loggables, Output, Outputable}
-
 import scala.language.postfixOps
 
 /**
@@ -223,7 +221,7 @@ object Deal {
   def apply(title: String, seed: Long = System.nanoTime(), adjustForPartnerships: Boolean = true): Deal = {
     val newDeck: Seq[Card] =
       for (s <- Seq(Spades, Hearts, Diamonds, Clubs); r <- Seq(Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)) yield Card(s, r)
-    val shuffler = Shuffle[Card](seed)
+    val shuffler: Iterable[Card] => Seq[Card] = Shuffle[Card](_, seed)
     fromCards(title, shuffler(newDeck), adjustForPartnerships)
   }
 
@@ -233,7 +231,7 @@ object Deal {
     writer.flush()
   }
 
-  implicit object LoggableDeal extends Loggable[Deal] with Loggables {
-    def toLog(t: Deal): String = s"Deal ${t.title}/${t.nCards}"
-  }
+  //  implicit object LoggableDeal extends Loggable[Deal] with Loggables {
+  //    def toLog(t: Deal): String = s"Deal ${t.title}/${t.nCards}"
+  //  }
 }

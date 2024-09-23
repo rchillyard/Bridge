@@ -5,12 +5,12 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.pbn.{DealValue, Game, PBN, PBNParser}
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.{AnyFlatSpec, should.Matchers}
 
 import scala.io.Source
 
 //noinspection ScalaStyle
-class IntegrationAnalysisSpec extends FlatSpec with Matchers {
+class IntegrationAnalysisSpec extends AnyFlatSpec with should.Matchers {
 
   private val so = Option(getClass.getResourceAsStream("westwood_20190625_1.pbn")) map (Source.fromInputStream(_))
   private val py: Option[PBN] = for (s <- so; p <- PBNParser.parsePBN(s).toOption) yield p

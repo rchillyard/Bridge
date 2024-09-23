@@ -7,8 +7,6 @@ package com.phasmidsoftware.bridge.director
 import com.phasmidsoftware.bridge.director.Howell.{MovePlan, Moves, Trio}
 
 import scala.annotation.tailrec
-import scala.collection.generic.CanBuildFrom
-import scala.collection.mutable
 import scala.language.higherKinds
 
 /**
@@ -26,7 +24,7 @@ case class Howell(name: String, tables: Seq[Table], movePlan: MovePlan) {
     val head = movement.head
     val tail = movement.tail
     val result = for (e <- current.encounters) yield e.move(head, current)
-    implicit val t: Int = tables.length
+    implicit val _: Int = tables.length
     (Position(result), Movement(tail))
   }
 
@@ -52,18 +50,18 @@ case class Position(encounters: Seq[Encounter]) {
 case class Round(round: Int, position: Position) {
   override def toString: String = s"Round $round: $position"
 }
-
-abstract class MappedProduct3[T, F[_]](_1: T, _2: T, _3: T) extends Product3[T, T, T] {
-  def map[U](f: T => U)(implicit cbf: CanBuildFrom[F[U], U, F[U]]): F[U] = {
-    val ts = productIterator
-    val us = for (t <- ts) yield f(t.asInstanceOf[T])
-    val x: mutable.Builder[U, F[U]] = cbf()
-    for (u <- us) x += u
-    x.result()
-  }
-
-  override def toString: String = s"n:${_1} e:${_2} b:${_3}"
-}
+//
+//abstract class MappedProduct3[T, F[_]](_1: T, _2: T, _3: T) extends Product3[T, T, T] {
+//  def map[U](f: T => U)(implicit cbf: CanBuildFrom[F[U], U, F[U]]): F[U] = {
+//    val ts = productIterator
+//    val us = for (t <- ts) yield f(t.asInstanceOf[T])
+//    val x: mutable.Builder[U, F[U]] = cbf()
+//    for (u <- us) x += u
+//    x.result()
+//  }
+//
+//  override def toString: String = s"n:${_1} e:${_2} b:${_3}"
+//}
 
 case class Triple[T](_1: T, _2: T, _3: T) extends Product3[T, T, T] {
   def map[U](f: T => U): Triple[U] = Triple(f(_1), f(_2), f(_3))

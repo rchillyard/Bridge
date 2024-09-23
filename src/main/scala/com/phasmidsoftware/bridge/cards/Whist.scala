@@ -5,7 +5,6 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.decisiontree.{Expandable, GoalDriven}
-import com.phasmidsoftware.util._
 
 import scala.language.implicitConversions
 
@@ -94,10 +93,10 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None) ex
 object Whist {
 
   val MAX_STATES = 1000000
-
-  implicit object LoggableWhist extends Loggable[Whist] with Loggables {
-    def toLog(t: Whist): String = s"${implicitly[Loggable[Deal]].toLog(t.deal)}@${Hand.name(t.openingLeader)}:${t.sStrain}"
-  }
+  //
+  //  implicit object LoggableWhist extends Loggable[Whist] with Loggables {
+  //    def toLog(t: Whist): String = s"${implicitly[Loggable[Deal]].toLog(t.deal)}@${Hand.name(t.openingLeader)}:${t.sStrain}"
+  //  }
 
   def goal(_neededTricks: Int, _directionNS: Boolean, _totalTricks: Int = Deal.TricksPerDeal): WhistGoalDriven = new WhistGoalDriven {
     val neededTricks: Int = _neededTricks

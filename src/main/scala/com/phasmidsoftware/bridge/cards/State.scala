@@ -165,15 +165,15 @@ object State {
       */
     def compare(x: State, y: State): Int = y.cardsPlayed - x.cardsPlayed
   }
-
-  implicit object LoggableState extends Loggable[State] with Loggables {
-    def toLog(t: State): String =
-      s"${t.trick.history.mkString("", ", ", "")} " +
-        //				s"${implicitly[Loggable[Trick]].toLog(t.trick)} " +
-        s"${implicitly[Loggable[Tricks]].toLog(t.tricks)} " +
-        s"${t.fitness} " +
-        s"${implicitly[Loggable[Whist]].toLog(t.whist)}"
-  }
+  //
+  //  implicit object LoggableState extends Loggable[State] with Loggables {
+  //    def toLog(t: State): String =
+  //      s"${t.trick.history.mkString("", ", ", "")} " +
+  //        //				s"${implicitly[Loggable[Trick]].toLog(t.trick)} " +
+  //        s"${implicitly[Loggable[Tricks]].toLog(t.tricks)} " +
+  //        s"${t.fitness} " +
+  //        s"${implicitly[Loggable[Whist]].toLog(t.whist)}"
+  //  }
 
   implicit object ShowState extends Show[State] {
     def show(t: State): String = t.neatOutput

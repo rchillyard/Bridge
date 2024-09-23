@@ -8,7 +8,7 @@ package com.phasmidsoftware.bridge.cards
   * Module which includes Trick and Winner
   */
 
-import com.phasmidsoftware.util.{Loggable, Loggables, Output, Outputable}
+import com.phasmidsoftware.util.{Output, Outputable}
 
 import scala.collection.immutable
 import scala.language.postfixOps
@@ -205,7 +205,7 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
                                                   p <- h.choosePlays(deal, strain, leader, strategy, None)}
       yield p -> h.nCards
     // TODO incorporate this into the code
-    val y: Seq[(Suit, List[(CardPlay, Int)])] = z.groupBy { case (p, _) => p.suit }.toSeq
+    val _: Seq[(Suit, List[(CardPlay, Int)])] = z.groupBy { case (p, _) => p.suit }.toSeq
     val (q, _) = z.sortWith((x, _) => x._1.isStiff(x._2)).sortBy(x => -x._2).unzip
     q
   }
@@ -233,10 +233,10 @@ object Trick {
     * Create an empty (non-) trick
     */
   val empty: Trick = apply(0, Nil, None)
-
-  implicit object LoggableTrick extends Loggable[Trick] with Loggables {
-    def toLog(t: Trick): String = s"T${t.index} ${t.plays.mkString("{", ", ", "}")}"
-  }
+  //
+  //  implicit object LoggableTrick extends Loggable[Trick] with Loggables {
+  //    def toLog(t: Trick): String = s"T${t.index} ${t.plays.mkString("{", ", ", "}")}"
+  //  }
 
 }
 

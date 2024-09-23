@@ -5,12 +5,13 @@
 package com.phasmidsoftware.bridge.pbn
 
 import com.phasmidsoftware.bridge.cards.{Deal, Whist}
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should
 
 import scala.io.Source
 import scala.util.{Success, Try}
 
-class PBNSpec extends FlatSpec with Matchers {
+class PBNSpec extends AnyFlatSpec with should.Matchers {
 
   private val py: Try[PBN] = PBNParser.parsePBN(Source.fromResource("com/phasmidsoftware/bridge/director/LEXINGTON 2016.2.9.PBN"))
 

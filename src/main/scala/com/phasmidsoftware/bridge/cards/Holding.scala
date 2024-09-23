@@ -286,11 +286,11 @@ object Holding {
   def create(ranks: Seq[Rank], suit: Suit): Holding = apply(suit, ranks.sorted.reverse: _*)
 
   def ranksToString(ranks: Seq[Rank]): String = if (ranks.nonEmpty) ranks.mkString("", "", "") else "-"
-
-  // NOTE not used
-  implicit object LoggableHolding extends Loggable[Holding] with Loggables {
-    def toLog(t: Holding): String = t.neatOutput
-  }
+  //
+  //  // NOTE not used
+  //  implicit object LoggableHolding extends Loggable[Holding] with Loggables {
+  //    def toLog(t: Holding): String = t.neatOutput
+  //  }
 
   /**
     * Method to assess the given strategy in the current situation.

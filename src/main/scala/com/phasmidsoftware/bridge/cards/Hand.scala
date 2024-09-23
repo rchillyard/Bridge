@@ -268,7 +268,7 @@ object Hand {
     */
   def isDeclaringSide(directionNS: Boolean, index: Int): Boolean = (index % 2 == 1) ^ directionNS
 
-  implicit val z: Loggable[Hand] = (t: Hand) => t.neatOutput
+//  implicit val z: Loggable[Hand] = (t: Hand) => t.neatOutput
 
   /**
     * This method must only be called with a valid index value.
