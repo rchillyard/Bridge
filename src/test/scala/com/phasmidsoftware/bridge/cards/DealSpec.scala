@@ -32,8 +32,8 @@ class DealSpec extends AnyFlatSpec with should.Matchers {
   }
 
   it should "fromCards" in {
-    val newDeck: Seq[Card] =
-      for (s <- Seq(Spades, Hearts, Diamonds, Clubs); r <- Seq(Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)) yield Card(s, r)
+    val newDeck: List[Card] =
+      for (s <- List(Spades, Hearts, Diamonds, Clubs); r <- List(Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)) yield Card(s, r)
     val target = Deal.fromCards("test", newDeck, adjust = false)
     target.north.holdings(Spades) shouldBe Holding(Spades, Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)
     target.east.holdings(Hearts) shouldBe Holding(Hearts, Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)
@@ -87,7 +87,7 @@ class DealSpec extends AnyFlatSpec with should.Matchers {
 
   it should "evaluate" in {
     val target = Deal("test", 0L, adjustForPartnerships = false)
-    val Seq(n, _, s, _) = target.hands
+    val List(n, _, s, _) = target.hands
     n.evaluate shouldBe 0.44 +- 0.02
     s.evaluate shouldBe 3.41 +- 0.02
     target.evaluate shouldBe (0.44 + 3.41) +- 0.03
@@ -115,7 +115,7 @@ class DealSpec extends AnyFlatSpec with should.Matchers {
     target.nCards shouldBe 52
     val hands = target.hands
     hands.size shouldBe 4
-    val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.head.priority)
+    val List(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.head.priority)
     val trick =
       Trick.create(0, CardPlay(target, None, 0, Spades, priority1S), CardPlay(target, None, 1, Spades, priority2S), CardPlay(target, None, 2, Spades, priority3S), CardPlay(target, None, 3, Spades, priority4S))
     val played: Deal = target.playAll(trick)
@@ -129,7 +129,7 @@ class DealSpec extends AnyFlatSpec with should.Matchers {
     target.nCards shouldBe 52
     val hands = target.hands
     hands.size shouldBe 4
-    val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
+    val List(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
     val trick =
       Trick.create(0, CardPlay(target, None, 0, Spades, priority1S), CardPlay(target, None, 1, Spades, priority2S), CardPlay(target, None, 2, Spades, priority3S), CardPlay(target, None, 3, Spades, priority4S))
     val played: Deal = target.playAll(trick)
@@ -142,7 +142,7 @@ class DealSpec extends AnyFlatSpec with should.Matchers {
     val target = Deal("test", 0L, adjustForPartnerships = false)
     target.nCards shouldBe 52
     val hands = target.hands
-    val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
+    val List(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
 
     val trick =
       Trick.create(0, CardPlay(target, None, 0, Spades, priority1S), CardPlay(target, None, 1, Spades, priority2S), CardPlay(target, None, 2, Spades, priority3S), CardPlay(target, None, 3, Spades, priority4S))
@@ -160,7 +160,7 @@ class DealSpec extends AnyFlatSpec with should.Matchers {
     val deal2: Deal = parseDeal("N:A76.863.AK82.732 Q54.K54.QJ94.984 T92.AQJT2.63.AK6 KJ83.97.T75.QJT5")
     val deal3: Deal = parseDeal("N:A92.AT4.K9864.53 J65.K853.AJT.972 KQ743.QJ7.32.AK4 T8.962.Q75.QJT86")
     val header = Map("Event" -> "Concord CC", "Date" -> "2019.06.24", "Vulnerable" -> "NS")
-    Deal.writePBN(bw, header, Seq(deal1, deal2, deal3))
+    Deal.writePBN(bw, header, List(deal1, deal2, deal3))
     bw.close()
   }
 

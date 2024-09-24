@@ -30,14 +30,14 @@ class PBNParser extends JavaTokenParsers {
     Game(ps map { case n ~ v ~ xs => n -> DetailedValue.trim(v, xs) })
   }
 
-  def tagPair: Parser[Name ~ Value ~ Seq[String]] =
+  def tagPair: Parser[Name ~ Value ~ List[String]] =
     openBracket ~> name ~ (atLeastOneWhiteSpace ~> quote ~> value <~ quote <~ closeBracket) ~ detail
 
   def name: Parser[Name] = tag ^^ { s => Name(s) }
 
   def value: Parser[Value] = date | deal | set | stringValue | failure("invalid value")
 
-  def detail: Parser[Seq[String]] = repsep(detailR, emptySpace) ^^ { ws =>
+  def detail: Parser[List[String]] = repsep(detailR, emptySpace) ^^ { ws =>
     for (w <- ws; x <- w.split("\n")) yield x
   }
 
@@ -51,7 +51,7 @@ class PBNParser extends JavaTokenParsers {
 
   def playerGlyphs: Parser[String] = """[NESW]""".r
 
-  def hand: Parser[Seq[String]] = repsep(holding, period)
+  def hand: Parser[List[String]] = repsep(holding, period)
 
   def holding: Parser[String] = """[AKQJT2-9]*""".r
 

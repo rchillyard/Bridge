@@ -10,7 +10,6 @@ package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.util.{Output, Outputable}
 
-import scala.collection.immutable
 import scala.language.postfixOps
 
 /**
@@ -95,9 +94,9 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
   /**
     * Refactor this
     */
-  lazy val history: Seq[Trick] = maybePrior match {
-    case None => Seq(this)
-    case Some(Trick.empty) => Seq(this)
+  lazy val history: List[Trick] = maybePrior match {
+    case None => List(this)
+    case Some(Trick.empty) => List(this)
     case Some(t) => t.history :+ this
   }
 
@@ -200,12 +199,12 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
 
   // TODO make private
   def chooseLeads(deal: Deal, leader: Int, strain: Option[Suit]): List[CardPlay] = {
-    val z: immutable.List[(CardPlay, Int)] = for {(s, h) <- deal.hands(leader).holdings.toList
-                                                  strategy = leadStrategy(s, h, strain)
-                                                  p <- h.choosePlays(deal, strain, leader, strategy, None)}
-      yield p -> h.nCards
+    val z: List[(CardPlay, Int)] = for {(s, h) <- deal.hands(leader).holdings.toList
+                                        strategy = leadStrategy(s, h, strain)
+                                        p <- h.choosePlays(deal, strain, leader, strategy, None)}
+    yield p -> h.nCards
     // TODO incorporate this into the code
-    val _: Seq[(Suit, List[(CardPlay, Int)])] = z.groupBy { case (p, _) => p.suit }.toSeq
+    val _: List[(Suit, List[(CardPlay, Int)])] = z.groupBy { case (p, _) => p.suit }.toList
     val (q, _) = z.sortWith((x, _) => x._1.isStiff(x._2)).sortBy(x => -x._2).unzip
     q
   }

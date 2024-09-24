@@ -110,7 +110,7 @@ object Sequence {
     * @param cs the list of Cards (must be non-empty).
     * @return a new Sequence.
     */
-  def apply(cs: Seq[Card]): Sequence = apply(cs.head.priority, cs.toList)
+  def apply(cs: List[Card]): Sequence = apply(cs.head.priority, cs)
 
   /**
     * @return true if the top card of the sequence with the given priority is at least a ten.

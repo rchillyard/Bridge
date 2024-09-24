@@ -58,14 +58,14 @@ class PBNSpec extends AnyFlatSpec with should.Matchers {
 
   behavior of "DetailedValue"
   it should "trim last newline 1" in {
-    val xs = Seq("Hello\n", "World\n")
+    val xs = List("Hello\n", "World\n")
     val target = DetailedValue.trim(StringValue(""), xs)
-    target.detail shouldBe Seq("Hello\n", "World")
+    target.detail shouldBe List("Hello\n", "World")
   }
   it should "trim last newline 2" in {
-    val xs = Seq("Hello\n", "\n")
+    val xs = List("Hello\n", "\n")
     val target = DetailedValue.trim(StringValue(""), xs)
-    target.detail shouldBe Seq("Hello\n")
+    target.detail shouldBe List("Hello\n")
   }
   it should "toInt" in {
     val target = DetailedValue.trim(StringValue("1"), Nil)

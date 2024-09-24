@@ -221,7 +221,7 @@ class RecapParserSpec extends AnyFlatSpec with should.Matchers {
     event.title shouldBe "Test Section 2016/04/12"
     event.sections.size shouldBe 1
     val section: Section = event.sections.head
-    section.preamble shouldBe Preamble("A", None, Seq(Pair(1, Some("N"), Player("Erithacus Rubecula") -> Player("Esox Lucius"))))
+    section.preamble shouldBe Preamble("A", None, List(Pair(1, Some("N"), Player("Erithacus Rubecula") -> Player("Esox Lucius"))))
   }
 
   it should "parse single-winner event" in {

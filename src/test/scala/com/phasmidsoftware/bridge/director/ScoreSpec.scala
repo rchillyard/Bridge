@@ -92,7 +92,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val board = 1
     val play1 = Play(1, 2, PlayResult("110"))
     val play2 = Play(3, 4, PlayResult("100"))
-    val travelerMap = Map[Int, Traveler](1 -> Traveler(1, Seq(play2)))
+    val travelerMap = Map[Int, Traveler](1 -> Traveler(1, List(play2)))
     val target = BoardPlay(board, play1)
     val updatedMap = target.addTo(travelerMap)
     updatedMap.size shouldBe 1
@@ -118,27 +118,27 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val play2 = Play(ns, ew, result2)
     val boardPlay1 = BoardPlay(bd1, play1)
     val boardPlay2 = BoardPlay(bd2, play2)
-    val target = Pickup(ns, ew, Seq(BoardResult(bd1, result1), BoardResult(bd2, result2)))
+    val target = Pickup(ns, ew, List(BoardResult(bd1, result1), BoardResult(bd2, result2)))
     target.toString shouldBe s"Pickup: $ns vs $ew: $bd1: $score1, $bd2: $score2"
     target.boards.size shouldBe 2
     target.ns shouldBe ns
     target.ew shouldBe ew
-    val boardPlays: Seq[BoardPlay] = target.asBoardPlays
-    boardPlays shouldBe Seq(boardPlay1, boardPlay2)
+    val boardPlays: List[BoardPlay] = target.asBoardPlays
+    boardPlays shouldBe List(boardPlay1, boardPlay2)
   }
 
   behavior of "Traveler"
   it should "matchpoint properly (1)" in {
     val p1 = Play(2, 1, PlayResult(Right(130)))
     val p2 = Play(1, 2, PlayResult(Right(150)))
-    val t = Traveler(1, Seq(p1, p2))
+    val t = Traveler(1, List(p1, p2))
     t.matchpoint(p1) shouldBe Some(Rational.zero)
     t.matchpoint(p2) shouldBe Some(Rational.one)
   }
   it should "matchpoint properly (2)" in {
     val p1 = Play(2, 1, PlayResult(Right(130)))
     val p2 = Play(1, 2, PlayResult(Right(150)))
-    val t = Traveler(1, Seq(p1, p2))
+    val t = Traveler(1, List(p1, p2))
     val mps = t.matchpointIt
     mps.head.mp shouldBe Some(Rational.zero)
     mps.tail.head.mp shouldBe Some(Rational.one)
@@ -147,7 +147,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val p1 = Play(2, 1, PlayResult(Right(130)))
     val p2 = Play(1, 2, PlayResult(Right(150)))
     val p3 = Play(3, 3, PlayResult(Right(150)))
-    val t = Traveler(1, Seq(p1, p2, p3))
+    val t = Traveler(1, List(p1, p2, p3))
     val mps = t.matchpointIt
     mps.head.mp shouldBe Some(Rational.zero)
     mps.tail.head.mp shouldBe Some(Rational(3, 4))
@@ -187,10 +187,10 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val ew2 = 16
     val play1 = Play(ns1, ew1, result1)
     val play2 = Play(ns2, ew2, result2)
-    val target = Traveler(bd, Seq(play1, play2))
+    val target = Traveler(bd, List(play1, play2))
     target.board shouldBe bd
     target.ps.size shouldBe 2
-    target.ps shouldBe Seq(play1, play2)
+    target.ps shouldBe List(play1, play2)
     target.isPlayed shouldBe true
     target.top shouldBe 1
     val writer = MockWriter()
@@ -214,10 +214,10 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val ew2 = 16
     val play1 = Play(ns1, ew1, result1)
     val play2 = Play(ns2, ew2, result2)
-    val target = Traveler(bd, Seq(play1, play2))
+    val target = Traveler(bd, List(play1, play2))
     target.board shouldBe bd
     target.ps.size shouldBe 2
-    target.ps shouldBe Seq(play1, play2)
+    target.ps shouldBe List(play1, play2)
     target.isPlayed shouldBe true
     target.top shouldBe 1
     target.toString shouldBe s"Traveler($bd,List($ns1 vs $ew1: $score1, $ns2 vs $ew2: $score2))"
@@ -225,7 +225,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
   it should "matchpoint" in {
     val play1 = Play(13, 17, PlayResult("110"))
     val play2 = Play(14, 16, PlayResult("100"))
-    val target = Traveler(5, Seq(play1, play2))
+    val target = Traveler(5, List(play1, play2))
     target.matchpoint(play1) shouldBe Some(Rational(1))
     target.matchpoint(play2) shouldBe Some(Rational(0))
   }
@@ -239,11 +239,11 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val ns2 = 14
     val ew1 = 17
     val ew2 = 16
-    val target = Traveler(bd, Seq(Play(ns1, ew1, result1), Play(ns2, ew2, result2)))
+    val target = Traveler(bd, List(Play(ns1, ew1, result1), Play(ns2, ew2, result2)))
     val top = 1
     val matchpoints1 = Matchpoints(ns1, ew1, result1, Some(Rational(1)), top)
     val matchpoints2 = Matchpoints(ns2, ew2, result2, Some(Rational(0)), top)
-    target.matchpointIt shouldBe Seq(matchpoints1, matchpoints2)
+    target.matchpointIt shouldBe List(matchpoints1, matchpoints2)
   }
   it should ":+" in {
     val score1 = "110"
@@ -257,9 +257,9 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val play1 = Play(ns, ew, result1)
     val play2 = Play(ns, ew, result2)
     val target5 = Traveler(bd1, Nil)
-    target5 :+ play1 shouldBe Traveler(bd1, Seq(play1))
+    target5 :+ play1 shouldBe Traveler(bd1, List(play1))
     val target6 = Traveler(bd2, Nil)
-    target6 :+ play2 shouldBe Traveler(bd2, Seq(play2))
+    target6 :+ play2 shouldBe Traveler(bd2, List(play2))
   }
 
   behavior of "pairs"
@@ -275,17 +275,17 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
   behavior of "result"
   it should "score DNP as None" in {
     val p1 = Play(1, 1, PlayResult(Left("DNP")))
-    val t = Traveler(1, Seq())
+    val t = Traveler(1, List())
     p1.matchpoints(t) shouldBe None
   }
   it should "score A as Some(1/2)" in {
     val p1 = Play(1, 1, PlayResult(Left("A")))
-    val t = Traveler(1, Seq())
+    val t = Traveler(1, List())
     p1.matchpoints(t) shouldBe Some(Rational(1, 2))
   }
   it should "score A- as Some(2,5)" in {
     val p1 = Play(1, 1, PlayResult(Left("A-")))
-    val t = Traveler(1, Seq())
+    val t = Traveler(1, List())
     p1.matchpoints(t) shouldBe Some(Rational(2, 5))
   }
   "percentageAsString" should "work" in {
@@ -308,7 +308,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
   behavior of "Section"
 
   it should "apply with pickups" in {
-    val pairs = Seq(
+    val pairs = List(
       director.Pair(1, Some("N"), (Player("tweedledum"), Player("tweedledee"))),
       director.Pair(2, Some("N"), (Player("James Clark Maxwell"), Player("Albert Einstein"))),
       director.Pair(1, Some("E"), (Player("Tristan"), Player("Isolde"))),
@@ -325,16 +325,16 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val result122 = PlayResult(Right(100))
     val result222 = PlayResult(Right(-400))
     val result221 = PlayResult(Right(-430))
-    val traveler1 = Traveler(bd1, Seq(Play(ns1, ew1, result111), Play(ns2, ew2, result122)))
-    val traveler2 = Traveler(bd2, Seq(Play(ns2, ew2, result222), Play(ns2, ew1, result221)))
-    val travelers: Seq[Traveler] = Seq()
-    val pickup111 = Pickup(ns1, ew1, Seq(BoardResult(bd1, result111)))
-    val pickup122 = Pickup(ns2, ew2, Seq(BoardResult(bd1, result122)))
-    val pickup221 = Pickup(ns2, ew1, Seq(BoardResult(bd2, result221)))
-    val pickup222 = Pickup(ns2, ew2, Seq(BoardResult(bd2, result222)))
-    val pickups = Seq(pickup111, pickup122, pickup222, pickup221)
+    val traveler1 = Traveler(bd1, List(Play(ns1, ew1, result111), Play(ns2, ew2, result122)))
+    val traveler2 = Traveler(bd2, List(Play(ns2, ew2, result222), Play(ns2, ew1, result221)))
+    val travelers: List[Traveler] = List()
+    val pickup111 = Pickup(ns1, ew1, List(BoardResult(bd1, result111)))
+    val pickup122 = Pickup(ns2, ew2, List(BoardResult(bd1, result122)))
+    val pickup221 = Pickup(ns2, ew1, List(BoardResult(bd2, result221)))
+    val pickup222 = Pickup(ns2, ew2, List(BoardResult(bd2, result222)))
+    val pickups = List(pickup111, pickup122, pickup222, pickup221)
     val target = Section(preamble, travelers, pickups)
-    target.travelers.toList shouldBe Seq(traveler1, traveler2)
+    target.travelers shouldBe List(traveler1, traveler2)
   }
 
   it should "work" in {
@@ -348,20 +348,20 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
       for ((_, Card(_, t, _)) <- cards) t shouldBe result.top + 1
     }
 
-    val pairs = Seq(
+    val pairs = List(
       director.Pair(1, Some("N"), (Player("tweedledum"), Player("tweedledee"))),
       director.Pair(2, Some("N"), (Player("James Clark Maxwell"), Player("Albert Einstein"))),
       director.Pair(1, Some("E"), (Player("Tristan"), Player("Isolde"))),
       director.Pair(2, Some("E"), (Player("Romeo"), Player("Juliet")))
     )
-    val travelers: Seq[Traveler] = Seq(
-      Traveler(1, Seq(Play(1, 1, PlayResult(Right(110))), Play(2, 2, PlayResult(Right(100))))),
-      Traveler(2, Seq(Play(1, 2, PlayResult(Right(-400))), Play(2, 1, PlayResult(Right(-430)))))
+    val travelers: List[Traveler] = List(
+      Traveler(1, List(Play(1, 1, PlayResult(Right(110))), Play(2, 2, PlayResult(Right(100))))),
+      Traveler(2, List(Play(1, 2, PlayResult(Right(-400))), Play(2, 1, PlayResult(Right(-430)))))
     )
     val preamble = Preamble("A", None, pairs)
     val section = Section(preamble, travelers)
     section.calculateTop shouldBe 1
-    val results: Seq[Result] = section.createResults
+    val results: List[Result] = section.createResults
     results.size shouldBe 2
     checkResult(results.head, directionNS = true)
     checkResult(results.last, directionNS = false)

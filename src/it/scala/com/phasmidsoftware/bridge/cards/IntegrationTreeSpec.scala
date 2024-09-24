@@ -34,77 +34,77 @@ class IntegrationTreeSpec extends AnyFlatSpec with should.Matchers {
     val target = StateTree(whist)
     //		val result = target.expand(16)(_.tricks.ns >= 3, _.tricks.ew > 2)
     val result = target.expand(16)
-    val states: Seq[State] = result.depthFirstTraverse
+    val states: List[State] = result.depthFirstTraverse
     states.size shouldBe 6
   }
 
   it should "go to level 20 with short circuit" in {
     val target = StateTree(whist)
     val result = target.expand(20)
-    val states: Seq[State] = result.depthFirstTraverse
+    val states: List[State] = result.depthFirstTraverse
     states.size shouldBe 6
   }
 
   it should "go to level 24 with short circuit" in {
     val target = StateTree(whist)
     val result = target.expand(24)
-    val states: Seq[State] = result.depthFirstTraverse
+    val states: List[State] = result.depthFirstTraverse
     states.size shouldBe 6
   }
 
   it should "go to level 28 with short circuit" in {
     val target = StateTree(whist)
     val result = target.expand(28)
-    val states: Seq[State] = result.depthFirstTraverse
+    val states: List[State] = result.depthFirstTraverse
     states.size shouldBe 6
   }
 
   it should "go to level 32 with short circuit" in {
     val target = StateTree(whist)
     val result = target.expand(32)
-    val states: Seq[State] = result.depthFirstTraverse
+    val states: List[State] = result.depthFirstTraverse
     states.size shouldBe 6
   }
 
   it should "go to level 36 with short circuit" in {
     val target = StateTree(whist)
     val result = target.expand(36)
-    val states: Seq[State] = result.depthFirstTraverse
+    val states: List[State] = result.depthFirstTraverse
     states.size shouldBe 6
   }
 
   it should "go to level 40 with short circuit" in {
     val target = StateTree(whist)
     val result = target.expand(40)
-    val states: Seq[State] = result.depthFirstTraverse
+    val states: List[State] = result.depthFirstTraverse
     states.size shouldBe 6
   }
 
   it should "go to level 40 with short alternative circuit" in {
     val target = StateTree(whist)
     val result = target.expand(40)
-    val states: Seq[State] = result.depthFirstTraverse
+    val states: List[State] = result.depthFirstTraverse
     states.size shouldBe 6
   }
 
   it should "go to level 44 with short circuit" in {
     val target = StateTree(whist)
     val result = target.expand(44)
-    val states: Seq[State] = result.depthFirstTraverse
+    val states: List[State] = result.depthFirstTraverse
     states.size shouldBe 6
   }
 
   it should "go to level 48 with short circuit" in {
     val target = StateTree(whist)
     val result = target.expand(48)
-    val states: Seq[State] = result.depthFirstTraverse
+    val states: List[State] = result.depthFirstTraverse
     states.size shouldBe 6
   }
 
   it should "go through all levels with short circuit based on 3NT" in {
     val target = StateTree(whist)
     val result = target.enumerateNoTrumpPlaysNS(9)
-    val states: Seq[State] = result.depthFirstTraverse
+    val states: List[State] = result.depthFirstTraverse
     states.size shouldBe 6
   }
 }

@@ -276,5 +276,5 @@ object Hand {
     * @param index an index between 0 and 3.
     * @return an appropriate name for the hand.
     */
-  def name(index: Int): String = Seq("N", "E", "S", "W")(index)
+  def name(index: Int): String = List("N", "E", "S", "W")(index)
 }

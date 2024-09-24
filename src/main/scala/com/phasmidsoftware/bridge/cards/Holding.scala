@@ -248,7 +248,7 @@ object Holding {
     * @return a new Holding.
     */
   def apply(suit: Suit, ranks: Rank*): Holding = {
-    val cards = ranks map (rank => Card(suit, rank))
+    val cards = ranks map (rank => Card(suit, rank)) to List
     val cXsXm = (for ((c, i) <- cards.zipWithIndex) yield i - c.priority -> c).groupBy(_._1)
     val ss = cXsXm.values map (cXs => Sequence(cXs.map(_._2)))
     apply(ss.toList.sorted, suit, Nil)
@@ -281,11 +281,11 @@ object Holding {
   }
 
   // CONSIDER merge the two create methods
-  def create(suit: Suit, cards: Seq[Card]): Holding = apply(suit, (cards map (_.rank)).sorted.reverse: _*)
+  def create(suit: Suit, cards: List[Card]): Holding = apply(suit, (cards map (_.rank)).sorted.reverse: _*)
 
-  def create(ranks: Seq[Rank], suit: Suit): Holding = apply(suit, ranks.sorted.reverse: _*)
+  def create(ranks: List[Rank], suit: Suit): Holding = apply(suit, ranks.sorted.reverse: _*)
 
-  def ranksToString(ranks: Seq[Rank]): String = if (ranks.nonEmpty) ranks.mkString("", "", "") else "-"
+  def ranksToString(ranks: List[Rank]): String = if (ranks.nonEmpty) ranks.mkString("", "", "") else "-"
   //
   //  // NOTE not used
   //  implicit object LoggableHolding extends Loggable[Holding] with Loggables {

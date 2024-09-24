@@ -17,7 +17,7 @@ class StateTreeSpec extends AnyFlatSpec with should.Matchers {
   class OldStyleExpandable(success: State => Boolean = _ => false, failure: State => Boolean = _ => false) extends Expandable[State] with Loggables {
 
     implicit val optionLoggerBoolean: Loggable[Option[Boolean]] = optionLoggable[Boolean]
-    implicit val seqLoggerState: Loggable[List[State]] = listLoggable[State]
+    implicit val ListLoggerState: Loggable[List[State]] = listLoggable[State]
 
     import com.phasmidsoftware.util.SmartValueOps._
 
@@ -199,7 +199,7 @@ class StateTreeSpec extends AnyFlatSpec with should.Matchers {
     val target = StateTree(whist)
 
     val result = target.expand(9)
-    val states: Seq[State] = result.depthFirstTraverse
+    val states: List[State] = result.depthFirstTraverse
     states.size shouldBe 10
   }
 
@@ -212,7 +212,7 @@ class StateTreeSpec extends AnyFlatSpec with should.Matchers {
     val target = StateTree(whist)
 
     val result = target.expand(9)
-    val states: Seq[State] = result.depthFirstTraverse
+    val states: List[State] = result.depthFirstTraverse
     states.size shouldBe 10
   }
 
@@ -225,7 +225,7 @@ class StateTreeSpec extends AnyFlatSpec with should.Matchers {
     val target = StateTree(whist)
 
     val result = target.expand(13)
-    val states: Seq[State] = result.depthFirstTraverse
+    val states: List[State] = result.depthFirstTraverse
     states.size shouldBe 13
   }
 

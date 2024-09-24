@@ -131,9 +131,9 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
   /**
     * TODO Should be private
     */
-  lazy val _cooperate = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.cooperate(partner(k)(s))))
+  lazy val _cooperate: Deal = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.cooperate(partner(k)(s))))
 
-  lazy val _reprioritize = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.reprioritize))
+  lazy val _reprioritize: Deal = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.reprioritize))
 
   private def outputHand(name: String, hand: Hand): Output = (Output(s"$name:\t") :+ hand.neatOutput).insertBreak()
 
@@ -188,8 +188,8 @@ object Deal {
     * @param adjust adjustForPartnerships if true (default)
     * @return a new Deal.
     */
-  def fromCards(title: String, cs: Seq[Card], adjust: Boolean): Deal = {
-    val deal = new Deal(title, (for ((cs, index) <- cs.grouped(CardsPerHand).zipWithIndex) yield index -> Hand.createHoldings(cs.toList)).toMap)
+  def fromCards(title: String, cs: List[Card], adjust: Boolean): Deal = {
+    val deal = new Deal(title, (for ((cs, index) <- cs.grouped(CardsPerHand).zipWithIndex) yield index -> Hand.createHoldings(cs)).toMap)
     if (adjust) deal.adjustForPartnerships else deal
   }
 
@@ -198,12 +198,17 @@ object Deal {
     *
     * @param title the title for the deal.
     * @param start the player who will lead to this deal.
-    * @param wss a sequence in order NESW of a sequence in order SHDC of card representations.
+    * @param wss   a sequence in order NESW of a sequence in order SHDC of card representations.
     * @return a new deal. Yeah to FDR.
     */
-  def fromHandStrings(title: String, start: String, wss: Seq[Seq[String]]): Deal = {
-    val firstIndex = start match { case "N" => 0; case "E" => 1; case "S" => 2; case "W" => 3 }
-    val hSss: Seq[Seq[(Suit, Holding)]] = for (ws <- wss) yield for ((w, x) <- ws zip Seq(Spades, Hearts, Diamonds, Clubs)) yield x -> Holding(x, w)
+  def fromHandStrings(title: String, start: String, wss: List[List[String]]): Deal = {
+    val firstIndex = start match {
+      case "N" => 0;
+      case "E" => 1;
+      case "S" => 2;
+      case "W" => 3
+    }
+    val hSss: List[List[(Suit, Holding)]] = for (ws <- wss) yield for ((w, x) <- ws zip List(Spades, Hearts, Diamonds, Clubs)) yield x -> Holding(x, w)
     val hands = for ((hHs, i) <- hSss zipWithIndex) yield Hand(Hand.next(firstIndex, i), hHs.toMap)
     val (nonNorth, north) = hands.splitAt(4 - firstIndex)
     Deal(title, north ++ nonNorth).adjustForPartnerships
@@ -219,13 +224,13 @@ object Deal {
     * @return a new Deal.
     */
   def apply(title: String, seed: Long = System.nanoTime(), adjustForPartnerships: Boolean = true): Deal = {
-    val newDeck: Seq[Card] =
-      for (s <- Seq(Spades, Hearts, Diamonds, Clubs); r <- Seq(Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)) yield Card(s, r)
+    val newDeck: List[Card] =
+      for (s <- List(Spades, Hearts, Diamonds, Clubs); r <- List(Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)) yield Card(s, r)
     val shuffler: Iterable[Card] => Seq[Card] = Shuffle[Card](_, seed)
-    fromCards(title, shuffler(newDeck), adjustForPartnerships)
+    fromCards(title, shuffler(newDeck).toList, adjustForPartnerships)
   }
 
-  def writePBN(writer: Writer, map: Map[String, String], boards: Seq[Deal]): Unit = {
+  def writePBN(writer: Writer, map: Map[String, String], boards: List[Deal]): Unit = {
     writer.append("% PBN 2.1\n% EXPORT\n")
     for ((d, i) <- boards.zipWithIndex) writer.append(d.asPBN(map, i + 1))
     writer.flush()
