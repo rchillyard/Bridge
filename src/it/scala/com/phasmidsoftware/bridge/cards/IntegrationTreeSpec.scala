@@ -4,7 +4,7 @@ import com.phasmidsoftware.decisiontree.{Expandable, GoalDriven, StateNode}
 import org.scalatest.{AnyFlatSpec, should.Matchers}
 
 //noinspection ScalaStyle
-class IntegrationTreeSpec extends AnyFlatSpec with should.Matchers {
+class IntegrationTreeSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   def success(n: StateNode[State]): Boolean = false
 

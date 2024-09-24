@@ -8,11 +8,11 @@ import com.phasmidsoftware.decisiontree.{Expandable, GoalDriven, StateNode}
 import com.phasmidsoftware.flog.Loggable
 import com.phasmidsoftware.output.MockWriter
 import com.phasmidsoftware.util.{Loggables, Output}
-import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.flatspec
 import org.scalatest.matchers.should
 
 //noinspection ScalaStyle
-class StateTreeSpec extends AnyFlatSpec with should.Matchers {
+class StateTreeSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   class OldStyleExpandable(success: State => Boolean = _ => false, failure: State => Boolean = _ => false) extends Expandable[State] with Loggables {
 

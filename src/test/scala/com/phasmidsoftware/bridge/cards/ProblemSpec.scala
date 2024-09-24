@@ -23,10 +23,10 @@ class ProblemSpec extends AnyFlatSpec with should.Matchers {
   it should "analyze deal 16" in {
     val game = pbn(15)
     println(game)
-    analyzeMakableContracts(game)
+    analyzeMakeableContracts(game)
   }
 
-  private def analyzeMakableContracts(game: Game): Unit = {
+  private def analyzeMakeableContracts(game: Game): Unit = {
     val deal = game("Deal").value.asInstanceOf[DealValue].deal
     val detail = game("OptimumResultTable").detail
     val ntContracts = detail.filter(_.contains("NT")).filter(_.startsWith("S"))

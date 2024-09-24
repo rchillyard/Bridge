@@ -9,7 +9,7 @@ import org.scalatest.time.{Seconds, Span}
 import org.scalatest.{AnyFlatSpec, should.Matchers}
 
 //noinspection ScalaStyle
-class WhistFuncSpec extends AnyFlatSpec with should.Matchers with TimeLimitedTests {
+class WhistFuncSpec extends flatspec.AnyFlatSpec with should.Matchers with TimeLimitedTests {
 
   val timeLimit = Span(2, Seconds)
 

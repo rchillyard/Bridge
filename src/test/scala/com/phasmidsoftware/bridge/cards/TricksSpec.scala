@@ -4,11 +4,11 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.flatspec
 import org.scalatest.matchers.should
 
 //noinspection ScalaStyle
-class TricksSpec extends AnyFlatSpec with should.Matchers {
+class TricksSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   behavior of "TricksSpec"
 

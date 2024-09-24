@@ -207,7 +207,7 @@ object Howell extends App {
       val triples: List[(Int, List[(Int, Int)])] = for ((k, es) <- groups.toList; e <- es; if e.real) yield k -> e.pairsInOrder.sorted
       println(s"""Triples: $triples""")
       val distinct = triples.distinct
-      val duplicates = triples.diff(distinct).distinct
+      //      val duplicates = triples.diff(distinct).distinct
       if (triples.size != distinct.size) println(s"""*** Duplicate encounters: ${triples.diff(distinct).distinct}""")
     }
 

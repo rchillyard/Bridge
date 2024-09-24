@@ -9,6 +9,8 @@ val scalaTestVersion = "3.2.9"
 resolvers += Resolver.mavenLocal
 resolvers += "Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases"
 
+resolvers += "Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases/"
+
 libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play-json" % "2.10.6",
 //  "com.phasmid" %% "lascala" % "1.0.11",

@@ -49,7 +49,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
   it should "apply(A)" in {
     val target = PlayResult("A")
     target.r.isRight shouldBe false
-    target.matchpoints(None) shouldBe Some(Rational(1) / 2)
+    target.matchpoints(None) shouldBe Some(Rational.half)
     target.toString shouldBe "A"
   }
   it should "apply(A+)" in {
@@ -131,7 +131,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
   it should "matchpoint properly (1)" in {
     val p1 = Play(2, 1, PlayResult(Right(130)))
     val p2 = Play(1, 2, PlayResult(Right(150)))
-    val t = Traveler(1, List(p1, p2))
+    val t = Traveler(1, Seq(p1, p2))
     t.matchpoint(p1) shouldBe Some(Rational.zero)
     t.matchpoint(p2) shouldBe Some(Rational.one)
   }
@@ -225,7 +225,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
   it should "matchpoint" in {
     val play1 = Play(13, 17, PlayResult("110"))
     val play2 = Play(14, 16, PlayResult("100"))
-    val target = Traveler(5, List(play1, play2))
+    val target = Traveler(5, Seq(play1, play2))
     target.matchpoint(play1) shouldBe Some(Rational(1))
     target.matchpoint(play2) shouldBe Some(Rational(0))
   }
@@ -243,7 +243,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val top = 1
     val matchpoints1 = Matchpoints(ns1, ew1, result1, Some(Rational(1)), top)
     val matchpoints2 = Matchpoints(ns2, ew2, result2, Some(Rational(0)), top)
-    target.matchpointIt shouldBe List(matchpoints1, matchpoints2)
+    target.matchpointIt shouldBe Seq(matchpoints1, matchpoints2)
   }
   it should ":+" in {
     val score1 = "110"
