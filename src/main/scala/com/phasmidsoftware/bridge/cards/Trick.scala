@@ -23,7 +23,7 @@ import scala.language.postfixOps
   * @param plays      the sequence of plays (in sequence).
   * @param maybePrior an optional previous trick
   */
-case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) extends Outputable[Deal] with Evaluatable {
+case class Trick(index: Int, plays: Seq[CardPlay], maybePrior: Option[Trick]) extends Outputable[Deal] with Evaluatable {
 
   /**
     * True if plays is non empty.
@@ -70,7 +70,7 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     */
   //noinspection ScalaStyle
   def :+(play: CardPlay): Trick =
-    if (isComplete || index == 0) Trick(index + 1, List(play), if (index == 0) None else Some(this))
+    if (isComplete || index == 0) Trick(index + 1, Seq(play), if (index == 0) None else Some(this))
     else if (next contains play.hand) Trick(index, plays :+ play, maybePrior)
     else throw CardException(s"play $play cannot be added to this trick: $this ")
 
@@ -94,9 +94,9 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
   /**
     * Refactor this
     */
-  lazy val history: List[Trick] = maybePrior match {
-    case None => List(this)
-    case Some(Trick.empty) => List(this)
+  lazy val history: Seq[Trick] = maybePrior match {
+    case None => Seq(this)
+    case Some(Trick.empty) => Seq(this)
     case Some(t) => t.history :+ this
   }
 
@@ -134,7 +134,7 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     *         (1) the current trick if we are following;
     *         (2) a new trick if we are leading.
     */
-  def enumerateSubsequentPlays(whist: Whist): List[Trick] = enumerateSubsequentPlays(whist.deal, whist.openingLeader, whist.strain) //.invariant(ts => ts.nonEmpty)
+  def enumerateSubsequentPlays(whist: Whist): Seq[Trick] = enumerateSubsequentPlays(whist.deal, whist.openingLeader, whist.strain) //.invariant(ts => ts.nonEmpty)
 
   /**
     * Determine if the declaring side still has a play left in this trick.
@@ -189,7 +189,7 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
           enumerateLeads(deal, leader, strain) // XXX: enumerate leads, starting from the null trick.
     }
 
-  private def enumerateLeads(deal: Deal, leader: Int, strain: Option[Suit]) = for (q <- chooseLeads(deal, leader, strain)) yield Trick(index + 1, List(q), Some(this))
+  private def enumerateLeads(deal: Deal, leader: Int, strain: Option[Suit]) = for (q <- chooseLeads(deal, leader, strain)) yield Trick(index + 1, Seq(q), Some(this))
 
   private def leadStrategy(s: Suit, h: Holding, strain: Option[Suit]): Strategy = h.nCards match {
     case 0 => Invalid
@@ -198,13 +198,13 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
   }
 
   // TODO make private
-  def chooseLeads(deal: Deal, leader: Int, strain: Option[Suit]): List[CardPlay] = {
-    val z: List[(CardPlay, Int)] = for {(s, h) <- deal.hands(leader).holdings.toList
-                                        strategy = leadStrategy(s, h, strain)
-                                        p <- h.choosePlays(deal, strain, leader, strategy, None)}
+  def chooseLeads(deal: Deal, leader: Int, strain: Option[Suit]): Seq[CardPlay] = {
+    val z: Seq[(CardPlay, Int)] = for {(s, h) <- deal.hands(leader).holdings.toList
+                                       strategy = leadStrategy(s, h, strain)
+                                       p <- h.choosePlays(deal, strain, leader, strategy, None)}
     yield p -> h.nCards
     // TODO incorporate this into the code
-    val _: List[(Suit, List[(CardPlay, Int)])] = z.groupBy { case (p, _) => p.suit }.toList
+    val _: Seq[(Suit, Seq[(CardPlay, Int)])] = z.groupBy { case (p, _) => p.suit }.toList
     val (q, _) = z.sortWith((x, _) => x._1.isStiff(x._2)).sortBy(x => -x._2).unzip
     q
   }

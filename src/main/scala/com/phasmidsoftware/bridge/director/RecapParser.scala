@@ -7,7 +7,7 @@ package com.phasmidsoftware.bridge.director
 import scala.io.Source
 import scala.language.postfixOps
 import scala.util.parsing.combinator.JavaTokenParsers
-import scala.util.{Failure, _}
+import scala.util._
 
 
 /**
@@ -29,7 +29,7 @@ class RecapParser extends JavaTokenParsers {
   def modifier: Parser[String] = """[A-Z]+""".r
 
   // XXX list of pairs, each terminated by a endOfLine
-  def pairs: Parser[List[Pair]] = rep(pair <~ endOfLine)
+  def pairs: Parser[Seq[Pair]] = rep(pair <~ endOfLine)
 
   // XXX pair parser yields a Players object and is a number followed by "N" or "E" followed by two full names, each terminated by a period
   def pair: Parser[Pair] = (wholeNumber <~ spacer) ~ opt("E" | "N") ~ playerPlayer ^^ { case n ~ d ~ p => Pair(n.toInt, d, p._1 -> p._2) }
@@ -44,28 +44,28 @@ class RecapParser extends JavaTokenParsers {
     """\s*\w[^\r\n&]*""".r ^^ (s => Player(s.trim))
 
   // XXX travelers, each terminated by a endOfLine
-  def travelers: Parser[List[Traveler]] = rep(traveler)
+  def travelers: Parser[Seq[Traveler]] = rep(traveler)
 
   // XXX traveler parser yields a Traveler object and must start with a "T" and end with a blank line. In between is a list of Play objects
   def traveler: Parser[Traveler] =
     opt(spacer) ~> "T" ~> spacer ~> (wholeNumber <~ endOfLine) ~ plays <~ (endOfLine | eoi) ^^ { case b ~ ps => Traveler(Try(b.toInt), ps) }
 
   // XXX pickups, each terminated by a endOfLine
-  def pickups: Parser[List[Pickup]] = rep(pickup)
+  def pickups: Parser[Seq[Pickup]] = rep(pickup)
 
   // XXX pickup parser yields a Pickup object and must start with a "P" and end with a blank line. In between is a list of Play objects
   def pickup: Parser[Pickup] =
     opt(spacer) ~> "P" ~> spacer ~> wholeNumber ~ (spacer ~> wholeNumber <~ endOfLine) ~ boardResults <~ (endOfLine | eoi) ^^ { case ns ~ ew ~ rs => Pickup(ns.toInt, ew.toInt, rs) }
 
   // XXX plays parser yields a list of Play objects where each play is terminated by a endOfLine.
-  def plays: Parser[List[Play]] = rep(play <~ endOfLine)
+  def plays: Parser[Seq[Play]] = rep(play <~ endOfLine)
 
   // XXX play parser yields a Play object and must be two integer numbers followed by a result
   def play: Parser[Play] =
     (opt(spacer) ~> wholeNumber <~ spacer) ~ (wholeNumber <~ spacer) ~ result ^^ { case n ~ e ~ r => Play(Try(n.toInt), Try(e.toInt), r) }
 
   // XXX boardResults parser yields a list of BoardResult objects where each result is terminated by a endOfLine.
-  def boardResults: Parser[List[BoardResult]] = rep(boardResult <~ endOfLine)
+  def boardResults: Parser[Seq[BoardResult]] = rep(boardResult <~ endOfLine)
 
   // XXX boardResult parser yields a BoardResult
   def boardResult: Parser[BoardResult] = opt(spacer) ~> (wholeNumber <~ spacer) ~ result ^^ { case n ~ r => BoardResult(n.toInt, r) }

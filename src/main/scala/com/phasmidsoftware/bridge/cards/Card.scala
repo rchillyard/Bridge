@@ -165,7 +165,7 @@ abstract class BaseSuit(val isRound: Boolean, val isRed: Boolean) extends Suit w
     */
   def priority: Int = _priority
 
-  override def toString: String = List("S", "H", "D", "C")(priority)
+  override def toString: String = Seq("S", "H", "D", "C")(priority)
 
   private lazy val _priority = Card.bool2Int(isRound) + 2 * Card.bool2Int(isRound ^ isRed)
 }
@@ -271,7 +271,7 @@ object Rank {
   */
 abstract class BaseRank(val priority: Int, val isHonor: Boolean) extends Rank with Priority {
 
-  override def toString: String = if (isHonor) List("A", "K", "Q", "J", "T")(priority) else (Rank.lowestPriority - priority).toString
+  override def toString: String = if (isHonor) Seq("A", "K", "Q", "J", "T")(priority) else (Rank.lowestPriority - priority).toString
 
   private def canEqual(other: Any): Boolean = other.isInstanceOf[BaseRank]
 
@@ -346,7 +346,7 @@ private class RankParser extends JavaTokenParsers {
     }
   }
 
-  def holding: Parser[List[Rank]] = rep(rank) ^^ (_ map Rank.apply)
+  def holding: Parser[Seq[Rank]] = rep(rank) ^^ (_ map Rank.apply)
 
   def rank: Parser[String] = """[2-9]""".r | """[AKQJT]""".r | "10" | failure("invalid rank")
 }

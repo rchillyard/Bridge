@@ -26,7 +26,7 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
     *
     * @return a sequence of States.
     */
-  def enumeratePlays: List[State] = _enumeratePlays
+  def enumeratePlays: Seq[State] = _enumeratePlays
 
   /**
     * NOTE: this is used only in unit tests

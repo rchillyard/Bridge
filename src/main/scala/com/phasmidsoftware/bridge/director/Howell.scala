@@ -18,7 +18,7 @@ import scala.annotation.tailrec
   * The number of board sets is the same as the number of tables.
   * All positions are 0-based
   */
-case class Howell(name: String, tables: List[Table], movePlan: MovePlan) {
+case class Howell(name: String, tables: Seq[Table], movePlan: MovePlan) {
   def moves(current: Position, movement: Movement): (Position, Movement) = {
     val head = movement.head
     val tail = movement.tail
@@ -29,8 +29,8 @@ case class Howell(name: String, tables: List[Table], movePlan: MovePlan) {
 
   private def getMovement(implicit tables: Int): Movement = Movement(Triple.toLazyLists(movePlan))
 
-  def positions(start: Position): List[Position] = {
-    @tailrec def loop(positions: List[Position], posMov: (Position, Movement), moves: Int): List[Position] = moves match {
+  def positions(start: Position): Seq[Position] = {
+    @tailrec def loop(positions: Seq[Position], posMov: (Position, Movement), moves: Int): Seq[Position] = moves match {
       case 0 => positions
       case _ => loop(positions :+ posMov._1, this.moves(posMov._1, posMov._2), moves - 1)
     }
@@ -187,7 +187,7 @@ object Howell extends App {
     checkEncounters(groupEncounters(e => e.b))
 
     // TODO sort this all out!
-    def showGroupedEncounters(w: String, groups: Map[Int, List[Encounter]]): Unit = {
+    def showGroupedEncounters(w: String, groups: Map[Int, Seq[Encounter]]): Unit = {
       println(s"Check validity grouped by $w")
       //        checkValidity("Pairs", _.pairsInOrder)
       //        checkValidity("Boards/Pairs", _.boardPairs)
@@ -203,7 +203,7 @@ object Howell extends App {
       //        }
     }
 
-    def checkEncounters(groups: Map[Int, List[Encounter]]): Unit = {
+    def checkEncounters(groups: Map[Int, Seq[Encounter]]): Unit = {
       val triples: List[(Int, List[(Int, Int)])] = for ((k, es) <- groups.toList; e <- es; if e.real) yield k -> e.pairsInOrder.sorted
       println(s"""Triples: $triples""")
       val distinct = triples.distinct
@@ -215,7 +215,7 @@ object Howell extends App {
 
   }
 
-  def evaluateRounds(positions: List[Position]): List[Round] = for ((p, r) <- positions zip LazyList.from(1)) yield Round(r, p)
+  def evaluateRounds(positions: Seq[Position]): Seq[Round] = for ((p, r) <- positions zip LazyList.from(1)) yield Round(r, p)
 }
 
 case class Encounter(table: Int, n: Int, e: Int, b: Int)(implicit tables: List[Table]) {

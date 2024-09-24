@@ -18,7 +18,7 @@ import scala.language.implicitConversions
   * @param promotions a list of promotions that should be applied on quitting a trick.
   *                   CONSIDER eliminating the list of promotions if holding is void.
   */
-case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] = Nil)
+case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = Nil)
   extends Outputable[Unit] with Quittable[Holding] with Cooperative[Holding] with Reprioritizable[Holding] with Evaluatable with Removable {
 
   require(isVoid || maybeSuit.get == suit)
@@ -44,7 +44,7 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
   /**
     * @return the all of the cards in this Holding.
     */
-  lazy val cards: List[Card] = for (s <- sequences; c <- s.cards) yield c
+  lazy val cards: Seq[Card] = for (s <- sequences; c <- s.cards) yield c
 
   /**
     * @return the effective number of cards.
@@ -70,7 +70,7 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     * @param trick the current state of this trick (i.e. the prior plays).
     * @return a sequence of all possible plays, starting with the ones most suited to the appropriate strategy.
     */
-  def chooseFollowSuitPlays(deal: Deal, strain: Option[Suit], hand: Int, trick: Trick): List[CardPlay] =
+  def chooseFollowSuitPlays(deal: Deal, strain: Option[Suit], hand: Int, trick: Trick): Seq[CardPlay] =
     choosePlays(deal, strain, hand, getStrategyForFollowingSuit(trick), trick.winner)
 
   /**
@@ -83,7 +83,7 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     * @param currentWinner the play currently winning the trick.
     * @return a sequence of CardPlay objects.
     */
-  def choosePlays(deal: Deal, strain: Option[Suit], hand: Int, strategy: Strategy, currentWinner: Option[Winner]): List[CardPlay] = {
+  def choosePlays(deal: Deal, strain: Option[Suit], hand: Int, strategy: Strategy, currentWinner: Option[Winner]): Seq[CardPlay] = {
     def createPlay(priority: Int): CardPlay = CardPlay(deal, strain, hand, suit, priority)
 
     lazy val priorityToBeat = (currentWinner map (_.priorityToBeat(hand))).getOrElse(Rank.lowestPriority)
@@ -148,7 +148,7 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     */
   //noinspection ScalaStyle
   def -(priority: Int): Holding = {
-    val sos: List[Option[Sequence]] = for (s <- sequences) yield if (s.priority == priority) s.truncate else Some(s)
+    val sos: Seq[Option[Sequence]] = for (s <- sequences) yield if (s.priority == priority) s.truncate else Some(s)
     Holding(sos.flatten, suit, promotions)
   }
 
@@ -183,8 +183,8 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
       Sequence(sequence.priority - promotion, sequence.cards)
     }
 
-    val ss: List[Sequence] = sequences map applyPromotions
-    Holding(ss.foldLeft[List[Sequence]](Nil)((r, s) => s.merge(r)), suit, Nil)
+    val ss: Seq[Sequence] = sequences map applyPromotions
+    Holding(ss.foldLeft[Seq[Sequence]](Nil)((r, s) => s.merge(r)), suit, Nil)
   }
 
   private def _cooperate(holding: Holding) = Holding(sequences, suit, for (s <- holding.sequences; p = s.priority; is <- List.fill(s.length)(p)) yield is)
@@ -211,14 +211,14 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
   }
 
   // TODO Merge this with the following method
-  private def chooseFollowSuitPlays(createPlay: Int => CardPlay, strategy: Strategy, priorityToBeat: Int): List[CardPlay] = {
+  private def chooseFollowSuitPlays(createPlay: Int => CardPlay, strategy: Strategy, priorityToBeat: Int): Seq[CardPlay] = {
     // XXX this function is used to sort the possible plays according to which fits the given strategy best (smallest resulting Int)
     def sortFunction(play: CardPlay): Int = Holding.applyFollowSuitStrategy(strategy, priorityToBeat, play.priority)
 
     (for (s <- sequences) yield createPlay(s.priority)).sortBy(sortFunction)
   }
 
-  private def chooseLeadSuitPlays(createPlay: Int => CardPlay, strategy: Strategy): List[CardPlay] = {
+  private def chooseLeadSuitPlays(createPlay: Int => CardPlay, strategy: Strategy): Seq[CardPlay] = {
     // XXX this function is used to sort the possible plays according to which fits the given strategy best (smallest resulting Int)
     def sortFunction(play: CardPlay): Int = Holding.applyLeadSuitStrategy(strategy, play, sequence(play.priority))
 
@@ -281,11 +281,11 @@ object Holding {
   }
 
   // CONSIDER merge the two create methods
-  def create(suit: Suit, cards: List[Card]): Holding = apply(suit, (cards map (_.rank)).sorted.reverse: _*)
+  def create(suit: Suit, cards: Seq[Card]): Holding = apply(suit, (cards map (_.rank)).sorted.reverse: _*)
 
-  def create(ranks: List[Rank], suit: Suit): Holding = apply(suit, ranks.sorted.reverse: _*)
+  def create(ranks: Seq[Rank], suit: Suit): Holding = apply(suit, ranks.sorted.reverse: _*)
 
-  def ranksToString(ranks: List[Rank]): String = if (ranks.nonEmpty) ranks.mkString("", "", "") else "-"
+  def ranksToString(ranks: Seq[Rank]): String = if (ranks.nonEmpty) ranks.mkString("", "", "") else "-"
   //
   //  // NOTE not used
   //  implicit object LoggableHolding extends Loggable[Holding] with Loggables {

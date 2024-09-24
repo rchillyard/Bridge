@@ -21,11 +21,11 @@ class StateTreeSpec extends AnyFlatSpec with should.Matchers {
 
     import com.phasmidsoftware.util.SmartValueOps._
 
-    def successors(t: State): List[State] = t.enumeratePlays.invariant(xs => xs.distinct.length == xs.length)
+    def successors(t: State): List[State] = t.enumeratePlays.invariant(xs => xs.distinct.length == xs.length) to List
   }
 
   class PlainEnumerationExpandable() extends Expandable[State] with Loggables {
-    def successors(t: State): List[State] = t.enumeratePlays
+    def successors(t: State): List[State] = t.enumeratePlays to List
   }
 
   behavior of "Tree"
@@ -207,7 +207,7 @@ class StateTreeSpec extends AnyFlatSpec with should.Matchers {
     val deal = Deal("test", 2L, adjustForPartnerships = false)
     val whist = Whist(deal, 0)
 
-    implicit val se: Expandable[State] = (t: State) => t.enumeratePlays
+    implicit val se: Expandable[State] = (t: State) => t.enumeratePlays to List
     implicit val sg: GoalDriven[State] = Whist.goal(2, _directionNS = true, 3)
     val target = StateTree(whist)
 
@@ -221,7 +221,7 @@ class StateTreeSpec extends AnyFlatSpec with should.Matchers {
     val whist = Whist(deal, 0)
 
     implicit val whistGoal: GoalDriven[State] = Whist.goal(3, _directionNS = true, 4)
-    implicit val se: Expandable[State] = (t: State) => t.enumeratePlays
+    implicit val se: Expandable[State] = (t: State) => t.enumeratePlays to List
     val target = StateTree(whist)
 
     val result = target.expand(13)

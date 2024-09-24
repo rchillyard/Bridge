@@ -14,7 +14,7 @@ import scala.language.implicitConversions
   * @param priority the number of higher-ranking cards in the suit.
   * @param cards    the cards.
   */
-case class Sequence(priority: Int, cards: List[Card]) extends Evaluatable with Reprioritizable[Sequence] {
+case class Sequence(priority: Int, cards: Seq[Card]) extends Evaluatable with Reprioritizable[Sequence] {
 
   require(cards.nonEmpty)
 
@@ -42,7 +42,7 @@ case class Sequence(priority: Int, cards: List[Card]) extends Evaluatable with R
     * @param ss a sequence of Sequences.
     * @return a new sequence of Sequences.
     */
-  def merge(ss: List[Sequence]): List[Sequence] = if (ss.nonEmpty && ss.last.canCombine(this)) ss.init :+ (ss.last ++ this) else ss :+ this
+  def merge(ss: Seq[Sequence]): Seq[Sequence] = if (ss.nonEmpty && ss.last.canCombine(this)) ss.init :+ (ss.last ++ this) else ss :+ this
 
   /**
     * Method to concatenate two Sequences.
@@ -110,7 +110,7 @@ object Sequence {
     * @param cs the list of Cards (must be non-empty).
     * @return a new Sequence.
     */
-  def apply(cs: List[Card]): Sequence = apply(cs.head.priority, cs)
+  def apply(cs: Seq[Card]): Sequence = apply(cs.head.priority, cs)
 
   /**
     * @return true if the top card of the sequence with the given priority is at least a ten.

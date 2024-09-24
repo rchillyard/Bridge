@@ -123,7 +123,7 @@ class StateSpec extends AnyFlatSpec with should.Matchers {
 
   it should "enumeratePlays" in {
     val target = State(whist)
-    val plays: List[State] = target.enumeratePlays
+    val plays: Seq[State] = target.enumeratePlays
     plays.size shouldBe 10
     plays.head.trick.plays.size shouldBe 1
     plays.head.trick.plays.head should matchPattern { case CardPlay(_, None, `north`, Hearts, 2) => }
@@ -141,7 +141,7 @@ class StateSpec extends AnyFlatSpec with should.Matchers {
     val trick2alternatives = trick1.enumerateSubsequentPlays(whist1)
     val state2alternatives = whist1.makeStates(state1.tricks, trick2alternatives)
     val state20 = state2alternatives.head
-    val state3alternatives: List[State] = state20.enumeratePlays
+    val state3alternatives: Seq[State] = state20.enumeratePlays
     val state30 = state3alternatives.head
     val state4alternatives = state30.enumeratePlays
     val state40: State = state4alternatives.head

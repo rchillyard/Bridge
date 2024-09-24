@@ -123,7 +123,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     target.boards.size shouldBe 2
     target.ns shouldBe ns
     target.ew shouldBe ew
-    val boardPlays: List[BoardPlay] = target.asBoardPlays
+    val boardPlays: collection.Seq[BoardPlay] = target.asBoardPlays
     boardPlays shouldBe List(boardPlay1, boardPlay2)
   }
 
@@ -361,7 +361,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val preamble = Preamble("A", None, pairs)
     val section = Section(preamble, travelers)
     section.calculateTop shouldBe 1
-    val results: List[Result] = section.createResults
+    val results: collection.Seq[Result] = section.createResults
     results.size shouldBe 2
     checkResult(results.head, directionNS = true)
     checkResult(results.last, directionNS = false)

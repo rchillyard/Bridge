@@ -37,7 +37,7 @@ class TrickSpec extends AnyFlatSpec with should.Matchers {
     val trick2alternatives = trick1.enumerateSubsequentPlays(whist1)
     val state2alternatives = whist1.makeStates(state1.tricks, trick2alternatives)
     val state20 = state2alternatives.head
-    val state3alternatives: List[State] = state20.enumeratePlays
+    val state3alternatives: Seq[State] = state20.enumeratePlays
     val state30 = state3alternatives.head
     val state4alternatives = state30.enumeratePlays
     val state40: State = state4alternatives.head
@@ -147,8 +147,8 @@ class TrickSpec extends AnyFlatSpec with should.Matchers {
     val secondHandPlay1 = trick21.last
     secondHandPlay1.suit shouldBe Hearts
     secondHandPlay1.priority shouldBe 7
-    val trick3alternatives: List[Trick] = trick20.enumerateSubsequentPlays(whist20)
-    val state3alternatives: List[State] = state20.enumeratePlays
+    val trick3alternatives: Seq[Trick] = trick20.enumerateSubsequentPlays(whist20)
+    val state3alternatives: Seq[State] = state20.enumeratePlays
     state3alternatives.size shouldBe 2
     whist20.makeStates(state20.tricks, trick3alternatives) shouldBe state3alternatives
     val state30 = state3alternatives.head
@@ -191,8 +191,8 @@ class TrickSpec extends AnyFlatSpec with should.Matchers {
     val secondHandPlay1 = trick21.last
     secondHandPlay1.suit shouldBe Spades
     secondHandPlay1.priority shouldBe 1
-    val trick3alternatives: List[Trick] = trick20.enumerateSubsequentPlays(whist20)
-    val state3alternatives: List[State] = state20.enumeratePlays
+    val trick3alternatives: Seq[Trick] = trick20.enumerateSubsequentPlays(whist20)
+    val state3alternatives: Seq[State] = state20.enumeratePlays
     state3alternatives.size shouldBe 3
     state3alternatives.head.trick.plays.drop(2).head.asCard shouldBe Card(Clubs, Eight)
     whist20.makeStates(state20.tricks, trick3alternatives) shouldBe state3alternatives

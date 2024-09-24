@@ -11,7 +11,7 @@ import com.phasmidsoftware.bridge.cards.Deal
   *
   * @param games the games for this PBN
   */
-case class PBN(games: List[Game]) extends Iterable[Game] with (Int => Game) {
+case class PBN(games: Seq[Game]) extends Iterable[Game] with (Int => Game) {
 
   /**
     * Method to get the ith game.
@@ -23,7 +23,7 @@ case class PBN(games: List[Game]) extends Iterable[Game] with (Int => Game) {
 
   def iterator: Iterator[Game] = games.iterator
 
-  def sorted(implicit ev: Ordering[Game]): List[Game] = games.sorted
+  def sorted(implicit ev: Ordering[Game]): Seq[Game] = games.sorted
 }
 
 /**
@@ -31,7 +31,7 @@ case class PBN(games: List[Game]) extends Iterable[Game] with (Int => Game) {
   *
   * @param tagPairs a list of tagPairs where each tagPair is a Name->DetailedValue pair.
   */
-case class Game(tagPairs: List[(Name, DetailedValue)]) extends Iterable[(Name, DetailedValue)] with (String => DetailedValue) {
+case class Game(tagPairs: Seq[(Name, DetailedValue)]) extends Iterable[(Name, DetailedValue)] with (String => DetailedValue) {
   def asMap: Map[String, DetailedValue] = tagPairs.map(mapper.tupled).toMap
 
   override def apply(w: String): DetailedValue = tagPairs.toMap.apply(Name(w))
@@ -61,17 +61,17 @@ object Game {
 
 }
 
-case class DetailedValue(value: Value, detail: List[String]) extends Value {
+case class DetailedValue(value: Value, detail: Seq[String]) extends Value {
   override def toInt: Int = value.toInt
 
   override def toString: String = s""""$value"${detail.mkString(" ", ",", "")}"""
 }
 
 object DetailedValue {
-  def trim(value: Value, detail: List[String]): DetailedValue = DetailedValue(value, trim(detail))
+  def trim(value: Value, detail: Seq[String]): DetailedValue = DetailedValue(value, trim(detail))
 
   // TODO simplify this because we no longer have newlines embedded in the strings.
-  private def trim(detail: List[String]): List[String] = (detail.reverse.filter(_.nonEmpty) match {
+  private def trim(detail: Seq[String]): Seq[String] = (detail.reverse.filter(_.nonEmpty) match {
     case Nil => Nil
     case h :: t =>
       h.reverse.replaceFirst("\n", "") match {
@@ -139,13 +139,13 @@ case class DateValue(year: Int, month: Int, day: Int) extends Value {
   * @param rss four hands in order NESW of four holdings in order SHDC.
   * @return a new Deal.
   */
-case class DealValue(q: String, rss: List[List[String]]) extends Value {
+case class DealValue(q: String, rss: Seq[Seq[String]]) extends Value {
 
   // CONSIDER adding a proper title to this deal.
   def deal: Deal = Deal.fromHandStrings("", q, rss)
 }
 
-case class SetValue(ws: List[String]) extends Value
+case class SetValue(ws: Seq[String]) extends Value
 
 case class StringValue(value: String) extends Value {
   override def toString: String = value

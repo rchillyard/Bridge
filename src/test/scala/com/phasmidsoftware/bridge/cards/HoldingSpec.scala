@@ -151,7 +151,7 @@ class HoldingSpec extends AnyFlatSpec with should.Matchers {
   it should "apply win it strategy" in {
     val deal = Deal("test", 0L, adjustForPartnerships = false)
     val holding: Holding = deal.hands.head.longestSuit
-    val leads: List[CardPlay] = holding.choosePlays(deal, None, 0, FourthBest, None)
+    val leads: Seq[CardPlay] = holding.choosePlays(deal, None, 0, FourthBest, None)
     leads.size shouldBe 3
     val lead: CardPlay = leads.head
     val trick0 = Trick(1, List(lead), None)
@@ -274,7 +274,7 @@ class HoldingSpec extends AnyFlatSpec with should.Matchers {
     val hand1 = deal.hands(1)
     val holding: Holding = deal.hands.head.longestSuit
     holding.suit shouldBe Hearts
-    val leads: List[CardPlay] = holding.choosePlays(deal, None, 0, FourthBest, None)
+    val leads: Seq[CardPlay] = holding.choosePlays(deal, None, 0, FourthBest, None)
     leads.size shouldBe 3
     val lead = leads.head
     val trick0 = Trick(1, List(lead), None)

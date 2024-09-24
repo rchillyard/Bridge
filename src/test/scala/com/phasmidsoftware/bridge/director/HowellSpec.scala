@@ -56,7 +56,7 @@ class HowellSpec extends AnyFlatSpec with should.Matchers with Inside {
     val positions = howell.positions(start)
     positions.size shouldBe 7
     positions.tail.head shouldBe Position(List(Encounter(1, 2, 2, 2), Encounter(2, 7, 6, 3), Encounter(3, 5, 3, 4), Encounter(4, 3, 7, 5), Encounter(5, 1, 4, 6), Encounter(6, 6, 1, 7), Encounter(7, 4, 5, 1)))
-    val labeledPositions: List[Round] = Howell.evaluateRounds(howell.positions(start))
+    val labeledPositions: collection.Seq[Round] = Howell.evaluateRounds(howell.positions(start))
     for (r <- labeledPositions)
       println(s"Round ${r.round}: ${r.position}")
 

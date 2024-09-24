@@ -122,7 +122,7 @@ class WhistSpec extends AnyFlatSpec with should.Matchers {
     val deal0 = Deal("test", 0L, adjustForPartnerships = false)
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
-    val states: List[State] = state0.enumeratePlays
+    val states: Seq[State] = state0.enumeratePlays
     println(states)
     states.size shouldBe 10
   }
@@ -131,9 +131,9 @@ class WhistSpec extends AnyFlatSpec with should.Matchers {
     val deal0 = Deal("test", 0L, adjustForPartnerships = false)
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
-    val states1: List[State] = state0.enumeratePlays
+    val states1: Seq[State] = state0.enumeratePlays
     states1.size shouldBe 10
-    val states2: List[State] = for (p <- states1; q <- p.enumeratePlays) yield q
+    val states2: Seq[State] = for (p <- states1; q <- p.enumeratePlays) yield q
     states2.size shouldBe 27
   }
 
@@ -141,11 +141,11 @@ class WhistSpec extends AnyFlatSpec with should.Matchers {
     val deal0 = Deal("test", 0L)
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
-    val states1: List[State] = state0.enumeratePlays
+    val states1: Seq[State] = state0.enumeratePlays
     states1.size shouldBe 10
-    val states2: List[State] = for (p <- states1; q <- p.enumeratePlays) yield q
+    val states2: Seq[State] = for (p <- states1; q <- p.enumeratePlays) yield q
     states2.size shouldBe 25
-    val states3: List[State] = for (p <- states2; q <- p.enumeratePlays) yield q
+    val states3: Seq[State] = for (p <- states2; q <- p.enumeratePlays) yield q
     states3.size shouldBe 60
   }
 
@@ -153,13 +153,13 @@ class WhistSpec extends AnyFlatSpec with should.Matchers {
     val deal0 = Deal("test", 0L)
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
-    val states1: List[State] = state0.enumeratePlays
+    val states1: Seq[State] = state0.enumeratePlays
     states1.size shouldBe 10
-    val states2: List[State] = for (p <- states1; q <- p.enumeratePlays) yield q
+    val states2: Seq[State] = for (p <- states1; q <- p.enumeratePlays) yield q
     states2.size shouldBe 25
-    val states3: List[State] = for (p <- states2; q <- p.enumeratePlays) yield q
+    val states3: Seq[State] = for (p <- states2; q <- p.enumeratePlays) yield q
     states3.size shouldBe 60
-    val states4: List[State] = for (p <- states3; q <- p.enumeratePlays) yield q
+    val states4: Seq[State] = for (p <- states3; q <- p.enumeratePlays) yield q
     states4.size shouldBe 144
   }
 
@@ -167,15 +167,15 @@ class WhistSpec extends AnyFlatSpec with should.Matchers {
     val deal0 = Deal("test", 0L)
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
-    val states1: List[State] = state0.enumeratePlays
+    val states1: Seq[State] = state0.enumeratePlays
     states1.size shouldBe 10
-    val states2: List[State] = for (p <- states1; q <- p.enumeratePlays) yield q
+    val states2: Seq[State] = for (p <- states1; q <- p.enumeratePlays) yield q
     states2.size shouldBe 25
-    val states3: List[State] = for (p <- states2; q <- p.enumeratePlays) yield q
+    val states3: Seq[State] = for (p <- states2; q <- p.enumeratePlays) yield q
     states3.size shouldBe 60
-    val states4: List[State] = for (p <- states3; q <- p.enumeratePlays) yield q
+    val states4: Seq[State] = for (p <- states3; q <- p.enumeratePlays) yield q
     states4.size shouldBe 144
-    val states5: List[State] = for (p <- states4; q <- p.enumeratePlays) yield q
+    val states5: Seq[State] = for (p <- states4; q <- p.enumeratePlays) yield q
     states5.size shouldBe 1310
   }
 
