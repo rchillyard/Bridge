@@ -11,6 +11,7 @@ import scala.annotation.tailrec
 /**
   * @author robinhillyard
   */
+
 /**
   * tables is the total number of tables, including phantom tables (should be an odd number).
   * For a complete movement, the number of participating pairs is the number of tables plus one.

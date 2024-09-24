@@ -173,7 +173,7 @@ case class Trick(index: Int, plays: Seq[CardPlay], maybePrior: Option[Trick]) ex
     *
     * TODO: this entire mechanism of generating plays needs a complete re-write!
     *
-    * @param deal the deal.
+    * @param deal   the deal.
     * @param leader the opening leader.
     * @param strain the trump suit, if any.
     * @return a list of Tricks.

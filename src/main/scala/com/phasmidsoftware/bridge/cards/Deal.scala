@@ -218,8 +218,8 @@ object Deal {
     * Construct a Deal from a random number generator which will yield an arrangement of cards..
     * This method does NOT adjust for partnerships as it is used principally for testing.
     *
-    * @param title a title for the Deal.
-    * @param seed  a seed for the random number generator (defaults to the system--nano--clock)
+    * @param title                 a title for the Deal.
+    * @param seed                  a seed for the random number generator (defaults to the system--nano--clock)
     * @param adjustForPartnerships (defaults to true) if true then the result will have priorities adjusted for partnerships.
     * @return a new Deal.
     */

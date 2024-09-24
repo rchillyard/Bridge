@@ -57,17 +57,17 @@ class StateTreeSpec extends flatspec.AnyFlatSpec with should.Matchers {
   }
 
   // TODO sort this out.
-//  it should "enumerateFollows" in {
-//    val deal = Deal("test", 2L)
-//    deal.output(Output(System.out)).close()
-//    val whist = Whist(deal, 0)
-//    val trick = Trick(1, List(CardPlay(deal, 0, Spades, 1)), None)
-//    val state = State(whist, trick)
-//    val ss = state.enumerateFollows
-//    ss.size shouldBe 2
-//    ss.head.trick.toString shouldBe "T1 {SK, S4}"
-//    ss.last.trick.toString shouldBe "T1 {SK, SJ}"
-//  }
+  //  it should "enumerateFollows" in {
+  //    val deal = Deal("test", 2L)
+  //    deal.output(Output(System.out)).close()
+  //    val whist = Whist(deal, 0)
+  //    val trick = Trick(1, List(CardPlay(deal, 0, Spades, 1)), None)
+  //    val state = State(whist, trick)
+  //    val ss = state.enumerateFollows
+  //    ss.size shouldBe 2
+  //    ss.head.trick.toString shouldBe "T1 {SK, S4}"
+  //    ss.last.trick.toString shouldBe "T1 {SK, SJ}"
+  //  }
 
   // TODO restore me
   ignore should "expand 1" in {

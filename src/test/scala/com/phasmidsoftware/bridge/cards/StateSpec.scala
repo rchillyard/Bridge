@@ -108,18 +108,18 @@ class StateSpec extends AnyFlatSpec with should.Matchers {
     writer.spillway shouldBe "T1 N:S5 (4.0)"
   }
 
-//  it should "enumerateFollows" in {
-//    val target = State.create(whist, trick0 :+ play0, tricks0)
-//    val follows = target.enumerateFollows
-//    follows.size shouldBe 4
-//    follows.head.cardsPlayed shouldBe 2
-//    follows.head.isConsistent shouldBe true
-//  }
-//
-//  it should "enumerateFollows bis" in {
-//    val target = State(whist)
-//    an[CardException] should be thrownBy target.enumerateFollows
-//  }
+  //  it should "enumerateFollows" in {
+  //    val target = State.create(whist, trick0 :+ play0, tricks0)
+  //    val follows = target.enumerateFollows
+  //    follows.size shouldBe 4
+  //    follows.head.cardsPlayed shouldBe 2
+  //    follows.head.isConsistent shouldBe true
+  //  }
+  //
+  //  it should "enumerateFollows bis" in {
+  //    val target = State(whist)
+  //    an[CardException] should be thrownBy target.enumerateFollows
+  //  }
 
   it should "enumeratePlays" in {
     val target = State(whist)

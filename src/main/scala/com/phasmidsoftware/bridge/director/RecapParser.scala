@@ -6,8 +6,8 @@ package com.phasmidsoftware.bridge.director
 
 import scala.io.Source
 import scala.language.postfixOps
-import scala.util.parsing.combinator.JavaTokenParsers
 import scala.util._
+import scala.util.parsing.combinator.JavaTokenParsers
 
 
 /**
