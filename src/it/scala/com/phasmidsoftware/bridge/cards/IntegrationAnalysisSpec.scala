@@ -37,8 +37,6 @@ class IntegrationAnalysisSpec extends flatspec.AnyFlatSpec with should.Matchers 
         val tricks = n.toInt
         print(s"analyzeDoubleDummy: $event Board $board tricks=$tricks, declarer=$l, leader=$leader...")
         System.out.flush()
-        // FIXME
-
         val result = if (board == 15 && leader == 0) None
         else Whist(deal, leader).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0)
         result match {
