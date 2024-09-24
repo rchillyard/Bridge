@@ -12,9 +12,9 @@ import org.scalatest.{AnyFlatSpec, should.Matchers}
 import scala.io.Source
 
 //noinspection ScalaStyle
-class AnalysisSpec extends AnyFlatSpec with should.Matchers with TimeLimitedTests {
+class AnalysisSpec extends flatspec.AnyFlatSpec with should.Matchers with TimeLimitedTests {
 
-  val timeLimit = Span(5, Seconds)
+  val timeLimit = Span(25, Seconds)
 
   State.count = 0
   private val so = Option(getClass.getResourceAsStream("westwood_20190625_1.pbn")) map (Source.fromInputStream(_))

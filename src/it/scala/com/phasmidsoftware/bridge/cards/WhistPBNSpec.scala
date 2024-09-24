@@ -13,7 +13,7 @@ import scala.io.Source
 import scala.util.Try
 
 //noinspection ScalaStyle
-class WhistPBNSpec extends AnyFlatSpec with should.Matchers with TimeLimitedTests {
+class WhistPBNSpec extends flatspec.AnyFlatSpec with should.Matchers with TimeLimitedTests {
 
   // NOTE: in the previous version, the limit was 3 seconds.
   // We are doing a lot more now (5 strains instead of just NT).
