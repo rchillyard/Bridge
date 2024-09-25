@@ -130,7 +130,7 @@ class StateSpec extends AnyFlatSpec with should.Matchers {
     //    plays.head.trick.plays.head shouldBe CardPlay(deal, None, north, Hearts, 10)
   }
 
-  ignore should "get complex neat output" in {
+  it should "get complex neat output" in {
     val deal = Deal("test", 0L)
     val whist0 = Whist(deal, 0)
     val state0 = State(whist0)

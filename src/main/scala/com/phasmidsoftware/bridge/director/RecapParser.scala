@@ -7,6 +7,7 @@ package com.phasmidsoftware.bridge.director
 import scala.io.Source
 import scala.language.postfixOps
 import scala.util._
+import scala.util.matching.Regex
 import scala.util.parsing.combinator.JavaTokenParsers
 
 
@@ -15,6 +16,8 @@ import scala.util.parsing.combinator.JavaTokenParsers
   */
 class RecapParser extends JavaTokenParsers {
   override def skipWhitespace: Boolean = false
+
+  override val whiteSpace: Regex = """[\t ]+""".r
 
   // XXX event parser yields an Event and is a title followed by a list of sections
   def event: Parser[Event] = (title <~ endOfLine) ~ rep(section) <~ opt(eoi) ^^ { case p ~ ss => Event(p, ss) }
@@ -26,7 +29,7 @@ class RecapParser extends JavaTokenParsers {
   def preamble: Parser[Preamble] = (sectionIdentifier ~ opt(spacer ~> modifier) <~ endOfLine) ~ pairs ^^ { case t ~ wo ~ ps => Preamble(t, wo, ps) }
 
   // XXX a modifier consisting of at least one capital letter
-  def modifier: Parser[String] = """[A-Z]+""".r
+  private def modifier: Parser[String] = """[A-Z]+""".r
 
   // XXX list of pairs, each terminated by a endOfLine
   def pairs: Parser[Seq[Pair]] = rep(pair <~ endOfLine)
@@ -65,10 +68,10 @@ class RecapParser extends JavaTokenParsers {
     (opt(spacer) ~> wholeNumber <~ spacer) ~ (wholeNumber <~ spacer) ~ result ^^ { case n ~ e ~ r => Play(Try(n.toInt), Try(e.toInt), r) }
 
   // XXX boardResults parser yields a list of BoardResult objects where each result is terminated by a endOfLine.
-  def boardResults: Parser[Seq[BoardResult]] = rep(boardResult <~ endOfLine)
+  private def boardResults: Parser[Seq[BoardResult]] = rep(boardResult <~ endOfLine)
 
   // XXX boardResult parser yields a BoardResult
-  def boardResult: Parser[BoardResult] = opt(spacer) ~> (wholeNumber <~ spacer) ~ result ^^ { case n ~ r => BoardResult(n.toInt, r) }
+  private def boardResult: Parser[BoardResult] = opt(spacer) ~> (wholeNumber <~ spacer) ~ result ^^ { case n ~ r => BoardResult(n.toInt, r) }
 
   // XXX result parser yields a PlayResult object and must be either a number (a bridge score) or a string such as DNP or A[+-]
   def result: Parser[PlayResult] = (wholeNumber | "DNP" | regex("""A[\-+]?""".r) | failure("result")) ^^ (s => PlayResult(s))
@@ -76,7 +79,7 @@ class RecapParser extends JavaTokenParsers {
   // XXX title parser yields a String and must be a String not including a endOfLine
   def title: Parser[String] = """[^\r\n]+""".r
 
-  def endOfLine: Parser[String] = s""" *$newline""".r | """ *\n""".r
+  def endOfLine: Parser[String] = s"""$newline""".r | """\n""".r // XXX is this OK?
 
   private def spacer: Parser[String] = """[ \t]*""".r
 
