@@ -165,7 +165,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     * @return a new instance of Output.
     */
   def output(output: Output, xo: Option[Unit]): Output = {
-    // TODO figure out why we can't just import SuitOrdering from Suit
+    // XXX figure out why we can't just import SuitOrdering from Suit
     // NOTE: unused
     implicit object SuitOrdering extends Ordering[Suit] {
       override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
@@ -180,7 +180,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     * @return a debug string for this Hand.
     */
   override def toString: String = {
-    // TODO figure out why we can't just import SuitOrdering from Suit
+    // XXX figure out why we can't just import SuitOrdering from Suit
     // NOTE: unused
     implicit object SuitOrdering extends Ordering[Suit] {
       override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
@@ -195,7 +195,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     * @return
     */
   lazy val neatOutput: String = {
-    // TODO figure out why we can't just import SuitOrdering from Suit
+    // XXX figure out why we can't just import SuitOrdering from Suit
     implicit object SuitOrdering extends Ordering[Suit] {
       override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
     }

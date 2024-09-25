@@ -16,7 +16,7 @@ import org.scalatest.matchers.should
 class HowellSpec extends AnyFlatSpec with should.Matchers with Inside {
   "modulo" should "work on 1-n, etc." in {
     implicit val n: Int = 4
-    implicit val tables: List[Table] = Table.tables(3) // TODO this is not correct
+    implicit val tables: List[Table] = Table.tables(3) // CONSIDER this is not correct
     val e = Encounter(1, 2, 3, 4)
     e.modulo(-3) shouldBe 1
     e.modulo(-2) shouldBe 2
@@ -26,7 +26,7 @@ class HowellSpec extends AnyFlatSpec with should.Matchers with Inside {
   }
   "move" should "work on Encounter" in {
     implicit val n: Int = 4
-    implicit val tables: List[Table] = Table.tables(3) // TODO this is not correct
+    implicit val tables: List[Table] = Table.tables(3) // CONSIDER this is not correct
     val e = Encounter(1, 2, 3, 4)
     val p = Position(List(Encounter(1, 3, 2, 1), Encounter(2, 1, 4, 2), Encounter(3, 4, 1, 3), Encounter(4, 2, 3, 4)))
     val moves = director.Triple(-3, -2, -1)
@@ -36,7 +36,7 @@ class HowellSpec extends AnyFlatSpec with should.Matchers with Inside {
 
   "Howell" should "work with 4 tables" in {
     implicit val n: Int = 4
-    implicit val tables: List[Table] = Table.tables(3) // TODO this is not correct
+    implicit val tables: List[Table] = Table.tables(3) // CONSIDER this is not correct
     val howell = Howell("", tables, director.Triple(List(-3), List(-2), List(-1)))
     val start = Position(List(Encounter(1, 3, 2, 1), Encounter(2, 1, 4, 2), Encounter(3, 4, 1, 3), Encounter(4, 2, 3, 4)))
     val positions = howell.positions(start)

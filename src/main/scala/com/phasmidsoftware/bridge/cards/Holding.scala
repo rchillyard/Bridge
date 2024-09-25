@@ -198,7 +198,7 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
   private lazy val maybeSuit: Option[Suit] = cards.headOption map (_.suit)
 
   private lazy val _evaluate: Double = {
-    // TODO Do this properly but, for now, I'm going to use iteration and var !!
+    // CONSIDER Do this properly but, for now, I'm going to use iteration and var !!
     var result = 0.0
     var cards = 0
     for (i <- sequences.indices) {
@@ -210,7 +210,7 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
     result
   }
 
-  // TODO Merge this with the following method
+  // CONSIDER Merge this with the following method
   private def chooseFollowSuitPlays(createPlay: Int => CardPlay, strategy: Strategy, priorityToBeat: Int): Seq[CardPlay] = {
     // XXX this function is used to sort the possible plays according to which fits the given strategy best (smallest resulting Int)
     def sortFunction(play: CardPlay): Int = Holding.applyFollowSuitStrategy(strategy, priorityToBeat, play.priority)
@@ -274,7 +274,7 @@ object Holding {
   /**
     * An ordering for Ranks.
     * Lower priorities precede higher priorities.
-    * TODO merge with duplicate code.
+    * CONSIDER merge with duplicate code.
     */
   implicit object RankOrdering extends Ordering[Rank] {
     override def compare(x: Rank, y: Rank): Int = -x.priority + y.priority

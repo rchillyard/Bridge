@@ -127,7 +127,7 @@ case class Trick(index: Int, plays: Seq[CardPlay], maybePrior: Option[Trick]) ex
   /**
     * Enumerate the possible plays to follow the current play.
     *
-    * TODO move this into Whist?
+    * CONSIDER move this into Whist?
     *
     * @param whist the current game (only needed when the opening lead is being made) ???
     * @return a sequence of Trick instances, each based on:
@@ -171,7 +171,7 @@ case class Trick(index: Int, plays: Seq[CardPlay], maybePrior: Option[Trick]) ex
   /**
     * NOTE: this doesn't look right
     *
-    * TODO: this entire mechanism of generating plays needs a complete re-write!
+    * CONSIDER: this entire mechanism of generating plays needs a complete re-write!
     *
     * @param deal   the deal.
     * @param leader the opening leader.
@@ -197,13 +197,13 @@ case class Trick(index: Int, plays: Seq[CardPlay], maybePrior: Option[Trick]) ex
     case _ => StandardOpeningLead
   }
 
-  // TODO make private
+  // CONSIDER make private
   def chooseLeads(deal: Deal, leader: Int, strain: Option[Suit]): Seq[CardPlay] = {
     val z: Seq[(CardPlay, Int)] = for {(s, h) <- deal.hands(leader).holdings.toList
                                        strategy = leadStrategy(s, h, strain)
                                        p <- h.choosePlays(deal, strain, leader, strategy, None)}
     yield p -> h.nCards
-    // TODO incorporate this into the code
+    // CONSIDER incorporate this into the code
     val _: Seq[(Suit, Seq[(CardPlay, Int)])] = z.groupBy { case (p, _) => p.suit }.toList
     val (q, _) = z.sortWith((x, _) => x._1.isStiff(x._2)).sortBy(x => -x._2).unzip
     q
@@ -250,7 +250,7 @@ case class Winner(play: CardPlay, complete: Boolean) {
 
   def priorityToBeat(hand: Int): Int = if (sameSide(hand)) Rank.lowestPriority else play.priority
 
-  // TODO this looks a bit suspicious, but it is indeed used to prioritize plays!
+  // CONSIDER this looks a bit suspicious, but it is indeed used to prioritize plays!
   def partnerIsWinning(hand: Int): Boolean = play.isHonor && sameSide(hand)
 
   // NOTE: the following logical looking alternative doesn't work well.

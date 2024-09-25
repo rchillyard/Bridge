@@ -394,7 +394,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     for ((_, Card(_, t, _)) <- cards) t shouldBe resultANS.top + 1
   }
 
-  // TODO sort this out.
+  // CONSIDER sort this out.
   // This file seems to be incorrect so maybe it's not a problem that this test doesn't succeed
   //	ignore should "read travelers.lexington.2016.0503 as a resource" in {
   //		val resource = "travelers.lexington.2016.0503"

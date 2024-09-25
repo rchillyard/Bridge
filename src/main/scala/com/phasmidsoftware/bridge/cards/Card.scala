@@ -83,11 +83,10 @@ object Card {
 sealed trait Priority {
   /**
     * The priority of this object.
-    * For Rank, Ace: 0, King: 1, Deuce: 2.
-    * TODO check the following:
+    * For Rank, Ace: 0, King: 1, Deuce: 12.
     * For Suit, Spades: 0, Clubs: 3.
     *
-    * @return
+    * @return a priority value (smaller is higher).
     */
   def priority: Int
 }

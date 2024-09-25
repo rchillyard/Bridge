@@ -129,7 +129,7 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
   private lazy val _quit = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.quit))
 
   /**
-    * TODO Should be private
+    * CONSIDER Should be private
     */
   lazy val _cooperate: Deal = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.cooperate(partner(k)(s))))
 

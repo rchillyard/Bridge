@@ -83,7 +83,7 @@ case class Tricks(ns: Int, ew: Int) extends Evaluatable {
   def counterGoal(tricks: Int): Boolean = ew >= Deal.TricksPerDeal + 1 - tricks
 
   /**
-    * TODO test this.
+    * TESTME test this.
     *
     * @return a Double representing the value of this Tricks.
     */

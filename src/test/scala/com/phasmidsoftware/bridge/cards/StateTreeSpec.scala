@@ -38,7 +38,7 @@ class StateTreeSpec extends flatspec.AnyFlatSpec with should.Matchers {
   implicit val se: Expandable[State] = new OldStyleExpandable()
 
   it should "apply" in {
-    // TODO sort this out properly.
+    // CONSIDER sort this out properly.
     val trick = Trick.empty
     implicit val whistGoal: GoalDriven[State] = Whist.goal(0, _directionNS = true, 1)
     val root = StateNode(State(whist00, trick, Tricks.zero), so = None, Nil)

@@ -50,7 +50,7 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
     *
     * Method to validate this State.
     *
-    * TODO test this.
+    * TESTME test this.
     *
     * @return true if all the plays of the trick are validated
     */
