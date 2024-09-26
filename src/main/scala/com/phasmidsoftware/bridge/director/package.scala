@@ -5,5 +5,5 @@
 package com.phasmidsoftware.bridge
 
 package object director {
-
+  type Pos = (Int, Card) // XXX Pair number and their "card"
 }

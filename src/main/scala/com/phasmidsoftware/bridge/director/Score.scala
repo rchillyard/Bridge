@@ -18,6 +18,7 @@ import scala.util.{Failure, Success, _}
   *
   */
 object Score extends App {
+
   if (args.length > 0)
     doScoreFromName(isResource = false, args.head) match {
       case Success(o) => o.close()
@@ -38,6 +39,7 @@ object Score extends App {
 
   def doScoreFromFile(filename: String, output: Output = Output(new PrintWriter(System.out))): Try[Output] = doScore(Source.fromFile(filename), output)
 
+  // TESTME
   def doScore(source: BufferedSource, output: Output = Output(new PrintWriter(System.out))): Try[Output] = {
 
     implicit val separator: Output = Output.empty.insertBreak()
@@ -140,11 +142,11 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler]) extends Outputa
 
   private def all(n: Int, dir: Boolean): Seq[Option[Rational]] = recap.filter(_.matchesPair(n, dir)) map (_.getMatchpoints(dir))
 
-  private def total(d: Boolean): Seq[(Int, Card)] = for {p <- preamble.pairs
-                                                         ros = all(p.number, d)
-                                                         } yield p.number -> Card(ros)
+  private def total(d: Boolean): Seq[Pos] = for {p <- preamble.pairs
+                                                 ros = all(p.number, d)
+                                                 } yield p.number -> Card(ros)
 
-  private def sum(iCs: Seq[(Int, Card)]): Card = {
+  private def sum(iCs: Seq[Pos]): Card = {
     val (is, cs) = iCs.unzip
     if (is.distinct.length > 1) throw ScoreException(s"logic error: sum: indices should be the same")
     cs.foldLeft(Card(0, 0, 0))(_ + _)
@@ -284,14 +286,18 @@ case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
   }
 
   private def getResultsForDirection(nameFunction: Int => String) = {
-    def resultDetails(s: ((Int, Card), Int)): Output = {
+    def resultDetails(s: (Pos, Int)): Output = {
       val ((pairNumber, card), rank) = s
       Output(s"""$rank\t$pairNumber\t${card.toStringMps(top)}\t${card.toStringPercent}\t${nameFunction(pairNumber)}""").insertBreak()
     }
 
-    val header = Output(s"""Rank\tPair\tMPs\tPercent\tNames\n""")
-    val ranking: List[((Int, Card), Int)] = cards.toList.sortBy(_._2).reverse.zip(LazyList.from(1))
-    Output.foldLeft(ranking)(header)(_ ++ resultDetails(_))
+    val header = Output(s"""Pos\tPair\tMPs\tPercent\tNames\n""")
+    val cardsInOrder: Seq[Pos] = cards.toList.sortBy(_._2).reverse
+    val keyFunction: Pos => Rational = t => t._2.totalMps
+    val psRM: Map[Rational, Seq[Pos]] = cardsInOrder.groupBy[Rational](keyFunction)
+    val psRXs: Seq[((Rational, Seq[Pos]), Int)] = psRM.toSeq.sortBy(_._1).reverse.zipWithIndex
+    val xPs: Seq[(Pos, Int)] = for {((_, ps), x) <- psRXs; p <- ps} yield (p, x + 1)
+    Output.foldLeft(xPs)(header)(_ ++ resultDetails(_))
   }
 }
 
