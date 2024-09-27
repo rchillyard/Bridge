@@ -286,28 +286,27 @@ case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
   }
 
   private def getResultsForDirection(nameFunction: Int => String) = {
+
+    case class Psi(len: Int, rank: Int, ps: Seq[Pos])
+    object Psi {
+      def empty: Psi = Psi(0, 0, Nil)
+    }
+
     def resultDetails(s: (Pos, Int)): Output = {
       val ((pairNumber, card), rank) = s
       Output(s"""$rank\t$pairNumber\t${card.toStringMps(top)}\t${card.toStringPercent}\t${nameFunction(pairNumber)}""").insertBreak()
     }
 
-    val header = Output(s"""Pos\tPair\tMPs\tPercent\tNames\n""")
     val keyFunction: Pos => Rational = t => t._2.totalMps
-    val cardsInOrder: Seq[Pos] = cards.toList.sortBy(_._2).reverse
-    val psRM: Map[Rational, Seq[Pos]] = cardsInOrder.groupBy[Rational](keyFunction)
 
-    val psRs: Seq[(Rational, Seq[Pos])] = psRM.toSeq.sortBy(_._1).reverse
-
-    case class Info(y: Int, z: Int, ps: Seq[Pos])
-
-    val psIIs: Seq[(Int, Int, Seq[Pos])] = psRs.scanLeft[(Int, Int, Seq[Pos])]((0,0,Nil)){
-      (psII, pR) =>
-        val z = psII._1
-        val y = z + pR._2.length
-        (y, z, pR._2)
+    val ps: Seq[Pos] = cards.toList.sortBy(_._2).reverse
+    val psRm: Map[Rational, Seq[Pos]] = ps.groupBy[Rational](keyFunction)
+    val psRs: Seq[(Rational, Seq[Pos])] = psRm.toSeq.sortBy(_._1).reverse
+    val psis: Seq[Psi] = psRs.scanLeft(Psi.empty) {
+      case (Psi(l, _, _), (_, ps)) => Psi(l + ps.length, l, ps)
     }
-
-    val xPs: Seq[(Pos, Int)] = for {(_, z, ps) <- psIIs; p <- ps} yield (p, z + 1)
+    val xPs: Seq[(Pos, Int)] = for {Psi(_, r, ps) <- psis; p <- ps} yield (p, r + 1)
+    val header = Output(s"""Pos\tPair\tMPs\tPercent\tNames\n""")
     Output.foldLeft(xPs)(header)(_ ++ resultDetails(_))
   }
 }
