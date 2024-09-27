@@ -292,11 +292,22 @@ case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
     }
 
     val header = Output(s"""Pos\tPair\tMPs\tPercent\tNames\n""")
-    val cardsInOrder: Seq[Pos] = cards.toList.sortBy(_._2).reverse
     val keyFunction: Pos => Rational = t => t._2.totalMps
+    val cardsInOrder: Seq[Pos] = cards.toList.sortBy(_._2).reverse
     val psRM: Map[Rational, Seq[Pos]] = cardsInOrder.groupBy[Rational](keyFunction)
-    val psRXs: Seq[((Rational, Seq[Pos]), Int)] = psRM.toSeq.sortBy(_._1).reverse.zipWithIndex
-    val xPs: Seq[(Pos, Int)] = for {((_, ps), x) <- psRXs; p <- ps} yield (p, x + 1)
+
+    val psRs: Seq[(Rational, Seq[Pos])] = psRM.toSeq.sortBy(_._1).reverse
+
+    case class Info(y: Int, z: Int, ps: Seq[Pos])
+
+    val psIIs: Seq[(Int, Int, Seq[Pos])] = psRs.scanLeft[(Int, Int, Seq[Pos])]((0,0,Nil)){
+      (psII, pR) =>
+        val z = psII._1
+        val y = z + pR._2.length
+        (y, z, pR._2)
+    }
+
+    val xPs: Seq[(Pos, Int)] = for {(_, z, ps) <- psIIs; p <- ps} yield (p, z + 1)
     Output.foldLeft(xPs)(header)(_ ++ resultDetails(_))
   }
 }
