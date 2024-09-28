@@ -19,28 +19,32 @@ import scala.util.{Failure, Success, _}
   */
 object Score extends App {
 
+  private val printWriter = new PrintWriter(System.out)
+  lazy val defaultOutput: Output = Output.untabbedWriter(printWriter, 6)
+
   if (args.length > 0)
-    doScoreFromName(isResource = false, args.head) match {
+    doScoreFromName(isResource = false, args.head, Output.untabbedWriter(printWriter, 8)) match {
       case Success(o) => o.close()
       case Failure(x) => System.err.println(s"Score ${args.mkString} threw an exception: $x")
     }
   else System.err.println("Syntax: Score filename")
 
-  def doScoreFromName(isResource: Boolean, name: String, output: Output = Output(new PrintWriter(System.out))): Try[Output] = Using(
+
+  def doScoreFromName(isResource: Boolean, name: String, output: Output = defaultOutput): Try[Output] = Using(
     if (isResource) Source.fromResource(name) else Source.fromFile(name)
   ) { s => doScore(s, output) }
 
   // TODO use the methods in Result
-  def doScoreResource(resource: String, output: Output = Output(new PrintWriter(System.out))): Try[Output] =
+  def doScoreResource(resource: String, output: Output = defaultOutput): Try[Output] =
     Option(getClass.getResourceAsStream(resource)) match {
       case Some(s) => doScore(Source.fromInputStream(s), output)
       case None => Failure(ScoreException(s"doScoreResource: cannot open resource: $resource"))
     }
 
-  def doScoreFromFile(filename: String, output: Output = Output(new PrintWriter(System.out))): Try[Output] = doScore(Source.fromFile(filename), output)
+  def doScoreFromFile(filename: String, output: Output = defaultOutput): Try[Output] = doScore(Source.fromFile(filename), output)
 
   // TESTME
-  def doScore(source: BufferedSource, output: Output = Output(new PrintWriter(System.out))): Try[Output] = {
+  def doScore(source: BufferedSource, output: Output = defaultOutput): Try[Output] = {
 
     implicit val separator: Output = Output.empty.insertBreak()
 
@@ -306,7 +310,7 @@ case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
       case (Psi(l, _, _), (_, ps)) => Psi(l + ps.length, l, ps)
     }
     val xPs: Seq[(Pos, Int)] = for {Psi(_, r, ps) <- psis; p <- ps} yield (p, r + 1)
-    val header = Output(s"""Pos\tPair\tMPs\tPercent\tNames\n""")
+    val header = Output(s"Pos\tPair\tMPs\tPercent\tNames\n")
     Output.foldLeft(xPs)(header)(_ ++ resultDetails(_))
   }
 }
