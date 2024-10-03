@@ -20,10 +20,13 @@ import scala.util.{Failure, Success, _}
 object Score extends App {
 
   private val printWriter = new PrintWriter(System.out)
-  lazy val defaultOutput: Output = Output.untabbedWriter(printWriter, 6)
+  lazy val tabbedOutput: Output = Output(printWriter)
+  lazy val untabbedOutput: Output = Output.untabbedWriter(printWriter, 6)
+  // TODO set this to use untabbedOutput if you want all tabs turned into spaces.
+  lazy val defaultOutput: Output = tabbedOutput
 
   if (args.length > 0)
-    doScoreFromName(isResource = false, args.head, Output.untabbedWriter(printWriter, 8)) match {
+    doScoreFromName(isResource = false, args.head, defaultOutput) match {
       case Success(o) => o.close()
       case Failure(x) => System.err.println(s"Score ${args.mkString} threw an exception: $x")
     }
