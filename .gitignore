@@ -22,3 +22,5 @@ src/test/scala/com/phasmidsoftware/bridge/director/CardTest.scala
 /*.numbers
 /*.csv
 /*.xlsx
+
+src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20241001.txt

@@ -299,9 +299,9 @@ case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
       def empty: Psi = Psi(0, 0, Nil)
     }
 
-    def resultDetails(s: (Pos, Int)): Output = {
-      val ((pairNumber, card), rank) = s
-      Output(s"""$rank\t$pairNumber\t${card.toStringMps(top)}\t${card.toStringPercent}\t${nameFunction(pairNumber)}""").insertBreak()
+    def resultDetails(s: (Pos, Int, String)): Output = {
+      val ((pairNumber, card), rank, suffix) = s
+      Output(s"""$rank$suffix\t$pairNumber\t${card.toStringMps(top)}\t${card.toStringPercent}\t${nameFunction(pairNumber)}""").insertBreak()
     }
 
     val keyFunction: Pos => Rational = t => t._2.totalMps
@@ -312,7 +312,7 @@ case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
     val psis: Seq[Psi] = psRs.scanLeft(Psi.empty) {
       case (Psi(l, _, _), (_, ps)) => Psi(l + ps.length, l, ps)
     }
-    val xPs: Seq[(Pos, Int)] = for {Psi(_, r, ps) <- psis; p <- ps} yield (p, r + 1)
+    val xPs: Seq[(Pos, Int, String)] = for {Psi(_, r, ps) <- psis; x = if (ps.size > 1) "=" else " "; p <- ps} yield (p, r + 1, x)
     val header = Output(s"Pos\tPair\tMPs\tPercent\tNames\n")
     Output.foldLeft(xPs)(header)(_ ++ resultDetails(_))
   }
