@@ -82,7 +82,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val updatedMap = target.addTo(travelerMap)
     updatedMap.size shouldBe 1
     val maybeTraveler = updatedMap.get(board)
-    maybeTraveler should matchPattern { case Some(Traveler(_, _)) => }
+    maybeTraveler should matchPattern { case Some(Traveler(_, _, _)) => }
     val t = maybeTraveler.get
     t.board shouldBe board
     t.ps.size shouldBe 1
@@ -92,12 +92,12 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val board = 1
     val play1 = Play(1, 2, PlayResult("110"))
     val play2 = Play(3, 4, PlayResult("100"))
-    val travelerMap = Map[Int, Traveler](1 -> Traveler(1, List(play2)))
+    val travelerMap = Map[Int, Traveler](1 -> Traveler(1, List(play2), None))
     val target = BoardPlay(board, play1)
     val updatedMap = target.addTo(travelerMap)
     updatedMap.size shouldBe 1
     val maybeTraveler = updatedMap.get(board)
-    maybeTraveler should matchPattern { case Some(Traveler(_, _)) => }
+    maybeTraveler should matchPattern { case Some(Traveler(_, _, _)) => }
     val t = maybeTraveler.get
     t.board shouldBe board
     t.ps.size shouldBe 2
@@ -131,24 +131,24 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
   it should "matchpoint properly (1)" in {
     val p1 = Play(2, 1, PlayResult(Right(130)))
     val p2 = Play(1, 2, PlayResult(Right(150)))
-    val t = Traveler(1, Seq(p1, p2))
+    val t = Traveler(1, Seq(p1, p2), None)
     t.matchpoint(p1) shouldBe Some(Rational.zero)
     t.matchpoint(p2) shouldBe Some(Rational.one)
   }
   it should "matchpoint properly (2)" in {
     val p1 = Play(2, 1, PlayResult(Right(130)))
     val p2 = Play(1, 2, PlayResult(Right(150)))
-    val t = Traveler(1, List(p1, p2))
-    val mps = t.matchpointIt
-    mps.head.mp shouldBe Some(Rational.zero)
-    mps.tail.head.mp shouldBe Some(Rational.one)
+    val t = Traveler(1, List(p1, p2), None)
+    val mps = t.matchpointIt(1).maybeMatchpoints
+    mps.get.head.mp shouldBe Some(Rational.zero)
+    mps.get.tail.head.mp shouldBe Some(Rational.one)
   }
   it should "matchpoint properly (3)" in {
     val p1 = Play(2, 1, PlayResult(Right(130)))
     val p2 = Play(1, 2, PlayResult(Right(150)))
     val p3 = Play(3, 3, PlayResult(Right(150)))
-    val t = Traveler(1, List(p1, p2, p3))
-    val mps = t.matchpointIt
+    val t = Traveler(1, List(p1, p2, p3), None)
+    val mps = t.matchpointIt(2).maybeMatchpoints.get
     mps.head.mp shouldBe Some(Rational.zero)
     mps.tail.head.mp shouldBe Some(Rational(3, 4))
     Card.mpsAsString(mps.tail.head.mp.get, 2) shouldBe " 1.50"
@@ -187,7 +187,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val ew2 = 16
     val play1 = Play(ns1, ew1, result1)
     val play2 = Play(ns2, ew2, result2)
-    val target = Traveler(bd, List(play1, play2))
+    val target = Traveler(bd, List(play1, play2), None)
     target.board shouldBe bd
     target.ps.size shouldBe 2
     target.ps shouldBe List(play1, play2)
@@ -215,18 +215,18 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val ew2 = 16
     val play1 = Play(ns1, ew1, result1)
     val play2 = Play(ns2, ew2, result2)
-    val target = Traveler(bd, List(play1, play2))
+    val target = Traveler(bd, List(play1, play2), None)
     target.board shouldBe bd
     target.ps.size shouldBe 2
     target.ps shouldBe List(play1, play2)
     target.isPlayed shouldBe true
     target.top shouldBe 1
-    target.toString shouldBe s"Traveler($bd,List($ns1 vs $ew1: $score1, $ns2 vs $ew2: $score2))"
+    target.toString shouldBe s"Traveler($bd,List($ns1 vs $ew1: $score1, $ns2 vs $ew2: $score2),None)"
   }
   it should "matchpoint" in {
     val play1 = Play(13, 17, PlayResult("110"))
     val play2 = Play(14, 16, PlayResult("100"))
-    val target = Traveler(5, Seq(play1, play2))
+    val target = Traveler(5, Seq(play1, play2), None)
     target.matchpoint(play1) shouldBe Some(Rational(1))
     target.matchpoint(play2) shouldBe Some(Rational(0))
   }
@@ -240,11 +240,11 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val ns2 = 14
     val ew1 = 17
     val ew2 = 16
-    val target = Traveler(bd, List(Play(ns1, ew1, result1), Play(ns2, ew2, result2)))
+    val target = Traveler(bd, List(Play(ns1, ew1, result1), Play(ns2, ew2, result2)), None)
     val top = 1
     val matchpoints1 = Matchpoints(ns1, ew1, result1, Some(Rational(1)), top)
     val matchpoints2 = Matchpoints(ns2, ew2, result2, Some(Rational(0)), top)
-    target.matchpointIt shouldBe Seq(matchpoints1, matchpoints2)
+    target.matchpointIt(top) shouldBe target.copy(maybeMatchpoints = Some(Seq(matchpoints1, matchpoints2)))
   }
   it should ":+" in {
     val score1 = "110"
@@ -257,10 +257,10 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val ew = 17
     val play1 = Play(ns, ew, result1)
     val play2 = Play(ns, ew, result2)
-    val target5 = Traveler(bd1, Nil)
-    target5 :+ play1 shouldBe Traveler(bd1, List(play1))
-    val target6 = Traveler(bd2, Nil)
-    target6 :+ play2 shouldBe Traveler(bd2, List(play2))
+    val target5 = Traveler(bd1, Nil, None)
+    target5 :+ play1 shouldBe Traveler(bd1, List(play1), None)
+    val target6 = Traveler(bd2, Nil, None)
+    target6 :+ play2 shouldBe Traveler(bd2, List(play2), None)
   }
 
   behavior of "pairs"
@@ -276,17 +276,17 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
   behavior of "result"
   it should "score DNP as None" in {
     val p1 = Play(1, 1, PlayResult(Left("DNP")))
-    val t = Traveler(1, List())
+    val t = Traveler(1, List(), None)
     p1.matchpoints(t) shouldBe None
   }
   it should "score A as Some(1/2)" in {
     val p1 = Play(1, 1, PlayResult(Left("A")))
-    val t = Traveler(1, List())
+    val t = Traveler(1, List(), None)
     p1.matchpoints(t) shouldBe Some(Rational(1, 2))
   }
   it should "score A- as Some(2,5)" in {
     val p1 = Play(1, 1, PlayResult(Left("A-")))
-    val t = Traveler(1, List())
+    val t = Traveler(1, List(), None)
     p1.matchpoints(t) shouldBe Some(Rational(2, 5))
   }
   "percentageAsString" should "work" in {
@@ -326,8 +326,8 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val result122 = PlayResult(Right(100))
     val result222 = PlayResult(Right(-400))
     val result221 = PlayResult(Right(-430))
-    val traveler1 = Traveler(bd1, List(Play(ns1, ew1, result111), Play(ns2, ew2, result122)))
-    val traveler2 = Traveler(bd2, List(Play(ns2, ew2, result222), Play(ns2, ew1, result221)))
+    val traveler1 = Traveler(bd1, List(Play(ns1, ew1, result111), Play(ns2, ew2, result122)), None)
+    val traveler2 = Traveler(bd2, List(Play(ns2, ew2, result222), Play(ns2, ew1, result221)), None)
     val travelers: List[Traveler] = List()
     val pickup111 = Pickup(ns1, ew1, List(BoardResult(bd1, result111)))
     val pickup122 = Pickup(ns2, ew2, List(BoardResult(bd1, result122)))
@@ -356,8 +356,8 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
       director.Pair(2, Some("E"), (Player("Romeo"), Player("Juliet")))
     )
     val travelers: List[Traveler] = List(
-      Traveler(1, List(Play(1, 1, PlayResult(Right(110))), Play(2, 2, PlayResult(Right(100))))),
-      Traveler(2, List(Play(1, 2, PlayResult(Right(-400))), Play(2, 1, PlayResult(Right(-430)))))
+      Traveler(1, List(Play(1, 1, PlayResult(Right(110))), Play(2, 2, PlayResult(Right(100)))), None),
+      Traveler(2, List(Play(1, 2, PlayResult(Right(-400))), Play(2, 1, PlayResult(Right(-430)))), None)
     )
     val preamble = Preamble("A", None, pairs)
     val section = Section(preamble, travelers)
@@ -426,23 +426,22 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
   it should "read travelers.lexington.2017.0404 as a resource" in {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreResource("travelers.lexington.2017.0404", Output(writer))) o.close()
-    writer.spilled shouldBe 1767
+    writer.spilled shouldBe 1769
   }
   it should "read travelers.lexington.2017.0404P as a resource (includes pickup slips)" in {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreResource("travelers.lexington.2017.0404P", Output(writer))) o.close()
-    writer.spilled shouldBe 1767
+    writer.spilled shouldBe 1769
   }
   it should "read travelers.lexington.2017.0404 as a file" in {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/travelers.lexington.2017.0404", Output(writer))) o.close()
-    writer.spilled shouldBe 1767
+    writer.spilled shouldBe 1769
   }
   it should "read ConcordCountryClub20191007.txt" in {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreResource("ConcordCountryClub20191007.txt", Output(writer))) o.close()
-    writer.spilled shouldBe 2013
-    println(writer.spillway)
+    writer.spilled shouldBe 2014
   }
 
   // FIXME Issue #8
@@ -538,12 +537,158 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/KeremShalom.tsv", Output(writer))) o.close()
     //noinspection SpellCheckingInspection
     //    writer.spillway shouldBe "Kerem Shalom Beginner Duplicate: May 9th 2019\nSection A\nResults for direction N/S\n1 :  6.00 : 75.00% : Dan & Tenley\n3 :  5.67 : 56.67% : Chris & Kathy\n2 :  5.17 : 43.06% : Irene & Robin\n4 :  3.17 : 31.67% : Tom & Jane\nResults for direction E/W\n4 :  6.83 : 68.33% : Ghilaine & Bill\n2 :  3.83 : 47.92% : JoAnn & Margaret\n1 :  4.33 : 43.33% : Marian & Patty\n3 :  5.00 : 41.67% : Wendy & Ruth\n=====================================================\n=====================================================\nKerem Shalom Beginner Duplicate: May 9th 2019\nA\n1N: Dan & Tenley\n1E: Marian & Patty\n2N: Irene & Robin\n2E: JoAnn & Margaret\n3N: Chris & Kathy\n3E: Wendy & Ruth\n4N: Tom & Jane\n4E: Ghilaine & Bill\n\nBoard: 1 with 4 plays\nNS: 1, EW: 1, score: 450, MP: 1.50\nNS: 2, EW: 3, score: 450, MP: 1.50\nNS: 4, EW: 4, score: 450, MP: 1.50\nNS: 3, EW: 2, score: 450, MP: 1.50\nBoard: 2 with 3 plays\nNS: 1, EW: 1, score: -980, MP: 1.00\nNS: 2, EW: 3, score: -1010, MP: 0.00\nNS: 3, EW: 2, score: -510, MP: 2.00\nBoard: 3 with 4 plays\nNS: 2, EW: 2, score: -650, MP: 1.00\nNS: 4, EW: 4, score: -650, MP: 1.00\nNS: 1, EW: 3, score: 50, MP: 3.00\nNS: 3, EW: 1, score: -650, MP: 1.00\nBoard: 4 with 3 plays\nNS: 2, EW: 2, score: -100, MP: 0.50\nNS: 4, EW: 4, score: -100, MP: 0.50\nNS: 1, EW: 3, score: 1430, MP: 2.00\nBoard: 5 with 3 plays\nNS: 3, EW: 3, score: 50, MP: 1.00\nNS: 2, EW: 1, score: 50, MP: 1.00\nNS: 4, EW: 4, score: 50, MP: 1.00\nBoard: 6 with 3 plays\nNS: 3, EW: 3, score: 450, MP: 1.00\nNS: 2, EW: 1, score: 480, MP: 2.00\nNS: 4, EW: 4, score: -50, MP: 0.00\n"
-    writer.spilled shouldBe 1323
+    writer.spilled shouldBe 1325
   }
   it should "output with equal ranks" in {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20240924.txt", Output(writer))) o.close()
-    writer.spillway.substring(0, 200) shouldBe "Newton Sep 24th 2024\nSection A\nResults for direction N/S\nPos\tPair\tMPs\tPercent\tNames\n1=\t8\t33.50\t69.79%\tAmy Avergun & Penny Scharfman\n1=\t9\t33.50\t69.79%\tMarsha & Robert Greenstein\n3 \t3\t33.00\t68.75%\tKaj W"
+    writer.spillway.substring(0, 200) shouldBe "Newton Sep 24th 2024\nSection A\nResults for direction N/S\nRank\tPair\tMPs\tPercent\tNames\n1=\t8\t33.50\t69.79%\tAmy Avergun & Penny Scharfman\n1=\t9\t33.50\t69.79%\tMarsha & Robert Greenstein\n3 \t3\t33.00\t68.75%\tKaj "
+  }
+  it should "output with unplayed boards" in {
+    val writer = MockWriter(8192)
+    for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20241001a.txt", Output(writer))) o.close()
+    writer.spillway.substring(0, 2000) shouldBe
+      """Newton Oct 1st 2024
+        |Section A
+        |Results for direction N/S
+        |Rank	Pair	MPs	Percent	Names
+        |1 	7	34.99	72.90%	Carol Leahy & Deanna Szeto
+        |2 	6	28.88	60.16%	Mary Ellen Clark & Leslie Greenberg
+        |3 	9	27.50	57.29%	Amy Avergun & Penny Scharfman
+        |4 	8	25.49	53.10%	Jane Venti & Jane Volden
+        |5 	3	22.81	47.51%	Josh Gahm & Marya Van'T Hul
+        |6 	2	21.92	45.66%	Joanne Hennessy & Veets Veitas
+        |7 	5	21.38	44.54%	Vivian Hernandez & Roberta Kosberg
+        |8 	4	19.61	40.86%	Marsha & Rob Greenstein
+        |9 	1	14.00	35.00%	Judy & David Taub
+        |Results for direction E/W
+        |Rank	Pair	MPs	Percent	Names
+        |1 	4	34.39	71.64%	Rick & Lisa Martin
+        |2 	1	33.50	83.75%	Kaj Wilson & Ellen Dockser
+        |3 	3	29.19	60.82%	Robin Zelle & Barbara Berenson
+        |4 	6	25.12	52.34%	Gerri Taylor & Sherrill Kobrick
+        |5 	8	21.51	44.81%	Judy Tucker & Sheila Jones
+        |6 	9	21.50	44.79%	Kathy Curtiss & Linda Worters
+        |7 	7	19.51	40.65%	Alan Gordon & Margaret Meehan
+        |8 	2	16.58	34.55%	Rebecca Kratka & MJ Weinstein
+        |9 	5	 6.12	12.76%	Barbara & Don Oppenheimer
+        |=====================================================
+        |=====================================================
+        |Newton Oct 1st 2024
+        |A
+        |1N	Judy & David Taub
+        |2N	Joanne Hennessy & Veets Veitas
+        |3N	Josh Gahm & Marya Van'T Hul
+        |4N	Marsha & Rob Greenstein
+        |5N	Vivian Hernandez & Roberta Kosberg
+        |6N	Mary Ellen Clark & Leslie Greenberg
+        |7N	Carol Leahy & Deanna Szeto
+        |8N	Jane Venti & Jane Volden
+        |9N	Amy Avergun & Penny Scharfman
+        |1E	Kaj Wilson & Ellen Dockser
+        |2E	Rebecca Kratka & MJ Weinstein
+        |3E	Robin Zelle & Barbara Berenson
+        |4E	Rick & Lisa Martin
+        |5E	Barbara & Don Oppenheimer
+        |6E	Gerri Taylor & Sherrill Kobrick
+        |7E	Alan Gordon & Margaret Meehan
+        |8E	Judy Tucker & Sheila Jones
+        |9E	Kathy Curtiss & Linda Worters
+        |
+        |Board: 1 with 9 plays
+        |NS pair	EW pair	NS score	NS MPs
+        |1	1	-100	 0.00
+        |2	2	110	 5.50
+        |3	3	110	 5.50
+        |4	4	-50	 1.50
+        |5	5	110	 5.50
+        |6	6	-50	 1.50
+        |7	7	110	 5.50
+        |8	8	100	 3.00
+        |9	9	140	 8.00
+        |Board: 2 with 8 plays
+        |NS pair	EW pair	NS score	NS MPs
+        |2	2	-180	 3.43
+        |3	3	-460	 1.14
+        |4	4	-400	 2.29
+        |5	5	-130	 5.14
+        |6	6	-130	 5.14
+        |7	7	-90	 7.43
+        |8	8	-90	 7.43
+        |9	9""".stripMargin
+  }
+  it should "output from Newton" in {
+    val writer = MockWriter(8192)
+    for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20241001.txt", Output(writer))) o.close()
+    writer.spillway.substring(0, 2000) shouldBe
+      """Newton Oct 1st 2024
+        |Section A
+        |Results for direction N/S
+        |Rank	Pair	MPs	Percent	Names
+        |1 	7	34.00	70.83%	Carol Leahy & Deanna Szeto
+        |2 	6	28.50	59.38%	Mary Ellen Clark & Leslie Greenberg
+        |3 	9	27.50	57.29%	Amy Avergun & Penny Scharfman
+        |4 	8	24.50	51.04%	Jane Venti & Jane Volden
+        |5 	3	22.50	46.88%	Josh Gahm & Marya Van'T Hul
+        |6 	2	22.00	45.83%	Joanne Hennessy & Veets Veitas
+        |7 	5	21.00	43.75%	Vivian Hernandez & Roberta Kosberg
+        |8 	4	20.00	41.67%	Marsha & Rob Greenstein
+        |9 	1	16.00	33.33%	Judy & David Taub
+        |Results for direction E/W
+        |Rank	Pair	MPs	Percent	Names
+        |1 	1	39.50	82.29%	Kaj Wilson & Ellen Dockser
+        |2 	4	34.00	70.83%	Rick & Lisa Martin
+        |3 	3	29.50	61.46%	Robin Zelle & Barbara Berenson
+        |4 	6	25.50	53.13%	Gerri Taylor & Sherrill Kobrick
+        |5 	8	22.50	46.88%	Judy Tucker & Sheila Jones
+        |6 	9	21.50	44.79%	Kathy Curtiss & Linda Worters
+        |7 	7	20.50	42.71%	Alan Gordon & Margaret Meehan
+        |8 	2	16.50	34.38%	Rebecca Kratka & MJ Weinstein
+        |9 	5	 6.50	13.54%	Barbara & Don Oppenheimer
+        |=====================================================
+        |=====================================================
+        |Newton Oct 1st 2024
+        |A
+        |1N	Judy & David Taub
+        |2N	Joanne Hennessy & Veets Veitas
+        |3N	Josh Gahm & Marya Van'T Hul
+        |4N	Marsha & Rob Greenstein
+        |5N	Vivian Hernandez & Roberta Kosberg
+        |6N	Mary Ellen Clark & Leslie Greenberg
+        |7N	Carol Leahy & Deanna Szeto
+        |8N	Jane Venti & Jane Volden
+        |9N	Amy Avergun & Penny Scharfman
+        |1E	Kaj Wilson & Ellen Dockser
+        |2E	Rebecca Kratka & MJ Weinstein
+        |3E	Robin Zelle & Barbara Berenson
+        |4E	Rick & Lisa Martin
+        |5E	Barbara & Don Oppenheimer
+        |6E	Gerri Taylor & Sherrill Kobrick
+        |7E	Alan Gordon & Margaret Meehan
+        |8E	Judy Tucker & Sheila Jones
+        |9E	Kathy Curtiss & Linda Worters
+        |
+        |Board: 1 with 9 plays
+        |NS pair	EW pair	NS score	NS MPs
+        |1	1	-100	 0.00
+        |2	2	110	 5.50
+        |3	3	110	 5.50
+        |4	4	-50	 1.50
+        |5	5	110	 5.50
+        |6	6	-50	 1.50
+        |7	7	110	 5.50
+        |8	8	100	 3.00
+        |9	9	140	 8.00
+        |Board: 2 with 9 plays
+        |NS pair	EW pair	NS score	NS MPs
+        |1	1	-430	 2.00
+        |2	2	-180	 4.00
+        |3	3	-460	 1.00
+        |4	4	-400	 3.00
+        |5	5	-130	 5.50
+        |6	6	-130	 5.50
+        |7	7	-90	 7.50
+        |8	""".stripMargin
   }
 
   // TODO Find out why this doesn't work!

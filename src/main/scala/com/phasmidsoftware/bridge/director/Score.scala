@@ -61,7 +61,7 @@ object Score extends App {
 
     val ey = RecapParser.readEvent(source)
 
-    for (e <- ey) yield (output :+ e.title).insertBreak ++ (for ((p, rs) <- e.createResults) yield eventResults(e, p, rs))
+    for (e <- ey; x = e.score) yield (output :+ x.title).insertBreak ++ (for ((p, rs) <- x.createResults) yield eventResults(x, p, rs))
   }
 
   /**
@@ -101,6 +101,8 @@ case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit]
   if (sections.isEmpty)
     System.err.println("Warning: there are no sections in this event")
 
+  def score: Event = copy(title, sections map (_.recap))
+
   def createResults: Map[Preamble, Seq[Result]] = (for (s <- sections) yield s.preamble -> s.createResults).toMap
 
   /**
@@ -120,9 +122,9 @@ case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit]
   * @param travelers a sequence of travelers (maybe be empty of all pickup slips are used).
   */
 case class Section(preamble: Preamble, travelers: Seq[Traveler]) extends Outputable[Unit] {
+  private val top = calculateTop
 
   lazy val createResults: Seq[Result] = {
-    val top = calculateTop
     preamble.maybeModifier match {
       case Some(Preamble.SingleWinner) => Seq(Result(None, top, getSwResults))
       case _ => for (d <- Seq(true, false)) yield Result(Some(d), top, total(d).toMap)
@@ -130,10 +132,11 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler]) extends Outputa
   }
 
   lazy val calculateTop: Int = {
-    val tops: Seq[Int] = for (t <- travelers) yield t.top
-    val theTop = tops.distinct
-    if (theTop.size != 1) System.err.println(s"Warning: not all boards have been played the same number of times: $tops")
-    theTop.head
+    val tops: Seq[(Int, Int)] = for (t <- travelers.sortBy(_.board)) yield (t.board, t.top)
+    val theTop = tops.distinctBy(x => x._2)
+    if (theTop.size != 1)
+      System.err.println(s"Warning: not all boards have been played the same number of times: $tops")
+    theTop.head._2
   }
 
   /**
@@ -145,9 +148,14 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler]) extends Outputa
     */
   def output(output: Output, xo: Option[Unit] = None): Output = travelers.sorted.foldLeft(output :+ s"$preamble\n")((o, t) => o ++ t.output(Output.empty))
 
-  private lazy val recap: Seq[Matchpoints] = for (t <- travelers; m <- t.matchpointIt) yield m
+  lazy val recap: Section = copy(travelers = travelers map { t => t.matchpointIt(top) })
 
-  private def all(n: Int, dir: Boolean): Seq[Option[Rational]] = recap.filter(_.matchesPair(n, dir)) map (_.getMatchpoints(dir))
+  private def all(n: Int, dir: Boolean): Seq[Option[Rational]] =
+    for {
+      t <- recap.travelers // CONSIDER invoking recap somewhere else
+      ms <- t.maybeMatchpoints.toSeq // CONSIDER replace with matchpoints
+      m <- ms.filter(_.matchesPair(n, dir))
+    } yield m.getMatchpoints(dir)
 
   private def total(d: Boolean): Seq[Pos] = for {p <- preamble.pairs
                                                  ros = all(p.number, d)
@@ -313,7 +321,7 @@ case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
       case (Psi(l, _, _), (_, ps)) => Psi(l + ps.length, l, ps)
     }
     val xPs: Seq[(Pos, Int, String)] = for {Psi(_, r, ps) <- psis; x = if (ps.size > 1) "=" else " "; p <- ps} yield (p, r + 1, x)
-    val header = Output(s"Pos\tPair\tMPs\tPercent\tNames\n")
+    val header = Output(s"Rank\tPair\tMPs\tPercent\tNames\n")
     Output.foldLeft(xPs)(header)(_ ++ resultDetails(_))
   }
 }
@@ -325,9 +333,11 @@ case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
   * @param ew     EW pair #
   * @param result the table result
   * @param mp     (optionally) the matchpoints earned by ns for this boardResult
-  * @param top    the maximum number of matchpoints possible
-  */
+  * @param top    the tentative top on a board.
+  * */
 case class Matchpoints(ns: Int, ew: Int, result: PlayResult, mp: Option[Rational], top: Int) {
+  def factor(idealTop: Int): Matchpoints = copy(mp = mp.map(_ * (Rational(idealTop) / top)))
+
   def matchesPair(n: Int, dir: Boolean): Boolean = if (dir) n == ns else n == ew
 
   def getMatchpoints(dir: Boolean): Option[Rational] = if (dir) mp else invert
@@ -350,13 +360,18 @@ case class Matchpoints(ns: Int, ew: Int, result: PlayResult, mp: Option[Rational
   * @param board the board number.
   * @param ps    the plays.
   */
-case class Traveler(board: Int, ps: Seq[Play]) extends Outputable[Unit] with Ordered[Traveler] {
-  def isPlayed: Boolean = ps.nonEmpty
+case class Traveler(board: Int, ps: Seq[Play], maybeMatchpoints: Option[Seq[Matchpoints]]) extends Outputable[Unit] with Ordered[Traveler] {
+  lazy val isPlayed: Boolean = ps.nonEmpty
 
-  // Calculate the ideal top -- including any Average or DNP scores:
-  private[bridge] def top = ps.size - 1
+  // Calculate the unfactored top -- including any Average or DNP scores:
+  private[bridge] lazy val top = ps.size - 1
 
-  def matchpointIt: Seq[Matchpoints] = for (p <- ps) yield Matchpoints(p.ns, p.ew, p.result, p.matchpoints(this), top)
+  def matchpointIt(idealTop: Int): Traveler = copy(maybeMatchpoints = Some(calculateMatchpoints(idealTop)))
+
+  def matchpoints: Seq[Matchpoints] = maybeMatchpoints getOrElse calculateMatchpoints(top)
+
+  def calculateMatchpoints(idealTop: Int): Seq[Matchpoints] =
+    for (p <- ps) yield Matchpoints(p.ns, p.ew, p.result, p.matchpoints(this), top).factor(idealTop)
 
   def matchpoint(x: Play): Option[Rational] = if (isPlayed) {
     val isIs = (for (p <- ps; if p != x; io = p.compare(x.result); i <- io) yield (i, 2)) unzip;
@@ -370,7 +385,7 @@ case class Traveler(board: Int, ps: Seq[Play]) extends Outputable[Unit] with Ord
     * @param play the play to be added
     * @return the new combined Traveler.
     */
-  def :+(play: Play): Traveler = Traveler(board, ps :+ play)
+  def :+(play: Play): Traveler = Traveler(board, ps :+ play, None)
 
   override def compare(that: Traveler): Int = board - that.board
 
@@ -385,15 +400,15 @@ case class Traveler(board: Int, ps: Seq[Play]) extends Outputable[Unit] with Ord
     val result = new StringBuilder
     result.append(s"Board: $board with ${ps.size} plays\n")
     result.append(s"""NS pair\tEW pair\tNS score\tNS MPs\n""")
-    for (m <- matchpointIt) result.append(s"$m\n")
+    for (m <- matchpoints) result.append(s"$m\n")
     output :+ result.toString
   }
 }
 
 object Traveler {
   def apply(it: Try[Int], ps: Seq[Play]): Traveler = {
-    val tt = for (i <- it) yield Traveler(i, ps)
-    tt.recover { case x => System.err.println(s"Exception: $x"); Traveler(0, List()) }.get
+    val tt = for (i <- it) yield Traveler(i, ps, None)
+    tt.recover { case x => System.err.println(s"Exception: $x"); Traveler(0, List(), None) }.get
   }
 }
 
@@ -434,7 +449,7 @@ case class Pickup(ns: Int, ew: Int, boards: Seq[BoardResult]) {
 case class BoardPlay(board: Int, play: Play) {
   def addTo(travelerMap: Map[Int, Traveler]): Map[Int, Traveler] = {
     val entry = travelerMap.get(board)
-    val traveler = entry.getOrElse(Traveler(board, Nil))
+    val traveler = entry.getOrElse(Traveler(board, Nil, None))
     travelerMap + (board -> (traveler :+ play))
   }
 
