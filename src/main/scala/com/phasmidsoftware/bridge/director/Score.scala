@@ -51,8 +51,11 @@ object Score extends App {
 
     implicit val separator: Output = Output.empty.insertBreak()
 
-    def eventResults(e: Event, p: Preamble, rs: Seq[Result]): Output = {
-      val z = for (r <- rs) yield r.getResults(p.getNames)
+    def eventResults(e: Event, p: Preamble, rs: Seq[Result], boards: Int): Output = {
+      val z = for {
+        r <- rs
+        _ = r.checksum(boards)
+      } yield r.getResults(p.getNames)
       (Output(s"Section ${p.identifier}") ++ z :+
         "=====================================================\n" :+
         "=====================================================\n") ++
@@ -61,7 +64,7 @@ object Score extends App {
 
     val ey = RecapParser.readEvent(source)
 
-    for (e <- ey; x = e.score) yield (output :+ x.title).insertBreak ++ (for ((p, rs) <- x.createResults) yield eventResults(x, p, rs))
+    for (e <- ey; x = e.score) yield (output :+ x.title).insertBreak ++ (for ((p, rs) <- x.createResults) yield eventResults(x, p, rs, x.boards))
   }
 
   /**
@@ -98,8 +101,15 @@ object Score extends App {
   * @param sections a sequence of sections.
   */
 case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit] {
+  private val xs: Seq[Int] = sections map (_.boards) distinct
+
   if (sections.isEmpty)
     System.err.println("Warning: there are no sections in this event")
+
+  if (xs.size != 1)
+    System.err.println("Warning: sections played different numbers of boards")
+
+  lazy val boards: Int = xs.headOption.getOrElse(0)
 
   def score: Event = copy(title, sections map (_.recap))
 
@@ -123,6 +133,8 @@ case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit]
   */
 case class Section(preamble: Preamble, travelers: Seq[Traveler]) extends Outputable[Unit] {
   private val top = calculateTop
+
+  lazy val boards: Int = travelers.size
 
   lazy val createResults: Seq[Result] = {
     preamble.maybeModifier match {
@@ -300,6 +312,14 @@ case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
     case None => ""
   }
 
+  def checksum(boards: Int): Boolean = {
+    val matchpoints: Rational = cards.map(_._2.totalMps).sum
+    val expected = Rational(cards.size * boards, 2)
+    val result = matchpoints == expected
+    if (!result) System.err.println(s"Matchpoints for this result ($matchpoints) differ from what is expected for $boards boards ($expected)")
+    result
+  }
+
   private def getResultsForDirection(nameFunction: Int => String) = {
 
     case class Psi(len: Int, rank: Int, ps: Seq[Pos])
@@ -313,7 +333,6 @@ case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
     }
 
     val keyFunction: Pos => Rational = t => t._2.totalMps
-
     val ps: Seq[Pos] = cards.toList.sortBy(_._2).reverse
     val psRm: Map[Rational, Seq[Pos]] = ps.groupBy[Rational](keyFunction)
     val psRs: Seq[(Rational, Seq[Pos])] = psRm.toSeq.sortBy(_._1).reverse
@@ -363,8 +382,8 @@ case class Matchpoints(ns: Int, ew: Int, result: PlayResult, mp: Option[Rational
 case class Traveler(board: Int, ps: Seq[Play], maybeMatchpoints: Option[Seq[Matchpoints]]) extends Outputable[Unit] with Ordered[Traveler] {
   lazy val isPlayed: Boolean = ps.nonEmpty
 
-  // Calculate the unfactored top -- including any Average or DNP scores:
-  private[bridge] lazy val top = ps.size - 1
+  // Calculate the unfactored top -- taking account of any Average or DNP scores:
+  private[bridge] lazy val top = ps.count(p => p.result.matchpoints(Some(1)).isDefined) - 1
 
   def matchpointIt(idealTop: Int): Traveler = copy(maybeMatchpoints = Some(calculateMatchpoints(idealTop)))
 
@@ -374,7 +393,7 @@ case class Traveler(board: Int, ps: Seq[Play], maybeMatchpoints: Option[Seq[Matc
     for (p <- ps) yield Matchpoints(p.ns, p.ew, p.result, p.matchpoints(this), top).factor(idealTop)
 
   def matchpoint(x: Play): Option[Rational] = if (isPlayed) {
-    val isIs = (for (p <- ps; if p != x; io = p.compare(x.result); i <- io) yield (i, 2)) unzip;
+    val isIs = (for (p <- ps; if p != x; i <- p.compare(x.result)) yield (i, 2)) unzip;
     Some(Rational(isIs._1.sum, isIs._2.sum))
   }
   else None

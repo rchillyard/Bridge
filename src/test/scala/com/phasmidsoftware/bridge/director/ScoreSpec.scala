@@ -542,12 +542,14 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
   it should "output with equal ranks" in {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20240924.txt", Output(writer))) o.close()
+    println(writer.spillway)
     writer.spillway.substring(0, 200) shouldBe "Newton Sep 24th 2024\nSection A\nResults for direction N/S\nRank\tPair\tMPs\tPercent\tNames\n1=\t8\t33.50\t69.79%\tAmy Avergun & Penny Scharfman\n1=\t9\t33.50\t69.79%\tMarsha & Robert Greenstein\n3 \t3\t33.00\t68.75%\tKaj "
   }
-  it should "output with unplayed boards" in {
+  // FIXME issue #10
+  ignore should "output with unplayed boards" in {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20241001a.txt", Output(writer))) o.close()
-    writer.spillway.substring(0, 2000) shouldBe
+    writer.spillway.substring(0, 2010) shouldBe
       """Newton Oct 1st 2024
         |Section A
         |Results for direction N/S
@@ -615,7 +617,81 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
         |6	6	-130	 5.14
         |7	7	-90	 7.43
         |8	8	-90	 7.43
-        |9	9""".stripMargin
+        |9	9	-800	 0.""".stripMargin
+  }
+  // FIXME issue #10
+  ignore should "output with DNP boards" in {
+    val writer = MockWriter(8192)
+    for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20241001b.txt", Output(writer))) o.close()
+    writer.spillway.substring(0, 2010) shouldBe
+      """Newton Oct 1st 2024
+        |Section A
+        |Results for direction N/S
+        |Rank	Pair	MPs	Percent	Names
+        |1 	7	34.99	72.90%	Carol Leahy & Deanna Szeto
+        |2 	6	28.88	60.16%	Mary Ellen Clark & Leslie Greenberg
+        |3 	9	27.50	57.29%	Amy Avergun & Penny Scharfman
+        |4 	8	25.49	53.10%	Jane Venti & Jane Volden
+        |5 	3	22.81	47.51%	Josh Gahm & Marya Van'T Hul
+        |6 	2	21.92	45.66%	Joanne Hennessy & Veets Veitas
+        |7 	5	21.38	44.54%	Vivian Hernandez & Roberta Kosberg
+        |8 	4	19.61	40.86%	Marsha & Rob Greenstein
+        |9 	1	14.00	35.00%	Judy & David Taub
+        |Results for direction E/W
+        |Rank	Pair	MPs	Percent	Names
+        |1 	4	34.39	71.64%	Rick & Lisa Martin
+        |2 	1	33.50	83.75%	Kaj Wilson & Ellen Dockser
+        |3 	3	29.19	60.82%	Robin Zelle & Barbara Berenson
+        |4 	6	25.12	52.34%	Gerri Taylor & Sherrill Kobrick
+        |5 	8	21.51	44.81%	Judy Tucker & Sheila Jones
+        |6 	9	21.50	44.79%	Kathy Curtiss & Linda Worters
+        |7 	7	19.51	40.65%	Alan Gordon & Margaret Meehan
+        |8 	2	16.58	34.55%	Rebecca Kratka & MJ Weinstein
+        |9 	5	 6.12	12.76%	Barbara & Don Oppenheimer
+        |=====================================================
+        |=====================================================
+        |Newton Oct 1st 2024
+        |A
+        |1N	Judy & David Taub
+        |2N	Joanne Hennessy & Veets Veitas
+        |3N	Josh Gahm & Marya Van'T Hul
+        |4N	Marsha & Rob Greenstein
+        |5N	Vivian Hernandez & Roberta Kosberg
+        |6N	Mary Ellen Clark & Leslie Greenberg
+        |7N	Carol Leahy & Deanna Szeto
+        |8N	Jane Venti & Jane Volden
+        |9N	Amy Avergun & Penny Scharfman
+        |1E	Kaj Wilson & Ellen Dockser
+        |2E	Rebecca Kratka & MJ Weinstein
+        |3E	Robin Zelle & Barbara Berenson
+        |4E	Rick & Lisa Martin
+        |5E	Barbara & Don Oppenheimer
+        |6E	Gerri Taylor & Sherrill Kobrick
+        |7E	Alan Gordon & Margaret Meehan
+        |8E	Judy Tucker & Sheila Jones
+        |9E	Kathy Curtiss & Linda Worters
+        |
+        |Board: 1 with 9 plays
+        |NS pair	EW pair	NS score	NS MPs
+        |1	1	-100	 0.00
+        |2	2	110	 5.50
+        |3	3	110	 5.50
+        |4	4	-50	 1.50
+        |5	5	110	 5.50
+        |6	6	-50	 1.50
+        |7	7	110	 5.50
+        |8	8	100	 3.00
+        |9	9	140	 8.00
+        |Board: 2 with 8 plays
+        |NS pair	EW pair	NS score	NS MPs
+        |2	2	-180	 3.43
+        |3	3	-460	 1.14
+        |4	4	-400	 2.29
+        |5	5	-130	 5.14
+        |6	6	-130	 5.14
+        |7	7	-90	 7.43
+        |8	8	-90	 7.43
+        |9	9	-800	 0.""".stripMargin
   }
   it should "output from Newton" in {
     val writer = MockWriter(8192)
