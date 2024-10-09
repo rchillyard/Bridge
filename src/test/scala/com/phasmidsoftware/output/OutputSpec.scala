@@ -4,19 +4,19 @@
 
 package com.phasmidsoftware.output
 
-import java.io.Writer
-
-import com.phasmid.laScala.values.Rational
 import com.phasmidsoftware.bridge.director.Card
+import com.phasmidsoftware.number.core.Rational
 import com.phasmidsoftware.util.{Output, OutputException}
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should
 
+import java.io.Writer
 import scala.util.Try
 
 /**
   * This adds one test to the OutputSpec in the DecisionTree project.
   */
-class OutputSpec extends FlatSpec with Matchers {
+class OutputSpec extends AnyFlatSpec with should.Matchers {
 
   behavior of "BufferedCharSequenceOutput"
 
@@ -24,15 +24,15 @@ class OutputSpec extends FlatSpec with Matchers {
     val writer = MockWriter()
     val output: Output = Output(writer)
 
-    def getResultsForDirection(preamble: (String, Option[String], Seq[(Int, String, String)]), r: (Boolean, Int, Map[Int, (Rational[Int], Int)]), top: Int): Output = {
-      def resultDetails(s: (Int, (Rational[Int], Int))): Output = Output(s"${s._1} : ${Card.mpsAsString(s._2._1, top)} : ${Card(s._2._1, s._2._2, 0).toStringPercent} : Tweedledum & Tweedledee").insertBreak()
+    def getResultsForDirection(preamble: (String, Option[String], List[(Int, String, String)]), r: (Boolean, Int, Map[Int, (Rational, Int)]), top: Int): Output = {
+      def resultDetails(s: (Int, (Rational, Int))): Output = Output(s"${s._1} : ${Card.mpsAsString(s._2._1, top)} : ${Card(s._2._1, s._2._2, 0).toStringPercent} : Tweedledum & Tweedledee").insertBreak()
 
-      Output.foldLeft(r._3.toSeq.sortBy(_._2._1).reverse)()(_ ++ resultDetails(_))
+      Output.foldLeft(r._3.toList.sortBy(_._2._1).reverse)()(_ ++ resultDetails(_))
     }
 
-    def getResults(k: (String, Option[String], Seq[(Int, String, String)]), r: (Boolean, Int, Map[Int, (Rational[Int], Int)])): Output = Output(s"Results for direction: ${if (r._1) "N/S" else "E/W"}").insertBreak ++ getResultsForDirection(k, r, r._2)
+    def getResults(k: (String, Option[String], List[(Int, String, String)]), r: (Boolean, Int, Map[Int, (Rational, Int)])): Output = Output(s"Results for direction: ${if (r._1) "N/S" else "E/W"}").insertBreak ++ getResultsForDirection(k, r, r._2)
 
-    def eventResults(e: (String, Seq[String]), k: (String, Option[String], Seq[(Int, String, String)]), rs: Seq[(Boolean, Int, Map[Int, (Rational[Int], Int)])]): Output = {
+    def eventResults(e: (String, List[String]), k: (String, Option[String], List[(Int, String, String)]), rs: List[(Boolean, Int, Map[Int, (Rational, Int)])]): Output = {
       val z = for (r <- rs) yield getResults(k, r)
       (Output(s"${e._1}\nSection ${k._1}").insertBreak ++ z :+
         "=====================================================\n" :+
@@ -40,10 +40,10 @@ class OutputSpec extends FlatSpec with Matchers {
         Output(e._1)
     }
 
-    val ey = Try(("test", Seq("1", "2")))
+    val ey = Try(("test", List("1", "2")))
 
     val zy: Try[Output] = for (e <- ey) yield {
-      val results = for ((k, rs) <- Seq(("test", None, Seq((1, "x", "y"))) -> Seq((true, 2, Map[Int, (Rational[Int], Int)]())))) yield eventResults(e, k, rs)
+      val results = for ((k, rs) <- List(("test", None, List((1, "x", "y"))) -> List((true, 2, Map[Int, (Rational, Int)]())))) yield eventResults(e, k, rs)
       (output :+ "XXX").insertBreak ++ results
     }
 

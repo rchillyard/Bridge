@@ -4,10 +4,11 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec
+import org.scalatest.matchers.should
 
 //noinspection ScalaStyle
-class WhistSpec extends FlatSpec with Matchers {
+class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   behavior of "Whist"
   it should "" in {
@@ -54,7 +55,7 @@ class WhistSpec extends FlatSpec with Matchers {
     val deal = Deal("test", 0L, adjustForPartnerships = false)
     val hands = deal.hands
     hands.size shouldBe 4
-    val Seq(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
+    val List(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
     val trick =
       Trick.create(0, CardPlay(deal, None, 0, Spades, priority1S), CardPlay(deal, None, 1, Spades, priority2S), CardPlay(deal, None, 2, Spades, priority3S), CardPlay(deal, None, 3, Spades, priority4S))
     val target0 = deal.north
@@ -89,7 +90,7 @@ class WhistSpec extends FlatSpec with Matchers {
     state0.deal.nCards shouldBe 52
     state0.isConsistent shouldBe true
     val hands = deal0.hands
-    val Seq(priority1S, _, _, _) = hands map (_.holdings(Spades).sequences.last.priority)
+    val List(priority1S, _, _, _) = hands map (_.holdings(Spades).sequences.last.priority)
     val trick1 = Trick.create(1, CardPlay(deal0, None, 0, Spades, priority1S))
     val state1 = state0.next(trick1)
     state1.deal.nCards shouldBe 51
@@ -105,7 +106,7 @@ class WhistSpec extends FlatSpec with Matchers {
     val deal00 = whist00.deal
     val state0 = State(whist00)
     val hands = deal00.hands
-    val Seq(priority1S, priority2S, _, _) = hands map (_.holdings(Spades).sequences.last.priority)
+    val List(priority1S, priority2S, _, _) = hands map (_.holdings(Spades).sequences.last.priority)
     val trick1 = Trick.create(1, CardPlay(deal00, None, 0, Spades, priority1S))
     val trick2 = Trick.create(1, CardPlay(deal00, None, 0, Spades, priority1S), CardPlay(deal00, None, 1, Spades, priority2S))
     val state2 = state0.next(trick1).next(trick2)

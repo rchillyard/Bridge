@@ -26,7 +26,7 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
     *
     * @return a sequence of States.
     */
-  def enumeratePlays: List[State] = _enumeratePlays
+  def enumeratePlays: Seq[State] = _enumeratePlays
 
   /**
     * NOTE: this is used only in unit tests
@@ -50,7 +50,7 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
     *
     * Method to validate this State.
     *
-    * TODO test this.
+    * TESTME test this.
     *
     * @return true if all the plays of the trick are validated
     */
@@ -165,15 +165,15 @@ object State {
       */
     def compare(x: State, y: State): Int = y.cardsPlayed - x.cardsPlayed
   }
-
-  implicit object LoggableState extends Loggable[State] with Loggables {
-    def toLog(t: State): String =
-      s"${t.trick.history.mkString("", ", ", "")} " +
-        //				s"${implicitly[Loggable[Trick]].toLog(t.trick)} " +
-        s"${implicitly[Loggable[Tricks]].toLog(t.tricks)} " +
-        s"${t.fitness} " +
-        s"${implicitly[Loggable[Whist]].toLog(t.whist)}"
-  }
+  //
+  //  implicit object LoggableState extends Loggable[State] with Loggables {
+  //    def toLog(t: State): String =
+  //      s"${t.trick.history.mkString("", ", ", "")} " +
+  //        //				s"${implicitly[Loggable[Trick]].toLog(t.trick)} " +
+  //        s"${implicitly[Loggable[Tricks]].toLog(t.tricks)} " +
+  //        s"${t.fitness} " +
+  //        s"${implicitly[Loggable[Whist]].toLog(t.whist)}"
+  //  }
 
   implicit object ShowState extends Show[State] {
     def show(t: State): String = t.neatOutput

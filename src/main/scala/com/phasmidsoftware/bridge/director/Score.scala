@@ -4,13 +4,11 @@
 
 package com.phasmidsoftware.bridge.director
 
-import java.io.PrintWriter
-
-import com.phasmid.laScala.fp.FP
-import com.phasmid.laScala.values.Rational
-import com.phasmidsoftware.output.Util
+import com.phasmidsoftware.number.core.Rational
+import com.phasmidsoftware.output.{Using, Util}
 import com.phasmidsoftware.util.{Output, Outputable}
 
+import java.io.PrintWriter
 import scala.io.{BufferedSource, Source}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, _}
@@ -20,30 +18,44 @@ import scala.util.{Failure, Success, _}
   *
   */
 object Score extends App {
-  if (args.length > 0) {
-    val filename = args.head
-    doScore(Source.fromFile(filename)) match {
+
+  private val printWriter = new PrintWriter(System.out)
+  lazy val tabbedOutput: Output = Output(printWriter)
+  lazy val untabbedOutput: Output = Output.untabbedWriter(printWriter, 6)
+  // TODO set this to use untabbedOutput if you want all tabs turned into spaces.
+  lazy val defaultOutput: Output = tabbedOutput
+
+  if (args.length > 0)
+    doScoreFromName(isResource = false, args.head, defaultOutput) match {
       case Success(o) => o.close()
-      case Failure(x) => System.err.println(s"Score $filename threw an exception: $x")
+      case Failure(x) => System.err.println(s"Score ${args.mkString} threw an exception: $x")
     }
-  }
   else System.err.println("Syntax: Score filename")
 
+
+  def doScoreFromName(isResource: Boolean, name: String, output: Output = defaultOutput): Try[Output] = Using(
+    if (isResource) Source.fromResource(name) else Source.fromFile(name)
+  ) { s => doScore(s, output) }
+
   // TODO use the methods in Result
-  def doScoreResource(resource: String, output: Output = Output(new PrintWriter(System.out))): Try[Output] =
+  def doScoreResource(resource: String, output: Output = defaultOutput): Try[Output] =
     Option(getClass.getResourceAsStream(resource)) match {
       case Some(s) => doScore(Source.fromInputStream(s), output)
       case None => Failure(ScoreException(s"doScoreResource: cannot open resource: $resource"))
     }
 
-  def doScoreFromFile(filename: String, output: Output = Output(new PrintWriter(System.out))): Try[Output] = doScore(Source.fromFile(filename), output)
+  def doScoreFromFile(filename: String, output: Output = defaultOutput): Try[Output] = doScore(Source.fromFile(filename), output)
 
-  def doScore(source: BufferedSource, output: Output = Output(new PrintWriter(System.out))): Try[Output] = {
+  // TESTME
+  def doScore(source: BufferedSource, output: Output = defaultOutput): Try[Output] = {
 
     implicit val separator: Output = Output.empty.insertBreak()
 
-    def eventResults(e: Event, p: Preamble, rs: Seq[Result]): Output = {
-      val z = for (r <- rs) yield r.getResults(p.getNames)
+    def eventResults(e: Event, p: Preamble, rs: Seq[Result], boards: Int): Output = {
+      val z = for {
+        r <- rs
+        _ = r.checksum(boards)
+      } yield r.getResults(p.getNames)
       (Output(s"Section ${p.identifier}") ++ z :+
         "=====================================================\n" :+
         "=====================================================\n") ++
@@ -52,7 +64,7 @@ object Score extends App {
 
     val ey = RecapParser.readEvent(source)
 
-    for (e <- ey) yield (output :+ e.title).insertBreak ++ (for ((p, rs) <- e.createResults) yield eventResults(e, p, rs))
+    for (e <- ey; x = e.score) yield (output :+ x.title).insertBreak ++ (for ((p, rs) <- x.createResults) yield eventResults(x, p, rs, x.boards))
   }
 
   /**
@@ -64,7 +76,7 @@ object Score extends App {
     * @param base the value corresponding to 100%.
     * @return r converted to a percentage of base.
     */
-  def asPercent(r: Rational[Int], base: Int): Rational[Int] = r * 100 / base
+  def asPercent(r: Rational, base: Int): Rational = r * 100 / base
 
   /**
     * Method to render a Rational (r).
@@ -75,9 +87,9 @@ object Score extends App {
     * @return r rendered in 5 spaces.
     */
   //noinspection SpellCheckingInspection
-  def rationalToString(r: Rational[Int]): String = r match {
-    case Rational(x, 1) => f"$x%2d.00"
-    case Rational(_, 0) => "infty"
+  def rationalToString(r: Rational): String = r match {
+    case Rational(x, Rational.bigOne) => f"$x%2d.00"
+    case Rational(_, Rational.bigZero) => "infty"
     case _ => f"${r.toDouble}%5.2f"
   }
 }
@@ -89,8 +101,17 @@ object Score extends App {
   * @param sections a sequence of sections.
   */
 case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit] {
+  private val xs: Seq[Int] = sections map (_.boards) distinct
+
   if (sections.isEmpty)
     System.err.println("Warning: there are no sections in this event")
+
+  if (xs.size != 1)
+    System.err.println("Warning: sections played different numbers of boards")
+
+  lazy val boards: Int = xs.headOption.getOrElse(0)
+
+  def score: Event = copy(title, sections map (_.recap))
 
   def createResults: Map[Preamble, Seq[Result]] = (for (s <- sections) yield s.preamble -> s.createResults).toMap
 
@@ -111,9 +132,11 @@ case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit]
   * @param travelers a sequence of travelers (maybe be empty of all pickup slips are used).
   */
 case class Section(preamble: Preamble, travelers: Seq[Traveler]) extends Outputable[Unit] {
+  private val top = calculateTop
+
+  lazy val boards: Int = travelers.size
 
   lazy val createResults: Seq[Result] = {
-    val top = calculateTop
     preamble.maybeModifier match {
       case Some(Preamble.SingleWinner) => Seq(Result(None, top, getSwResults))
       case _ => for (d <- Seq(true, false)) yield Result(Some(d), top, total(d).toMap)
@@ -121,10 +144,11 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler]) extends Outputa
   }
 
   lazy val calculateTop: Int = {
-    val tops: Seq[Int] = for (t <- travelers) yield t.top
-    val theTop = tops.distinct
-    if (theTop.size != 1) System.err.println(s"Warning: not all boards have been played the same number of times: $tops")
-    theTop.head
+    val tops: Seq[(Int, Int)] = for (t <- travelers.sortBy(_.board)) yield (t.board, t.top)
+    val theTop = tops.distinctBy(x => x._2)
+    if (theTop.size != 1)
+      System.err.println(s"Warning: not all boards have been played the same number of times: $tops")
+    theTop.head._2
   }
 
   /**
@@ -136,15 +160,20 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler]) extends Outputa
     */
   def output(output: Output, xo: Option[Unit] = None): Output = travelers.sorted.foldLeft(output :+ s"$preamble\n")((o, t) => o ++ t.output(Output.empty))
 
-  private lazy val recap: Seq[Matchpoints] = for (t <- travelers; m <- t.matchpointIt) yield m
+  lazy val recap: Section = copy(travelers = travelers map { t => t.matchpointIt(top) })
 
-  private def all(n: Int, dir: Boolean): Seq[Option[Rational[Int]]] = recap.filter(_.matchesPair(n, dir)) map (_.getMatchpoints(dir))
+  private def all(n: Int, dir: Boolean): Seq[Option[Rational]] =
+    for {
+      t <- recap.travelers // CONSIDER invoking recap somewhere else
+      ms <- t.maybeMatchpoints.toSeq // CONSIDER replace with matchpoints
+      m <- ms.filter(_.matchesPair(n, dir))
+    } yield m.getMatchpoints(dir)
 
-  private def total(d: Boolean): Seq[(Int, Card)] = for {p <- preamble.pairs
-                                                         ros = all(p.number, d)
-                                                         } yield p.number -> Card(ros)
+  private def total(d: Boolean): Seq[Pos] = for {p <- preamble.pairs
+                                                 ros = all(p.number, d)
+                                                 } yield p.number -> Card(ros)
 
-  private def sum(iCs: Seq[(Int, Card)]): Card = {
+  private def sum(iCs: Seq[Pos]): Card = {
     val (is, cs) = iCs.unzip
     if (is.distinct.length > 1) throw ScoreException(s"logic error: sum: indices should be the same")
     cs.foldLeft(Card(0, 0, 0))(_ + _)
@@ -159,7 +188,7 @@ object Section {
     val travelerMap: Map[Int, Traveler] = (travelers map (t => t.board -> t)).toMap
     val boardPlays: Seq[BoardPlay] = for (p <- pickups; b <- p.asBoardPlays) yield b
     val tIm = boardPlays.foldLeft(travelerMap)((m, b) => b.addTo(m))
-    apply(preamble, tIm.values.toSeq)
+    apply(preamble, tIm.values.toList)
   }
 }
 
@@ -193,7 +222,7 @@ case class Preamble(identifier: String, maybeModifier: Option[String], pairs: Se
   }
 
   override def toString: String = {
-    val result = StringBuilder.newBuilder
+    val result = new StringBuilder
     result.append(s"$identifier\n")
     for (p <- pairs) result.append(s"$p\n")
     result.toString
@@ -213,7 +242,7 @@ object Preamble {
   */
 case class Pair(number: Int, maybeDirection: Option[String], players: (Player, Player)) {
 
-  override def toString: String = s"$number$direction: $brief"
+  override def toString: String = s"""$number$direction\t$brief"""
 
   // CONSIDER making this more elegant
   def valid(x: Option[String]): Boolean = x match {
@@ -237,28 +266,28 @@ case class Player(name: String) {
   override def toString: String = name
 }
 
-case class Card(totalMps: Rational[Int], played: Int, notPlayed: Int) extends Ordered[Card] {
+case class Card(totalMps: Rational, played: Int, notPlayed: Int) extends Ordered[Card] {
 
   def toStringMps(top: Int): String = Card.mpsAsString(scaledMps, top)
 
-  def compare(that: Card): Int = Rational.compare(percentage, that.percentage)
+  def compare(that: Card): Int = percentage.compare(that.percentage)
 
   def +(c: Card): Card = Card(totalMps + c.totalMps, played + c.played, notPlayed + c.notPlayed)
 
   lazy val toStringPercent: String = Score.rationalToString(percentage) + "%"
 
-  lazy val percentage: Rational[Int] = Score.asPercent(totalMps, played)
+  private lazy val percentage: Rational = Score.asPercent(totalMps, played)
 
   private def scaledMps = totalMps * (played + notPlayed) / played
 }
 
 object Card {
-  def apply(ros: Seq[Option[Rational[Int]]]): Card = {
-    val irs: Seq[Rational[Int]] = ros.flatten
+  def apply(ros: Seq[Option[Rational]]): Card = {
+    val irs: Seq[Rational] = ros.flatten
     Card(irs.sum, irs.size, ros.size - irs.size)
   }
 
-  def mpsAsString(r: Rational[Int], top: Int): String = Score.rationalToString(r * top)
+  def mpsAsString(r: Rational, top: Int): String = Score.rationalToString(r * top)
 }
 
 /**
@@ -283,13 +312,36 @@ case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
     case None => ""
   }
 
+  def checksum(boards: Int): Boolean = {
+    val matchpoints: Rational = cards.map(_._2.totalMps).sum
+    val expected = Rational(cards.size * boards, 2)
+    val result = matchpoints == expected
+    if (!result) System.err.println(s"Matchpoints for this result ($matchpoints) differ from what is expected for $boards boards ($expected)")
+    result
+  }
+
   private def getResultsForDirection(nameFunction: Int => String) = {
-    def resultDetails(s: (Int, Card)): Output = {
-      val (pairNumber, card) = s
-      Output(s"$pairNumber : ${card.toStringMps(top)} : ${card.toStringPercent} : ${nameFunction(pairNumber)}").insertBreak()
+
+    case class Psi(len: Int, rank: Int, ps: Seq[Pos])
+    object Psi {
+      def empty: Psi = Psi(0, 0, Nil)
     }
 
-    Output.foldLeft(cards.toSeq.sortBy(_._2).reverse)()(_ ++ resultDetails(_))
+    def resultDetails(s: (Pos, Int, String)): Output = {
+      val ((pairNumber, card), rank, suffix) = s
+      Output(s"""$rank$suffix\t$pairNumber\t${card.toStringMps(top)}\t${card.toStringPercent}\t${nameFunction(pairNumber)}""").insertBreak()
+    }
+
+    val keyFunction: Pos => Rational = t => t._2.totalMps
+    val ps: Seq[Pos] = cards.toList.sortBy(_._2).reverse
+    val psRm: Map[Rational, Seq[Pos]] = ps.groupBy[Rational](keyFunction)
+    val psRs: Seq[(Rational, Seq[Pos])] = psRm.toSeq.sortBy(_._1).reverse
+    val psis: Seq[Psi] = psRs.scanLeft(Psi.empty) {
+      case (Psi(l, _, _), (_, ps)) => Psi(l + ps.length, l, ps)
+    }
+    val xPs: Seq[(Pos, Int, String)] = for {Psi(_, r, ps) <- psis; x = if (ps.size > 1) "=" else " "; p <- ps} yield (p, r + 1, x)
+    val header = Output(s"Rank\tPair\tMPs\tPercent\tNames\n")
+    Output.foldLeft(xPs)(header)(_ ++ resultDetails(_))
   }
 }
 
@@ -300,16 +352,18 @@ case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
   * @param ew     EW pair #
   * @param result the table result
   * @param mp     (optionally) the matchpoints earned by ns for this boardResult
-  * @param top    the maximum number of matchpoints possible
-  */
-case class Matchpoints(ns: Int, ew: Int, result: PlayResult, mp: Option[Rational[Int]], top: Int) {
+  * @param top    the tentative top on a board.
+  * */
+case class Matchpoints(ns: Int, ew: Int, result: PlayResult, mp: Option[Rational], top: Int) {
+  def factor(idealTop: Int): Matchpoints = copy(mp = mp.map(_ * (Rational(idealTop) / top)))
+
   def matchesPair(n: Int, dir: Boolean): Boolean = if (dir) n == ns else n == ew
 
-  def getMatchpoints(dir: Boolean): Option[Rational[Int]] = if (dir) mp else invert
+  def getMatchpoints(dir: Boolean): Option[Rational] = if (dir) mp else invert
 
   // CONSIDER extending Outputable and putting this logic into output method.
   override def toString: String = mp match {
-    case Some(x) => s"NS: $ns, EW: $ew, score: $result, MP:${Card.mpsAsString(x, top)}"
+    case Some(x) => s"""$ns\t$ew\t$result\t${Card.mpsAsString(x, top)}"""
     case _ => ""
   }
 
@@ -325,17 +379,22 @@ case class Matchpoints(ns: Int, ew: Int, result: PlayResult, mp: Option[Rational
   * @param board the board number.
   * @param ps    the plays.
   */
-case class Traveler(board: Int, ps: Seq[Play]) extends Outputable[Unit] with Ordered[Traveler] {
-  def isPlayed: Boolean = ps.nonEmpty
+case class Traveler(board: Int, ps: Seq[Play], maybeMatchpoints: Option[Seq[Matchpoints]]) extends Outputable[Unit] with Ordered[Traveler] {
+  lazy val isPlayed: Boolean = ps.nonEmpty
 
-  // Calculate the ideal top -- including any Average or DNP scores:
-  private[bridge] def top = ps.size - 1
+  // Calculate the unfactored top -- taking account of any Average or DNP scores:
+  private[bridge] lazy val top = ps.count(p => p.result.matchpoints(Some(1)).isDefined) - 1
 
-  def matchpointIt: Seq[Matchpoints] = for (p <- ps) yield Matchpoints(p.ns, p.ew, p.result, p.matchpoints(this), top)
+  def matchpointIt(idealTop: Int): Traveler = copy(maybeMatchpoints = Some(calculateMatchpoints(idealTop)))
 
-  def matchpoint(x: Play): Option[Rational[Int]] = if (isPlayed) {
-    val isIs = (for (p <- ps; if p != x; io = p.compare(x.result); i <- io) yield (i, 2)) unzip;
-    Some(Rational.normalize(isIs._1.sum, isIs._2.sum))
+  def matchpoints: Seq[Matchpoints] = maybeMatchpoints getOrElse calculateMatchpoints(top)
+
+  def calculateMatchpoints(idealTop: Int): Seq[Matchpoints] =
+    for (p <- ps) yield Matchpoints(p.ns, p.ew, p.result, p.matchpoints(this), top).factor(idealTop)
+
+  def matchpoint(x: Play): Option[Rational] = if (isPlayed) {
+    val isIs = (for (p <- ps; if p != x; i <- p.compare(x.result)) yield (i, 2)) unzip;
+    Some(Rational(isIs._1.sum, isIs._2.sum))
   }
   else None
 
@@ -345,7 +404,7 @@ case class Traveler(board: Int, ps: Seq[Play]) extends Outputable[Unit] with Ord
     * @param play the play to be added
     * @return the new combined Traveler.
     */
-  def :+(play: Play): Traveler = Traveler(board, ps :+ play)
+  def :+(play: Play): Traveler = Traveler(board, ps :+ play, None)
 
   override def compare(that: Traveler): Int = board - that.board
 
@@ -357,17 +416,18 @@ case class Traveler(board: Int, ps: Seq[Play]) extends Outputable[Unit] with Ord
     * @return a new instance of Output.
     */
   def output(output: Output, xo: Option[Unit] = None): Output = {
-    val result = StringBuilder.newBuilder
+    val result = new StringBuilder
     result.append(s"Board: $board with ${ps.size} plays\n")
-    for (m <- matchpointIt) result.append(s"$m\n")
+    result.append(s"""NS pair\tEW pair\tNS score\tNS MPs\n""")
+    for (m <- matchpoints) result.append(s"$m\n")
     output :+ result.toString
   }
 }
 
 object Traveler {
   def apply(it: Try[Int], ps: Seq[Play]): Traveler = {
-    val tt = for (i <- it) yield Traveler(i, ps)
-    tt.recover { case x => System.err.println(s"Exception: $x"); Traveler(0, Seq()) }.get
+    val tt = for (i <- it) yield Traveler(i, ps, None)
+    tt.recover { case x => System.err.println(s"Exception: $x"); Traveler(0, List(), None) }.get
   }
 }
 
@@ -408,7 +468,7 @@ case class Pickup(ns: Int, ew: Int, boards: Seq[BoardResult]) {
 case class BoardPlay(board: Int, play: Play) {
   def addTo(travelerMap: Map[Int, Traveler]): Map[Int, Traveler] = {
     val entry = travelerMap.get(board)
-    val traveler = entry.getOrElse(Traveler(board, Nil))
+    val traveler = entry.getOrElse(Traveler(board, Nil, None))
     travelerMap + (board -> (traveler :+ play))
   }
 
@@ -433,7 +493,7 @@ case class Play(ns: Int, ew: Int, result: PlayResult) {
     case _ => None
   }
 
-  def matchpoints(t: Traveler): Option[Rational[Int]] = result.matchpoints(t.matchpoint(this))
+  def matchpoints(t: Traveler): Option[Rational] = result.matchpoints(t.matchpoint(this))
 
 }
 
@@ -462,7 +522,7 @@ case class PlayResult(r: Either[String, Int]) {
     * @param f call-by-name value of the matchpoints where the result is an an Int
     * @return an optional Rational
     */
-  def matchpoints(f: => Option[Rational[Int]]): Option[Rational[Int]] = r match {
+  def matchpoints(f: => Option[Rational]): Option[Rational] = r match {
     case Right(_) => f
     case Left("A-") => Some(Rational(2, 5))
     case Left("A") => Some(Rational(1, 2))
@@ -478,7 +538,7 @@ case class PlayResult(r: Either[String, Int]) {
 
 object PlayResult {
   def apply(s: String): PlayResult = {
-    val z = FP.sequence[Int](Try(s.toInt)) match {
+    val z = Try(s.toInt).toEither match {
       case Left(_) => Left(s) // we ignore the exception because it is probably just a non-integer
       case Right(r) => Right(r)
     }
