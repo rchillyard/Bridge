@@ -8,7 +8,7 @@ import com.phasmidsoftware.number.core.Rational
 import com.phasmidsoftware.output.{Using, Util}
 import com.phasmidsoftware.util.{Output, Outputable}
 
-import java.io.PrintWriter
+import java.io.{FileWriter, PrintWriter}
 import scala.io.{BufferedSource, Source}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, _}
@@ -19,19 +19,24 @@ import scala.util.{Failure, Success, _}
   */
 object Score extends App {
 
-  private val printWriter = new PrintWriter(System.out)
-  lazy val tabbedOutput: Output = Output(printWriter)
-  lazy val untabbedOutput: Output = Output.untabbedWriter(printWriter, 6)
+  private lazy val fileWriter = new FileWriter("output.csv")
+  private lazy val printWriter = new PrintWriter(System.out)
+  private lazy val tabbedOutput: Output = Output(fileWriter)
+  private lazy val untabbedOutput: Output = Output.untabbedWriter(printWriter, 6)
   // TODO set this to use untabbedOutput if you want all tabs turned into spaces.
   lazy val defaultOutput: Output = tabbedOutput
 
-  if (args.length > 0)
-    doScoreFromName(isResource = false, args.head, defaultOutput) match {
-      case Success(o) => o.close()
-      case Failure(x) => System.err.println(s"Score ${args.mkString} threw an exception: $x")
-    }
-  else System.err.println("Syntax: Score filename")
+  doMain(tabbedOutput)
 
+  // TESTME
+  def doMain(output: Output): Unit = {
+    if (args.length > 0)
+      doScoreFromName(isResource = false, args.head, output) match {
+        case Success(o) => o.close()
+        case Failure(x) => System.err.println(s"Score ${args.mkString} threw an exception: $x")
+      }
+    else System.err.println("Syntax: Score filename")
+  }
 
   def doScoreFromName(isResource: Boolean, name: String, output: Output = defaultOutput): Try[Output] = Using(
     if (isResource) Source.fromResource(name) else Source.fromFile(name)
