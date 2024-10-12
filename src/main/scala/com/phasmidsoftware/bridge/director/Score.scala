@@ -4,6 +4,9 @@
 
 package com.phasmidsoftware.bridge.director
 
+import com.phasmidsoftware.bridge.director.Card.mpsAsString
+import com.phasmidsoftware.bridge.director.Matchpoints.rationalToString
+import com.phasmidsoftware.bridge.director.Score.asPercent
 import com.phasmidsoftware.number.core.Rational
 import com.phasmidsoftware.number.core.Rational.half
 import com.phasmidsoftware.output.{Using, Util}
@@ -83,21 +86,6 @@ object Score extends App {
     * @return r converted to a percentage of base.
     */
   def asPercent(r: Rational, base: Int): Rational = r * 100 / base
-
-  /**
-    * Method to render a Rational (r).
-    *
-    * CONSIDER This method belongs in Rational.
-    *
-    * @param r a Rational.
-    * @return r rendered in 5 spaces.
-    */
-  //noinspection SpellCheckingInspection
-  def rationalToString(r: Rational): String = r match {
-    case Rational(x, Rational.bigOne) => f"$x%2d.00"
-    case Rational(_, Rational.bigZero) => "infty"
-    case _ => f"${r.toDouble}%5.2f"
-  }
 }
 
 /**
@@ -151,6 +139,12 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler], maybeTop: Optio
     } yield Result(Some(d), top, map)
   }
 
+  /**
+    * Method to calculate the top and to check that all boards have been entered.
+    *
+    * TODO the warning should only appear when a board-play is missing from the pickups (or travelers).
+    * Currently, it's complaining even if there is a DNP entry.
+    */
   lazy val calculateTop: Int = {
     val tops: Seq[(Int, Int)] = for (t <- travelers.sortBy(_.board)) yield (t.board, t.top)
     val theTop = tops.distinctBy(x => x._2)
@@ -285,26 +279,29 @@ case class Player(name: String) {
   */
 case class Card(totalMps: Rational, played: Int, notPlayed: Int) extends Ordered[Card] {
 
-  def toStringMps(top: Int): String = Card.mpsAsString(scaledMps, top)
+  def toStringMps(top: Int): String = mpsAsString(scaledMps, top)
 
   def compare(that: Card): Int = percentage.compare(that.percentage)
 
   def +(c: Card): Card = Card(totalMps + c.totalMps, played + c.played, notPlayed + c.notPlayed)
 
-  lazy val toStringPercent: String = Score.rationalToString(percentage) + "%"
+  lazy val toStringPercent: String = rationalToString(percentage) + "%"
 
-  private lazy val percentage: Rational = Score.asPercent(totalMps, played)
+  private lazy val percentage: Rational = asPercent(totalMps, played)
 
   private def scaledMps = totalMps * (played + notPlayed) / played
 }
 
+/**
+  * Companion object to Card class.
+  */
 object Card {
   def apply(ros: Seq[Option[Rational]]): Card = {
     val irs: Seq[Rational] = ros.flatten
     Card(irs.sum, irs.size, ros.size - irs.size)
   }
 
-  def mpsAsString(r: Rational, top: Int): String = Score.rationalToString(r * top)
+  def mpsAsString(r: Rational, top: Int): String = rationalToString(r * top)
 }
 
 /**
@@ -407,17 +404,26 @@ case class Matchpoints(ns: Int, ew: Int, result: PlayResult, ro: Option[Rational
 
   private def factorACBL(idealTop: Int) = ro match {
     case None => Some(half)
-    case Some(r) =>
-      val factored = ((r * top + half) * (idealTop + 1) / (top + 1) - half) / idealTop
-      //    println(s"factored mps: $r to $factored")
-      Some(factored)
+    case Some(r) => Some(((r * top + half) * (idealTop + 1) / (top + 1) - half) / idealTop)
   }
 
   private def invert = ro map { r => -(r - 1) }
+}
 
-  //  private def factorLogical(idealTop: Int) = {
-  //    ro.map(_ * (Rational(idealTop) / top))
-  //  }
+object Matchpoints {
+
+  /**
+    * Method to render a Rational (r).
+    *
+    * @param r a Rational.
+    * @return r rendered in 5 spaces.
+    */
+  //noinspection SpellCheckingInspection
+  def rationalToString(r: Rational): String = r match {
+    case Rational(x, Rational.bigOne) => f"$x%2d.00"
+    case Rational(_, Rational.bigZero) => "infty"
+    case _ => r.renderApproximate(5, Some(2))
+  }
 
 }
 
@@ -441,13 +447,6 @@ case class Traveler(board: Int, ps: Seq[Play], maybeMatchpoints: Option[Seq[Matc
   def matchpointIt(idealTop: Int): Traveler = copy(maybeMatchpoints = Some(calculateMatchpoints(idealTop)))
 
   def matchpoints: Seq[Matchpoints] = maybeMatchpoints getOrElse calculateMatchpoints(top)
-
-  def calculateMatchpoints(idealTop: Int): Seq[Matchpoints] = {
-    val result = for (p <- ps) yield Matchpoints(p.ns, p.ew, p.result, p.matchpoints(this), top).factorIfRequired(idealTop)
-    //    println(s"""Matchpoints for board $board with $n plays: ${ps.mkString(",")}""")
-    //    result foreach (m => println(m.toString))
-    result
-  }
 
   def matchpoint(x: Play): Option[Rational] = if (isPlayed) {
     val isIs = (for (p <- ps; if p != x; i <- p.compare(x.result)) yield (i, 2)) unzip;
@@ -479,8 +478,14 @@ case class Traveler(board: Int, ps: Seq[Play], maybeMatchpoints: Option[Seq[Matc
     for (m <- matchpoints) result.append(s"$m\n")
     output :+ result.toString
   }
+
+  private def calculateMatchpoints(idealTop: Int): Seq[Matchpoints] =
+    for (p <- ps) yield Matchpoints(p.ns, p.ew, p.result, p.matchpoints(this), top).factorIfRequired(idealTop)
 }
 
+/**
+  * Companion object to Traveler class.
+  */
 object Traveler {
   def apply(it: Try[Int], ps: Seq[Play]): Traveler = {
     val tt = for (i <- it) yield Traveler(i, ps, None)
@@ -560,6 +565,9 @@ case class Play(ns: Int, ew: Int, result: PlayResult) {
 
 }
 
+/**
+  * Companion object to Play class.
+  */
 object Play {
   def apply(ns: Try[Int], ew: Try[Int], result: PlayResult): Play = {
     val z = for (x <- ns; y <- ew) yield Play(x, y, result)
@@ -600,6 +608,9 @@ case class PlayResult(r: Either[String, Int]) {
   }
 }
 
+/**
+  * Companion object to PlayResult class.
+  */
 object PlayResult {
   def apply(s: String): PlayResult = {
     val z = Try(s.toInt).toEither match {

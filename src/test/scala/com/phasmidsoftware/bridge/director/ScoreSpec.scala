@@ -5,6 +5,7 @@
 package com.phasmidsoftware.bridge.director
 
 import com.phasmidsoftware.bridge.director
+import com.phasmidsoftware.bridge.director.Matchpoints.rationalToString
 import com.phasmidsoftware.number.core.Rational
 import com.phasmidsoftware.output.MockWriter
 import com.phasmidsoftware.util.Output
@@ -848,12 +849,12 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     target.toStringMps(2) shouldBe "12.50"
   }
 
-  behavior of "Rational"
+  behavior of "rationalToString"
 
   it should "render" in {
-    Score.rationalToString(Score.asPercent(Rational(1, 2), 1)) shouldBe "50.00"
-    Score.rationalToString(Rational(2, 1)) shouldBe " 2.00"
-    Score.rationalToString(Rational(1, 2)) shouldBe " 0.50"
+    rationalToString(Score.asPercent(Rational(1, 2), 1)) shouldBe "50.00"
+    rationalToString(Rational(2, 1)) shouldBe " 2.00"
+    rationalToString(Rational(1, 2)) shouldBe " 0.50"
   }
 
 }
