@@ -140,8 +140,8 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val p2 = Play(1, 2, PlayResult(Right(150)))
     val t = Traveler(1, List(p1, p2), None)
     val mps = t.matchpointIt(1).maybeMatchpoints
-    mps.get.head.mp shouldBe Some(Rational.zero)
-    mps.get.tail.head.mp shouldBe Some(Rational.one)
+    mps.get.head.ro shouldBe Some(Rational.zero)
+    mps.get.tail.head.ro shouldBe Some(Rational.one)
   }
   it should "matchpoint properly (3)" in {
     val p1 = Play(2, 1, PlayResult(Right(130)))
@@ -149,10 +149,10 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val p3 = Play(3, 3, PlayResult(Right(150)))
     val t = Traveler(1, List(p1, p2, p3), None)
     val mps = t.matchpointIt(2).maybeMatchpoints.get
-    mps.head.mp shouldBe Some(Rational.zero)
-    mps.tail.head.mp shouldBe Some(Rational(3, 4))
-    Card.mpsAsString(mps.tail.head.mp.get, 2) shouldBe " 1.50"
-    mps.tail.tail.head.mp shouldBe Some(Rational(3, 4))
+    mps.head.ro shouldBe Some(Rational.zero)
+    mps.tail.head.ro shouldBe Some(Rational(3, 4))
+    Card.mpsAsString(mps.tail.head.ro.get, 2) shouldBe " 1.50"
+    mps.tail.tail.head.ro shouldBe Some(Rational(3, 4))
   }
   it should "calculate BAM mps" in {
     val traveler = "   T 1\n    1 1 420\n    2 2 430\n\n"
@@ -308,6 +308,16 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
 
   behavior of "Section"
 
+  def checkResult(result: Result, directionNS: Boolean, top: Int, n: Int, boards: Int): Unit = {
+    result.isNS shouldBe Some(directionNS)
+    result.top shouldBe top
+    val cards: Map[Int, Card] = result.cards
+    cards.size shouldBe n
+    //    val total: Rational = (for (Card(r, _, _) <- cards.values) yield r).sum
+    result.checksum(boards) shouldBe true
+    //    (for ((_, Card(_, t, _)) <- cards) yield t).head shouldBe result.top + 1
+  }
+
   it should "apply with pickups" in {
     val pairs = List(
       director.Pair(1, Some("N"), (Player("tweedledum"), Player("tweedledee"))),
@@ -338,16 +348,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     target.travelers shouldBe List(traveler1, traveler2)
   }
 
-  it should "work" in {
-    def checkResult(result: Result, directionNS: Boolean): Unit = {
-      result.isNS shouldBe Some(directionNS)
-      result.top shouldBe 1
-      val cards: Map[Int, Card] = result.cards
-      cards.size shouldBe 2
-      val total: Rational = (for (Card(r, _, _) <- cards.values) yield r).sum
-      total shouldBe Rational(2).invert * cards.size * (result.top + 1)
-      for ((_, Card(_, t, _)) <- cards) t shouldBe result.top + 1
-    }
+  it should "work for travelers" in {
 
     val pairs = List(
       director.Pair(1, Some("N"), (Player("tweedledum"), Player("tweedledee"))),
@@ -364,8 +365,57 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     section.calculateTop shouldBe 1
     val results: collection.Seq[Result] = section.createResults
     results.size shouldBe 2
-    checkResult(results.head, directionNS = true)
-    checkResult(results.last, directionNS = false)
+    checkResult(results.head, directionNS = true, top = 1, n = 2, boards = 2)
+    checkResult(results.last, directionNS = false, top = 1, n = 2, boards = 2)
+  }
+
+  it should "work for incomplete travelers 1" in {
+
+    val pairs = List(
+      director.Pair(1, Some("N"), (Player("tweedledum"), Player("tweedledee"))),
+      director.Pair(2, Some("N"), (Player("James Clark Maxwell"), Player("Albert Einstein"))),
+      director.Pair(3, Some("N"), (Player("Rosie"), Player("Ashenden"))),
+      director.Pair(1, Some("E"), (Player("Tristan"), Player("Isolde"))),
+      director.Pair(2, Some("E"), (Player("Romeo"), Player("Juliet"))),
+      director.Pair(3, Some("E"), (Player("David"), Player("Dora")))
+    )
+    val travelers: List[Traveler] = List(
+      Traveler(1, List(Play(1, 1, PlayResult(Right(100))), Play(2, 2, PlayResult(Right(100))), Play(3, 3, PlayResult(Right(100)))), None),
+      Traveler(2, List(Play(1, 2, PlayResult(Right(-400))), Play(2, 3, PlayResult(Right(-400))), Play(3, 1, PlayResult(Left("DNP")))), None)
+    )
+    // Matchpoints for board 1 should be 1, 1, and 1
+    // Matchpoints for board 2 should be 1/2, and 1/2 unfactored but 1, 1, and 1 when factored.
+    // Total matchpoints for each card should therefore be 3/2 (i.e., n/2)
+    val preamble = Preamble("A", None, pairs)
+    val section = Section(preamble, travelers)
+    section.calculateTop shouldBe 2
+    val recap = section.recap
+    val results: collection.Seq[Result] = recap.createResults
+    results.size shouldBe 2
+    checkResult(results.head, directionNS = true, top = 2, n = pairs.size / 2, boards = travelers.size)
+    checkResult(results.last, directionNS = false, top = 2, n = pairs.size / 2, boards = travelers.size)
+  }
+
+  // NOTE that we currently don't handle travelers with missing entries: unplayed boards have to be entered as DNP
+  ignore should "work for incomplete travelers 2" in {
+
+    val pairs = List(
+      director.Pair(1, Some("N"), (Player("tweedledum"), Player("tweedledee"))),
+      director.Pair(2, Some("N"), (Player("James Clark Maxwell"), Player("Albert Einstein"))),
+      director.Pair(1, Some("E"), (Player("Tristan"), Player("Isolde"))),
+      director.Pair(2, Some("E"), (Player("Romeo"), Player("Juliet")))
+    )
+    val travelers: List[Traveler] = List(
+      Traveler(1, List(Play(1, 1, PlayResult(Right(110))), Play(2, 2, PlayResult(Right(100))), Play(3, 3, PlayResult(Right(50)))), None),
+      Traveler(2, List(Play(1, 2, PlayResult(Right(-400))), Play(2, 3, PlayResult(Right(-430)))), None)
+    )
+    val preamble = Preamble("A", None, pairs)
+    val section = Section(preamble, travelers)
+    section.calculateTop shouldBe 2
+    val results: collection.Seq[Result] = section.recap.createResults
+    results.size shouldBe 2
+    checkResult(results.head, directionNS = true, top = 2, n = 3, boards = 2)
+    checkResult(results.last, directionNS = false, top = 2, n = 3, boards = 2)
   }
 
   behavior of "event"
@@ -545,35 +595,35 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     println(writer.spillway)
     writer.spillway.substring(0, 200) shouldBe "Newton Sep 24th 2024\nSection A\nResults for direction N/S\nRank\tPair\tMPs\tPercent\tNames\n1=\t8\t33.50\t69.79%\tAmy Avergun & Penny Scharfman\n1=\t9\t33.50\t69.79%\tMarsha & Robert Greenstein\n3 \t3\t33.00\t68.75%\tKaj "
   }
-  // FIXME issue #10
-  ignore should "output with unplayed boards" in {
+
+  it should "output with unplayed boards" in {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20241001a.txt", Output(writer))) o.close()
-    writer.spillway.substring(0, 2010) shouldBe
+    writer.spillway.substring(0, 2026) shouldBe
       """Newton Oct 1st 2024
         |Section A
         |Results for direction N/S
         |Rank	Pair	MPs	Percent	Names
-        |1 	7	34.99	72.90%	Carol Leahy & Deanna Szeto
-        |2 	6	28.88	60.16%	Mary Ellen Clark & Leslie Greenberg
-        |3 	9	27.50	57.29%	Amy Avergun & Penny Scharfman
-        |4 	8	25.49	53.10%	Jane Venti & Jane Volden
-        |5 	3	22.81	47.51%	Josh Gahm & Marya Van'T Hul
-        |6 	2	21.92	45.66%	Joanne Hennessy & Veets Veitas
-        |7 	5	21.38	44.54%	Vivian Hernandez & Roberta Kosberg
-        |8 	4	19.61	40.86%	Marsha & Rob Greenstein
-        |9 	1	14.00	35.00%	Judy & David Taub
+        |1 	7	33.88	70.57%	Carol Leahy & Deanna Szeto
+        |2 	6	28.13	58.59%	Mary Ellen Clark & Leslie Greenberg
+        |3 	9	27.56	57.42%	Amy Avergun & Penny Scharfman
+        |4 	8	24.38	50.78%	Jane Venti & Jane Volden
+        |5 	3	22.69	47.27%	Josh Gahm & Marya Van'T Hul
+        |6 	2	21.44	44.66%	Joanne Hennessy & Veets Veitas
+        |7 	5	20.63	42.97%	Vivian Hernandez & Roberta Kosberg
+        |8 	4	19.31	40.23%	Marsha & Rob Greenstein
+        |9 	1	18.00	37.50%	Judy & David Taub
         |Results for direction E/W
         |Rank	Pair	MPs	Percent	Names
-        |1 	4	34.39	71.64%	Rick & Lisa Martin
-        |2 	1	33.50	83.75%	Kaj Wilson & Ellen Dockser
-        |3 	3	29.19	60.82%	Robin Zelle & Barbara Berenson
-        |4 	6	25.12	52.34%	Gerri Taylor & Sherrill Kobrick
-        |5 	8	21.51	44.81%	Judy Tucker & Sheila Jones
-        |6 	9	21.50	44.79%	Kathy Curtiss & Linda Worters
-        |7 	7	19.51	40.65%	Alan Gordon & Margaret Meehan
-        |8 	2	16.58	34.55%	Rebecca Kratka & MJ Weinstein
-        |9 	5	 6.12	12.76%	Barbara & Don Oppenheimer
+        |1 	1	37.50	78.13%	Kaj Wilson & Ellen Dockser
+        |2 	4	34.69	72.27%	Rick & Lisa Martin
+        |3 	3	29.31	61.07%	Robin Zelle & Barbara Berenson
+        |4 	6	25.88	53.91%	Gerri Taylor & Sherrill Kobrick
+        |5 	8	22.63	47.14%	Judy Tucker & Sheila Jones
+        |6 	9	21.44	44.66%	Kathy Curtiss & Linda Worters
+        |7 	7	20.63	42.97%	Alan Gordon & Margaret Meehan
+        |8 	2	17.06	35.55%	Rebecca Kratka & MJ Weinstein
+        |9 	5	 6.88	14.32%	Barbara & Don Oppenheimer
         |=====================================================
         |=====================================================
         |Newton Oct 1st 2024
@@ -608,16 +658,18 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
         |7	7	110	 5.50
         |8	8	100	 3.00
         |9	9	140	 8.00
-        |Board: 2 with 8 plays
+        |Board: 2 with 9 plays
         |NS pair	EW pair	NS score	NS MPs
-        |2	2	-180	 3.43
-        |3	3	-460	 1.14
-        |4	4	-400	 2.29
-        |5	5	-130	 5.14
-        |6	6	-130	 5.14
-        |7	7	-90	 7.43
-        |8	8	-90	 7.43
-        |9	9	-800	 0.""".stripMargin
+        |1	1	DNP	 3.50
+        |2	2	-180	 3.01
+        |3	3	-460	 1.04
+        |4	4	-400	 2.02
+        |5	5	-130	 4.48
+        |6	6	-130	 4.48
+        |7	7	-90	 6.45
+        |8	8	-90	 6.45
+        |9	9	-800	 0.05
+        |""".stripMargin
   }
   // FIXME issue #10
   ignore should "output with DNP boards" in {
