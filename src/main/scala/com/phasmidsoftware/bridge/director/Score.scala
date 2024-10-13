@@ -128,6 +128,8 @@ case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit]
 case class Section(preamble: Preamble, travelers: Seq[Traveler], maybeTop: Option[Int] = None) extends Outputable[Unit] {
   private val top = calculateTop
 
+  private val _ = countResults
+
   lazy val boards: Int = travelers.size
 
   lazy val createResults: Seq[Result] = preamble.maybeModifier match {
@@ -140,13 +142,21 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler], maybeTop: Optio
   }
 
   /**
-    * Method to calculate the top and to check that all boards have been entered.
+    * Method to calculate the top.
     *
-    * TODO the warning should only appear when a board-play is missing from the pickups (or travelers).
-    * Currently, it's complaining even if there is a DNP entry.
     */
   lazy val calculateTop: Int = {
     val tops: Seq[(Int, Int)] = for (t <- travelers.sortBy(_.board)) yield (t.board, t.top)
+    tops.distinctBy(x => x._2).head._2
+  }
+
+  /**
+    * Method to calculate the top and to check that all boards have been entered.
+    *
+    * TODO the warning should only appear when a board-play is missing from the pickups (or travelers).
+    */
+  lazy val countResults: Int = {
+    val tops: Seq[(Int, Int)] = for (t <- travelers.sortBy(_.board)) yield (t.board, t.ps.count(p => p.result.exists))
     val theTop = tops.distinctBy(x => x._2)
     if (theTop.size != 1 && maybeTop.isEmpty)
       System.err.println(s"Warning: not all boards have been played the same number of times. The calculated tops are: $tops")
@@ -600,6 +610,13 @@ case class PlayResult(r: Either[String, Int]) {
     case Left("A+") => Some(Rational(3, 5))
     case Left("DNP") => None
     case _ => throw ScoreException(s"matchpoints: unrecognized result: $r")
+  }
+
+  def exists: Boolean = r match {
+    case Right(_) => true
+    case Left("A-" | "A" | "A+" | "DNP") => true
+    case _ => false
+
   }
 
   override def toString: String = r match {
