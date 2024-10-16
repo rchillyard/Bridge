@@ -126,11 +126,11 @@ case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit]
   * @param travelers a sequence of travelers (maybe be empty of all pickup slips are used).
   */
 case class Section(preamble: Preamble, travelers: Seq[Traveler], maybeTop: Option[Int] = None) extends Outputable[Unit] {
-  private val top = calculateTop
-
-  private val _ = countResults
-
   lazy val boards: Int = travelers.size
+
+  private lazy val top = calculateTop
+
+  private lazy val _ = countResults
 
   lazy val createResults: Seq[Result] = preamble.maybeModifier match {
     case Some(Preamble.SingleWinner) => Seq(Result(None, top, getSwResults))
@@ -170,7 +170,13 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler], maybeTop: Optio
     * @param xo     an optional value of X, defaulting to None.
     * @return a new instance of Output.
     */
-  def output(output: Output, xo: Option[Unit] = None): Output = travelers.sorted.foldLeft(output :+ s"$preamble\n")((o, t) => o ++ t.output(Output.empty))
+  def output(output: Output, xo: Option[Unit] = None): Output = {
+    if (boards > 0)
+      System.out.println(s"Section ${preamble.identifier} has processed $boards boards")
+    else
+      System.err.println(s"Section ${preamble.identifier} has no results (no travelers)")
+    travelers.sorted.foldLeft(output :+ s"$preamble\n")((o, t) => o ++ t.output(Output.empty))
+  }
 
   lazy val recap: Section = copy(travelers = travelers map { t => t.matchpointIt(top) }).copy(maybeTop = Some(top))
 

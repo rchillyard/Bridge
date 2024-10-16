@@ -100,7 +100,8 @@ object RecapParser {
       case p.Error(f, x) => scala.util.Failure(new Exception(s"parse error: $f at $x"))
     }
     catch {
-      case exception: Exception => System.err.println(s"yup got one: $exception"); Failure(exception)
+      // TODO understand why this is a thrown exception instead of a parsing Failure.
+      case exception: Exception => System.err.println(s"RecapParser.readEvent: exception thrown (and not caught) by parseAll on p.event: $exception"); Failure(exception)
     }
   } else Failure(new Exception("source is null"))
 }

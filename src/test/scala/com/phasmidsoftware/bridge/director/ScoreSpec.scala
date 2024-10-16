@@ -745,6 +745,12 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
         |7	7	-90	 7.50
         |8	""".stripMargin
   }
+  // Issue #11
+  ignore should "output from Newton despite having PhantomPair" in {
+    val writer = MockWriter(8192)
+    for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20241015bad.txt", Output(writer))) o.close()
+    writer.spilled shouldBe -1
+  }
 
   // TODO Find out why this doesn't work!
   ignore should "read ConcordCountryClub20191007.txt using doScoreFromName" in {

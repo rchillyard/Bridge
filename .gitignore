@@ -26,3 +26,5 @@ src/test/scala/com/phasmidsoftware/bridge/director/CardTest.scala
 src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20241001.txt
 
 src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20241008.txt
+
+src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20241015.txt
