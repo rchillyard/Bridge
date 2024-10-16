@@ -4,8 +4,6 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.util._
-
 import scala.language.implicitConversions
 
 /**
@@ -16,7 +14,7 @@ import scala.language.implicitConversions
   * @param priority the number of higher-ranking cards in the suit.
   * @param cards    the cards.
   */
-case class Sequence(priority: Int, cards: List[Card]) extends Evaluatable with Reprioritizable[Sequence] {
+case class Sequence(priority: Int, cards: Seq[Card]) extends Evaluatable with Reprioritizable[Sequence] {
 
   require(cards.nonEmpty)
 
@@ -44,7 +42,7 @@ case class Sequence(priority: Int, cards: List[Card]) extends Evaluatable with R
     * @param ss a sequence of Sequences.
     * @return a new sequence of Sequences.
     */
-  def merge(ss: List[Sequence]): List[Sequence] = if (ss.nonEmpty && ss.last.canCombine(this)) ss.init :+ (ss.last ++ this) else ss :+ this
+  def merge(ss: Seq[Sequence]): Seq[Sequence] = if (ss.nonEmpty && ss.last.canCombine(this)) ss.init :+ (ss.last ++ this) else ss :+ this
 
   /**
     * Method to concatenate two Sequences.
@@ -112,7 +110,7 @@ object Sequence {
     * @param cs the list of Cards (must be non-empty).
     * @return a new Sequence.
     */
-  def apply(cs: Seq[Card]): Sequence = apply(cs.head.priority, cs.toList)
+  def apply(cs: Seq[Card]): Sequence = apply(cs.head.priority, cs)
 
   /**
     * @return true if the top card of the sequence with the given priority is at least a ten.
@@ -126,19 +124,19 @@ object Sequence {
   implicit object SequenceOrdering extends Ordering[Sequence] {
     override def compare(x: Sequence, y: Sequence): Int = x.priority - y.priority
   }
-
-  /**
-    * An loggable for a Sequence.
-    * Lower values of priority precede higher values.
-    *
-    * NOTE: not used
-    */
-  implicit object LoggableSequence extends Loggable[Sequence] with Loggables {
-    implicit val cardSequenceLoggable: Loggable[List[Card]] = listLoggable[Card]
-    // NOTE: that, for this particular apply method, we have to specify the fields we need.
-    val loggableSequence: Loggable[Sequence] = toLog2(Sequence.apply, List("priority", "cards"))
-
-    def toLog(t: Sequence): String = loggableSequence.toLog(t)
-  }
+  //
+  //  /**
+  //    * An loggable for a Sequence.
+  //    * Lower values of priority precede higher values.
+  //    *
+  //    * NOTE: not used
+  //    */
+  //  implicit object LoggableSequence extends Loggable[Sequence] with Loggables {
+  //    implicit val cardSequenceLoggable: Loggable[List[Card]] = listLoggable[Card]
+  //    // NOTE: that, for this particular apply method, we have to specify the fields we need.
+  //    val loggableSequence: Loggable[Sequence] = toLog2(Sequence.apply, List("priority", "cards"))
+  //
+  //    def toLog(t: Sequence): String = loggableSequence.toLog(t)
+  //  }
 
 }

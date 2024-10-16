@@ -5,7 +5,6 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.decisiontree.{Expandable, GoalDriven}
-import com.phasmidsoftware.util._
 
 import scala.language.implicitConversions
 
@@ -38,7 +37,7 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None) ex
     * @param ts     a sequence of Trick instances.
     * @return a sequence of State objects corresponding to the values of ts.
     */
-  def makeStates(tricks: Tricks, ts: List[Trick]): List[State] = ts.map(t => State.create(this, t, tricks))
+  def makeStates(tricks: Tricks, ts: Seq[Trick]): Seq[State] = ts.map(t => State.create(this, t, tricks))
 
   /**
     * Play a card from this Playable object.
@@ -63,7 +62,7 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None) ex
     implicit val sg: GoalDriven[State] = Whist.goal(tricks, directionNS)
     //    implicit val se: Expandable[State] = (t: State) => t.enumeratePlays
     implicit val se: Expandable[State] = new Expandable[State] {
-      def successors(t: State): List[State] = t.enumeratePlays
+      def successors(t: State): List[State] = t.enumeratePlays to List
 
       override def runaway(t: State): Boolean = t.sequence > Whist.MAX_STATES
     }
@@ -94,10 +93,10 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None) ex
 object Whist {
 
   val MAX_STATES = 1000000
-
-  implicit object LoggableWhist extends Loggable[Whist] with Loggables {
-    def toLog(t: Whist): String = s"${implicitly[Loggable[Deal]].toLog(t.deal)}@${Hand.name(t.openingLeader)}:${t.sStrain}"
-  }
+  //
+  //  implicit object LoggableWhist extends Loggable[Whist] with Loggables {
+  //    def toLog(t: Whist): String = s"${implicitly[Loggable[Deal]].toLog(t.deal)}@${Hand.name(t.openingLeader)}:${t.sStrain}"
+  //  }
 
   def goal(_neededTricks: Int, _directionNS: Boolean, _totalTricks: Int = Deal.TricksPerDeal): WhistGoalDriven = new WhistGoalDriven {
     val neededTricks: Int = _neededTricks

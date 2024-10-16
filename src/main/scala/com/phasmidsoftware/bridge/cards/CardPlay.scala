@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.util.{Loggable, Loggables, Output, Outputable}
+import com.phasmidsoftware.util.{Output, Outputable}
 
 import scala.language.postfixOps
 
@@ -74,11 +74,11 @@ case class CardPlay(deal: Deal, strain: Option[Suit], hand: Int, suit: Suit, pri
 object CardPlay {
 
   // NOTE: not used
-  implicit object LoggableCardPlay extends Loggable[CardPlay] with Loggables {
-    val loggable: Loggable[CardPlay] = toLog4((deal: Deal, hand: Int, suit: Suit, priority: Int) => CardPlay.apply(deal, None, hand, suit, priority), List("deal", "hand", "suit", "priority"))
-
-    def toLog(t: CardPlay): String = loggable.toLog(t)
-  }
+  //  implicit object LoggableCardPlay extends Loggable[CardPlay] with Loggables {
+  //    val loggable: Loggable[CardPlay] = toLog4((deal: Deal, hand: Int, suit: Suit, priority: Int) => CardPlay.apply(deal, None, hand, suit, priority), List("deal", "hand", "suit", "priority"))
+  //
+  //    def toLog(t: CardPlay): String = loggable.toLog(t)
+  //  }
 
 }
 

@@ -6,10 +6,10 @@ package com.phasmidsoftware.bridge.cards
 
 import org.scalatest.concurrent.TimeLimitedTests
 import org.scalatest.time.{Seconds, Span}
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.{AnyFlatSpec, should.Matchers}
 
 //noinspection ScalaStyle
-class WhistFuncSpec extends FlatSpec with Matchers with TimeLimitedTests {
+class WhistFuncSpec extends flatspec.AnyFlatSpec with should.Matchers with TimeLimitedTests {
 
   val timeLimit = Span(2, Seconds)
 
