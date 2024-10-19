@@ -7,12 +7,12 @@ package com.phasmidsoftware.bridge.cards
 import com.phasmidsoftware.bridge.pbn.{DealValue, Game, PBN, PBNParser}
 import org.scalatest.concurrent.TimeLimitedTests
 import org.scalatest.time.{Seconds, Span}
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.{AnyFlatSpec, should.Matchers}
 
 import scala.io.Source
 
 //noinspection ScalaStyle
-class AnalysisSpec extends FlatSpec with Matchers with TimeLimitedTests {
+class AnalysisSpec extends flatspec.AnyFlatSpec with should.Matchers with TimeLimitedTests {
 
   val timeLimit = Span(25, Seconds)
 

@@ -4,11 +4,9 @@
 
 package com.phasmidsoftware.bridge.cards
 
+import com.phasmidsoftware.util.{Output, Outputable, Shuffle}
+
 import java.io.Writer
-
-import com.phasmid.laScala.Shuffle
-import com.phasmidsoftware.util.{Loggable, Loggables, Output, Outputable}
-
 import scala.language.postfixOps
 
 /**
@@ -131,11 +129,11 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
   private lazy val _quit = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.quit))
 
   /**
-    * TODO Should be private
+    * CONSIDER Should be private
     */
-  lazy val _cooperate = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.cooperate(partner(k)(s))))
+  lazy val _cooperate: Deal = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.cooperate(partner(k)(s))))
 
-  lazy val _reprioritize = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.reprioritize))
+  lazy val _reprioritize: Deal = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.reprioritize))
 
   private def outputHand(name: String, hand: Hand): Output = (Output(s"$name:\t") :+ hand.neatOutput).insertBreak()
 
@@ -191,7 +189,7 @@ object Deal {
     * @return a new Deal.
     */
   def fromCards(title: String, cs: Seq[Card], adjust: Boolean): Deal = {
-    val deal = new Deal(title, (for ((cs, index) <- cs.grouped(CardsPerHand).zipWithIndex) yield index -> Hand.createHoldings(cs.toList)).toMap)
+    val deal = new Deal(title, (for ((cs, index) <- cs.grouped(CardsPerHand).zipWithIndex) yield index -> Hand.createHoldings(cs)).toMap)
     if (adjust) deal.adjustForPartnerships else deal
   }
 
@@ -200,11 +198,16 @@ object Deal {
     *
     * @param title the title for the deal.
     * @param start the player who will lead to this deal.
-    * @param wss a sequence in order NESW of a sequence in order SHDC of card representations.
+    * @param wss   a sequence in order NESW of a sequence in order SHDC of card representations.
     * @return a new deal. Yeah to FDR.
     */
   def fromHandStrings(title: String, start: String, wss: Seq[Seq[String]]): Deal = {
-    val firstIndex = start match { case "N" => 0; case "E" => 1; case "S" => 2; case "W" => 3 }
+    val firstIndex = start match {
+      case "N" => 0;
+      case "E" => 1;
+      case "S" => 2;
+      case "W" => 3
+    }
     val hSss: Seq[Seq[(Suit, Holding)]] = for (ws <- wss) yield for ((w, x) <- ws zip Seq(Spades, Hearts, Diamonds, Clubs)) yield x -> Holding(x, w)
     val hands = for ((hHs, i) <- hSss zipWithIndex) yield Hand(Hand.next(firstIndex, i), hHs.toMap)
     val (nonNorth, north) = hands.splitAt(4 - firstIndex)
@@ -215,15 +218,15 @@ object Deal {
     * Construct a Deal from a random number generator which will yield an arrangement of cards..
     * This method does NOT adjust for partnerships as it is used principally for testing.
     *
-    * @param title a title for the Deal.
-    * @param seed  a seed for the random number generator (defaults to the system--nano--clock)
+    * @param title                 a title for the Deal.
+    * @param seed                  a seed for the random number generator (defaults to the system--nano--clock)
     * @param adjustForPartnerships (defaults to true) if true then the result will have priorities adjusted for partnerships.
     * @return a new Deal.
     */
   def apply(title: String, seed: Long = System.nanoTime(), adjustForPartnerships: Boolean = true): Deal = {
     val newDeck: Seq[Card] =
       for (s <- Seq(Spades, Hearts, Diamonds, Clubs); r <- Seq(Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)) yield Card(s, r)
-    val shuffler = Shuffle[Card](seed)
+    val shuffler: Iterable[Card] => Seq[Card] = Shuffle[Card](_, seed)
     fromCards(title, shuffler(newDeck), adjustForPartnerships)
   }
 
@@ -233,7 +236,7 @@ object Deal {
     writer.flush()
   }
 
-  implicit object LoggableDeal extends Loggable[Deal] with Loggables {
-    def toLog(t: Deal): String = s"Deal ${t.title}/${t.nCards}"
-  }
+  //  implicit object LoggableDeal extends Loggable[Deal] with Loggables {
+  //    def toLog(t: Deal): String = s"Deal ${t.title}/${t.nCards}"
+  //  }
 }

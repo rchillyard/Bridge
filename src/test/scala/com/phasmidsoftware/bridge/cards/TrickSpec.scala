@@ -4,10 +4,11 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec
+import org.scalatest.matchers.should
 
 //noinspection ScalaStyle
-class TrickSpec extends FlatSpec with Matchers {
+class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   behavior of "Trick"
 
@@ -43,7 +44,7 @@ class TrickSpec extends FlatSpec with Matchers {
     val state5alternatives = state40.enumeratePlays
     val state50 = state5alternatives.head
     val target = state50.trick.history
-//    println(target)
+    //    println(target)
     target.size shouldBe 2
     target.head shouldBe state4alternatives.head.trick
   }
@@ -54,7 +55,7 @@ class TrickSpec extends FlatSpec with Matchers {
     val deal = Deal("test", 0L, adjustForPartnerships = false)
     val play = CardPlay(deal, None, 0, Spades, 5)
     val target = nothing :+ play
-    target.plays shouldBe Seq(play)
+    target.plays shouldBe List(play)
     target.started shouldBe true
     target.maybeSuit shouldBe Some(Spades)
     target.winner should matchPattern { case Some(Winner(_, false)) => }
@@ -146,7 +147,7 @@ class TrickSpec extends FlatSpec with Matchers {
     val secondHandPlay1 = trick21.last
     secondHandPlay1.suit shouldBe Hearts
     secondHandPlay1.priority shouldBe 7
-    val trick3alternatives: List[Trick] = trick20.enumerateSubsequentPlays(whist20)
+    val trick3alternatives: Seq[Trick] = trick20.enumerateSubsequentPlays(whist20)
     val state3alternatives: Seq[State] = state20.enumeratePlays
     state3alternatives.size shouldBe 2
     whist20.makeStates(state20.tricks, trick3alternatives) shouldBe state3alternatives
@@ -161,7 +162,7 @@ class TrickSpec extends FlatSpec with Matchers {
     state50.trick.index shouldBe 2
   }
   it should "enumerate plays 2" in {
-    val deal = Deal.fromHandStrings("test", "N", Seq(Seq("AQ", "", "J", "3"), Seq("K3", "T", "", "6"), Seq("", "87", "J", "8"), Seq("", "A", "9", "T9")))
+    val deal = Deal.fromHandStrings("test", "N", List(List("AQ", "", "J", "3"), List("K3", "T", "", "6"), List("", "87", "J", "8"), List("", "A", "9", "T9")))
     val whist0 = Whist(deal, 0, Some(Clubs))
     val state0 = State(whist0)
     val states = state0.enumeratePlays
@@ -190,7 +191,7 @@ class TrickSpec extends FlatSpec with Matchers {
     val secondHandPlay1 = trick21.last
     secondHandPlay1.suit shouldBe Spades
     secondHandPlay1.priority shouldBe 1
-    val trick3alternatives: List[Trick] = trick20.enumerateSubsequentPlays(whist20)
+    val trick3alternatives: Seq[Trick] = trick20.enumerateSubsequentPlays(whist20)
     val state3alternatives: Seq[State] = state20.enumeratePlays
     state3alternatives.size shouldBe 3
     state3alternatives.head.trick.plays.drop(2).head.asCard shouldBe Card(Clubs, Eight)

@@ -6,8 +6,9 @@ package com.phasmidsoftware.bridge.director
 
 import scala.io.Source
 import scala.language.postfixOps
+import scala.util._
+import scala.util.matching.Regex
 import scala.util.parsing.combinator.JavaTokenParsers
-import scala.util.{Failure, _}
 
 
 /**
@@ -15,6 +16,8 @@ import scala.util.{Failure, _}
   */
 class RecapParser extends JavaTokenParsers {
   override def skipWhitespace: Boolean = false
+
+  override val whiteSpace: Regex = """[\t ]+""".r
 
   // XXX event parser yields an Event and is a title followed by a list of sections
   def event: Parser[Event] = (title <~ endOfLine) ~ rep(section) <~ opt(eoi) ^^ { case p ~ ss => Event(p, ss) }
@@ -26,10 +29,10 @@ class RecapParser extends JavaTokenParsers {
   def preamble: Parser[Preamble] = (sectionIdentifier ~ opt(spacer ~> modifier) <~ endOfLine) ~ pairs ^^ { case t ~ wo ~ ps => Preamble(t, wo, ps) }
 
   // XXX a modifier consisting of at least one capital letter
-  def modifier: Parser[String] = """[A-Z]+""".r
+  private def modifier: Parser[String] = """[A-Z]+""".r
 
   // XXX list of pairs, each terminated by a endOfLine
-  def pairs: Parser[List[Pair]] = rep(pair <~ endOfLine)
+  def pairs: Parser[Seq[Pair]] = rep(pair <~ endOfLine)
 
   // XXX pair parser yields a Players object and is a number followed by "N" or "E" followed by two full names, each terminated by a period
   def pair: Parser[Pair] = (wholeNumber <~ spacer) ~ opt("E" | "N") ~ playerPlayer ^^ { case n ~ d ~ p => Pair(n.toInt, d, p._1 -> p._2) }
@@ -44,31 +47,31 @@ class RecapParser extends JavaTokenParsers {
     """\s*\w[^\r\n&]*""".r ^^ (s => Player(s.trim))
 
   // XXX travelers, each terminated by a endOfLine
-  def travelers: Parser[List[Traveler]] = rep(traveler)
+  def travelers: Parser[Seq[Traveler]] = rep(traveler)
 
   // XXX traveler parser yields a Traveler object and must start with a "T" and end with a blank line. In between is a list of Play objects
   def traveler: Parser[Traveler] =
     opt(spacer) ~> "T" ~> spacer ~> (wholeNumber <~ endOfLine) ~ plays <~ (endOfLine | eoi) ^^ { case b ~ ps => Traveler(Try(b.toInt), ps) }
 
   // XXX pickups, each terminated by a endOfLine
-  def pickups: Parser[List[Pickup]] = rep(pickup)
+  def pickups: Parser[Seq[Pickup]] = rep(pickup)
 
   // XXX pickup parser yields a Pickup object and must start with a "P" and end with a blank line. In between is a list of Play objects
   def pickup: Parser[Pickup] =
     opt(spacer) ~> "P" ~> spacer ~> wholeNumber ~ (spacer ~> wholeNumber <~ endOfLine) ~ boardResults <~ (endOfLine | eoi) ^^ { case ns ~ ew ~ rs => Pickup(ns.toInt, ew.toInt, rs) }
 
   // XXX plays parser yields a list of Play objects where each play is terminated by a endOfLine.
-  def plays: Parser[List[Play]] = rep(play <~ endOfLine)
+  def plays: Parser[Seq[Play]] = rep(play <~ endOfLine)
 
   // XXX play parser yields a Play object and must be two integer numbers followed by a result
   def play: Parser[Play] =
     (opt(spacer) ~> wholeNumber <~ spacer) ~ (wholeNumber <~ spacer) ~ result ^^ { case n ~ e ~ r => Play(Try(n.toInt), Try(e.toInt), r) }
 
   // XXX boardResults parser yields a list of BoardResult objects where each result is terminated by a endOfLine.
-  def boardResults: Parser[List[BoardResult]] = rep(boardResult <~ endOfLine)
+  private def boardResults: Parser[Seq[BoardResult]] = rep(boardResult <~ endOfLine)
 
   // XXX boardResult parser yields a BoardResult
-  def boardResult: Parser[BoardResult] = opt(spacer) ~> (wholeNumber <~ spacer) ~ result ^^ { case n ~ r => BoardResult(n.toInt, r) }
+  private def boardResult: Parser[BoardResult] = opt(spacer) ~> (wholeNumber <~ spacer) ~ result ^^ { case n ~ r => BoardResult(n.toInt, r) }
 
   // XXX result parser yields a PlayResult object and must be either a number (a bridge score) or a string such as DNP or A[+-]
   def result: Parser[PlayResult] = (wholeNumber | "DNP" | regex("""A[\-+]?""".r) | failure("result")) ^^ (s => PlayResult(s))
@@ -76,7 +79,7 @@ class RecapParser extends JavaTokenParsers {
   // XXX title parser yields a String and must be a String not including a endOfLine
   def title: Parser[String] = """[^\r\n]+""".r
 
-  def endOfLine: Parser[String] = s""" *$newline""".r | """ *\n""".r
+  def endOfLine: Parser[String] = s"""$newline""".r | """\n""".r // XXX is this OK?
 
   private def spacer: Parser[String] = """[ \t]*""".r
 
@@ -97,7 +100,8 @@ object RecapParser {
       case p.Error(f, x) => scala.util.Failure(new Exception(s"parse error: $f at $x"))
     }
     catch {
-      case exception: Exception => System.err.println(s"yup got one: $exception"); Failure(exception)
+      // TODO understand why this is a thrown exception instead of a parsing Failure.
+      case exception: Exception => System.err.println(s"RecapParser.readEvent: exception thrown (and not caught) by parseAll on p.event: $exception"); Failure(exception)
     }
   } else Failure(new Exception("source is null"))
 }

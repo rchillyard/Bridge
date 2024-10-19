@@ -5,25 +5,27 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.decisiontree.{Expandable, GoalDriven, StateNode}
+import com.phasmidsoftware.flog.Loggable
 import com.phasmidsoftware.output.MockWriter
-import com.phasmidsoftware.util.{Loggable, Loggables, Output}
-import org.scalatest.{FlatSpec, Matchers}
+import com.phasmidsoftware.util.{Loggables, Output}
+import org.scalatest.flatspec
+import org.scalatest.matchers.should
 
 //noinspection ScalaStyle
-class StateTreeSpec extends FlatSpec with Matchers {
+class StateTreeSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   class OldStyleExpandable(success: State => Boolean = _ => false, failure: State => Boolean = _ => false) extends Expandable[State] with Loggables {
 
     implicit val optionLoggerBoolean: Loggable[Option[Boolean]] = optionLoggable[Boolean]
-    implicit val seqLoggerState: Loggable[List[State]] = listLoggable[State]
+    implicit val ListLoggerState: Loggable[List[State]] = listLoggable[State]
 
     import com.phasmidsoftware.util.SmartValueOps._
 
-    def successors(t: State): List[State] = t.enumeratePlays.invariant(xs => xs.distinct.length == xs.length)
+    def successors(t: State): List[State] = t.enumeratePlays.invariant(xs => xs.distinct.length == xs.length) to List
   }
 
   class PlainEnumerationExpandable() extends Expandable[State] with Loggables {
-    def successors(t: State): List[State] = t.enumeratePlays
+    def successors(t: State): List[State] = t.enumeratePlays to List
   }
 
   behavior of "Tree"
@@ -36,7 +38,7 @@ class StateTreeSpec extends FlatSpec with Matchers {
   implicit val se: Expandable[State] = new OldStyleExpandable()
 
   it should "apply" in {
-    // TODO sort this out properly.
+    // CONSIDER sort this out properly.
     val trick = Trick.empty
     implicit val whistGoal: GoalDriven[State] = Whist.goal(0, _directionNS = true, 1)
     val root = StateNode(State(whist00, trick, Tricks.zero), so = None, Nil)
@@ -55,17 +57,17 @@ class StateTreeSpec extends FlatSpec with Matchers {
   }
 
   // TODO sort this out.
-//  it should "enumerateFollows" in {
-//    val deal = Deal("test", 2L)
-//    deal.output(Output(System.out)).close()
-//    val whist = Whist(deal, 0)
-//    val trick = Trick(1, List(CardPlay(deal, 0, Spades, 1)), None)
-//    val state = State(whist, trick)
-//    val ss = state.enumerateFollows
-//    ss.size shouldBe 2
-//    ss.head.trick.toString shouldBe "T1 {SK, S4}"
-//    ss.last.trick.toString shouldBe "T1 {SK, SJ}"
-//  }
+  //  it should "enumerateFollows" in {
+  //    val deal = Deal("test", 2L)
+  //    deal.output(Output(System.out)).close()
+  //    val whist = Whist(deal, 0)
+  //    val trick = Trick(1, List(CardPlay(deal, 0, Spades, 1)), None)
+  //    val state = State(whist, trick)
+  //    val ss = state.enumerateFollows
+  //    ss.size shouldBe 2
+  //    ss.head.trick.toString shouldBe "T1 {SK, S4}"
+  //    ss.last.trick.toString shouldBe "T1 {SK, SJ}"
+  //  }
 
   // TODO restore me
   ignore should "expand 1" in {
@@ -197,7 +199,7 @@ class StateTreeSpec extends FlatSpec with Matchers {
     val target = StateTree(whist)
 
     val result = target.expand(9)
-    val states: Seq[State] = result.depthFirstTraverse
+    val states: List[State] = result.depthFirstTraverse
     states.size shouldBe 10
   }
 
@@ -205,12 +207,12 @@ class StateTreeSpec extends FlatSpec with Matchers {
     val deal = Deal("test", 2L, adjustForPartnerships = false)
     val whist = Whist(deal, 0)
 
-    implicit val se: Expandable[State] = (t: State) => t.enumeratePlays
+    implicit val se: Expandable[State] = (t: State) => t.enumeratePlays to List
     implicit val sg: GoalDriven[State] = Whist.goal(2, _directionNS = true, 3)
     val target = StateTree(whist)
 
     val result = target.expand(9)
-    val states: Seq[State] = result.depthFirstTraverse
+    val states: List[State] = result.depthFirstTraverse
     states.size shouldBe 10
   }
 
@@ -219,11 +221,11 @@ class StateTreeSpec extends FlatSpec with Matchers {
     val whist = Whist(deal, 0)
 
     implicit val whistGoal: GoalDriven[State] = Whist.goal(3, _directionNS = true, 4)
-    implicit val se: Expandable[State] = (t: State) => t.enumeratePlays
+    implicit val se: Expandable[State] = (t: State) => t.enumeratePlays to List
     val target = StateTree(whist)
 
     val result = target.expand(13)
-    val states: Seq[State] = result.depthFirstTraverse
+    val states: List[State] = result.depthFirstTraverse
     states.size shouldBe 13
   }
 

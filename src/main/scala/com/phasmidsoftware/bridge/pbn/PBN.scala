@@ -36,7 +36,7 @@ case class Game(tagPairs: Seq[(Name, DetailedValue)]) extends Iterable[(Name, De
 
   override def apply(w: String): DetailedValue = tagPairs.toMap.apply(Name(w))
 
-  override def toString: String = s"Game: ${tagPairs.toMap}"
+  override def toString: String = s"gameP: ${tagPairs.toMap}"
 
   def iterator: Iterator[(Name, DetailedValue)] = tagPairs.iterator
 
@@ -52,7 +52,7 @@ object Game {
       val cfEvent = DetailedValueOrdering.compare(x(eventName), y(eventName))
       if (cfEvent != 0) cfEvent
       else {
-        // TODO order by date
+        // CONSIDER order by date
         val boardName = "Board"
         implicitly[Ordering[Int]].compare(x(boardName).toInt, y(boardName).toInt)
       }
@@ -70,7 +70,7 @@ case class DetailedValue(value: Value, detail: Seq[String]) extends Value {
 object DetailedValue {
   def trim(value: Value, detail: Seq[String]): DetailedValue = DetailedValue(value, trim(detail))
 
-  // TODO simplify this because we no longer have newlines embedded in the strings.
+  // CONSIDER simplify this because we no longer have newlines embedded in the strings.
   private def trim(detail: Seq[String]): Seq[String] = (detail.reverse.filter(_.nonEmpty) match {
     case Nil => Nil
     case h :: t =>
@@ -125,7 +125,7 @@ object Value {
 }
 
 case class DateValue(year: Int, month: Int, day: Int) extends Value {
-  // TODO put into yyy.mm.dd format
+  // CONSIDER put into yyy.mm.dd format
   //		def value: LocalDate =
   override def toString: String = ""
 }
