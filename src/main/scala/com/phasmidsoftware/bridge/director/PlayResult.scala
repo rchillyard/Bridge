@@ -79,7 +79,7 @@ object PlayResult {
     * @param dir true if the direction asked about is NS.
     * @return a Predicate[ScoreVul]
     */
-  def penaltyP(dir: Boolean): Predicate[ScoreVul] = PenaltyPredicate("penalty", penaltyIsOk).lens[SB](sb => sb.negate).lens(sv => sv.project(dir))
+  def penaltyP(dir: Boolean): Predicate[ScoreVul] = SBPredicate("penalty", penaltyIsOk).lens[SB](sb => sb.negate).lens(sv => sv.project(dir))
 
   /**
     * Predicate to test for a game in the direction dir.
@@ -120,18 +120,25 @@ object PlayResult {
 
   // NOTE we don't accept doubled overtricks or redoubled contracts here--they must be questioned.
   private lazy val trickScorePredicate = minorPartial orElse majorPartial orElse notrumpPartial orElse doubledMinorPartial orElse doubledMajorPartial orElse doubledNotrumpPartial
-
   private lazy val gameP: Predicate[SB] = trickScorePredicate.lens[SB](stripBonus(500, 300)) orElse
     trickScorePredicate.lens[SB](stripBonus(1250, 800)) orElse
     trickScorePredicate.lens[SB](stripBonus(2000, 1300))
 
   // NOTE: we accept doubled contracts as OK, but anything redoubled needs to be questioned.
-  private def penaltyIsOk(sv: SB): Boolean =
-    sv.score match {
-      case 50 | 150 | 250 | 350 | 450 | 550 | 650 => !sv.vulnerability
-      case 700 | 900 | 1000 | 1200 | 1300 => sv.vulnerability
+
+  /**
+    * Predicate method of type SB => Boolean.
+    * Recognizes penalties that are positive--i.e. from the point of view of the defenders.
+    *
+    * @param sb a SB value, i.e. score and vulnerability as a Boolean
+    * @return true if the score matches a valid penalty.
+    */
+  private def penaltyIsOk(sb: SB): Boolean =
+    sb.score match {
+      case 50 | 150 | 250 | 350 | 450 | 550 | 650 => !sb.vulnerability
+      case 700 | 900 | 1000 | 1200 | 1300 => sb.vulnerability
       case 100 | 200 | 300 | 400 | 500 | 600 | 800 | 1100 | 1400 | 1700 | 2000 | 2300 | 2600 | 2900 | 3200 | 3500 => true
-      case 3800 => sv.vulnerability
+      case 3800 => sb.vulnerability
       case _ => false
     }
 
@@ -164,7 +171,7 @@ object Vulnerability {
   }
 }
 
-case class PenaltyPredicate(name: String, f: SB => Boolean) extends BasePredicate[SB](name, f)
+case class SBPredicate(name: String, f: SB => Boolean) extends BasePredicate[SB](name, f)
 
 case class ScoreVul(score: Int, vulnerability: Vulnerability) {
   def project(direction: Boolean): SB = if (direction) SB(score, vulnerability.ns) else SB(-score, vulnerability.ew)

@@ -4,16 +4,18 @@
 
 package com.phasmidsoftware.misc
 
+import com.phasmidsoftware.misc.Predicate.{isEven, isOdd, isPositive}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
 
 class PredicateSpec extends AnyFlatSpec with should.Matchers {
 
-  behavior of "Predicate"
+  behavior of "IntPredicate"
 
-  private val isEven: IntPredicate = IntPredicate("even", _ % 2 == 0)
-  private val isOdd: IntPredicate = IntPredicate("odd", _ % 2 != 0)
-  private val isPositive: IntPredicate = IntPredicate("pos", _ > 0)
+  it should "apply" in {
+    isEven(2) shouldBe true
+    isEven(1) shouldBe false
+  }
 
   it should "get lens right" in {
     isEven.lens[Int](_ + 1)(1) shouldBe true
@@ -47,8 +49,21 @@ class PredicateSpec extends AnyFlatSpec with should.Matchers {
     (isOdd implies isPositive)(2) shouldBe true
     (isOdd implies isPositive)(-2) shouldBe true
   }
+
+  behavior of "BooleanIntPredicate"
+
+  it should "apply" in {
+    val controlPredicate: Boolean => Predicate[Int] = BooleanIntPredicate("boolean control", r => t => if (r) isEven(t) else isOdd(t))
+    val evenPredicate = controlPredicate(true)
+    val oddPredicate = controlPredicate(false)
+    evenPredicate(2) shouldBe true
+    evenPredicate(1) shouldBe false
+    oddPredicate(2) shouldBe false
+    oddPredicate(1) shouldBe true
+  }
+
 }
 
 case class IntPredicate(name: String, f: Int => Boolean) extends BasePredicate[Int](name, f)
-//  def apply(x: Int): Boolean = { val result = f(x); if (result) println(s"$name matched"); result }
 
+case class BooleanIntPredicate(name: String, f: Boolean => Int => Boolean)(b: Boolean) extends BaseControlPredicate[Boolean, Int](name, f)(b)
