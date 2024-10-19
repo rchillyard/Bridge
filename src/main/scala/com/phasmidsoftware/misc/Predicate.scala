@@ -15,9 +15,10 @@ trait Predicate[T] extends (T => Boolean) {
 
   def andThen(p: Predicate[T]): Predicate[T] = (t: T) => self(t) && p(t)
 
-  def orElse(p: Predicate[T]): Predicate[T] = (flip andThen p.flip).flip
+  def orElse(p: Predicate[T]): Predicate[T] = (t: T) => self(t) || p(t) //(flip andThen p.flip).flip
 
   def implies(p: Predicate[T]): Predicate[T] = (t: T) => if (self(t)) p(t) else true
+
 }
 
 /**
@@ -28,12 +29,12 @@ trait Predicate[T] extends (T => Boolean) {
   * @param showMatches whether to show matches (default should be false).
   * @tparam T the underlying type.
   */
-abstract class BasePredicate[T](name: String, f: T => Boolean, showMatches: Boolean = true) extends Predicate[T] {
-  override def apply(t: T): Boolean =
-    if (f(t)) {
-      if (showMatches) println(s"$name matched for t=$t")
-      true
-    } else false
+abstract class BasePredicate[T](name: String, f: T => Boolean, showMatches: Boolean = false) extends Predicate[T] {
+  override def apply(t: T): Boolean = {
+    val result = f(t)
+    if (result && showMatches) println(s"$name matched for t=$t")
+    result
+  }
 }
 
 case class IntPredicate(name: String, f: Int => Boolean) extends BasePredicate[Int](name, f)

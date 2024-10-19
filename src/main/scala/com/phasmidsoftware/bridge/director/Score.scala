@@ -128,8 +128,6 @@ case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit]
 case class Section(preamble: Preamble, travelers: Seq[Traveler], maybeTop: Option[Int] = None) extends Outputable[Unit] {
   lazy val boards: Int = travelers.size
 
-  checkBoards
-
   private lazy val top = calculateTop
 
   private lazy val _ = countResults
@@ -180,7 +178,11 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler], maybeTop: Optio
     travelers.sorted.foldLeft(output :+ s"$preamble\n")((o, t) => o ++ t.output(Output.empty))
   }
 
-  lazy val recap: Section = copy(travelers = travelers map { t => t.matchpointIt(top) }).copy(maybeTop = Some(top))
+  lazy val recap: Section = {
+    val result = copy(travelers = travelers map { t => t.matchpointIt(top) }).copy(maybeTop = Some(top))
+    if (!result.boardsOK) println("At least one result needs checking")
+    result
+  }
 
   private def all(n: Int, dir: Boolean): Seq[Option[Rational]] =
     for {
@@ -202,8 +204,7 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler], maybeTop: Optio
   private lazy val getSwResults: Map[Int, Card] =
     for ((i, i_cs) <- total(true) ++ total(false) groupBy { case (i, _) => i }) yield i -> sum(i_cs)
 
-  private def checkBoards(): Unit = for (t <- travelers; p <- t.ps) p.checkScore(t.board)
-
+  def boardsOK: Boolean = ((for (t <- travelers; p <- t.ps) yield t.board -> p) map { case (b, p) => p.checkScore(b) }).forall(b => b)
 }
 
 object Section {
@@ -589,17 +590,11 @@ case class Play(ns: Int, ew: Int, result: PlayResult) {
     *
     * @param board the board number.
     */
-  def checkScore(board: Int): Boolean = result.checkScore(Vulnerability(board))
-  //    result.r match {
-  //    case Left(_) => true
-  //    case Right(score) =>
-  //      if (score >= 80 && score < 400) partScoreIsOK(score)
-  //      else {
-  //        val vul = Vulnerability(board)
-  //        if (score % 50 == 0) penaltyOk(score, vul)
-  //        else gameOK(score, vul)
-  //      }
-  //  }
+  def checkScore(board: Int): Boolean = {
+    val z = result.checkScore(Vulnerability(board))
+    if (!z) println(s"Board $board needs check on result $result")
+    z
+  }
 }
 
 /**
