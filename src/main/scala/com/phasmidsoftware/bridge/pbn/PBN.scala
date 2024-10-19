@@ -36,7 +36,7 @@ case class Game(tagPairs: Seq[(Name, DetailedValue)]) extends Iterable[(Name, De
 
   override def apply(w: String): DetailedValue = tagPairs.toMap.apply(Name(w))
 
-  override def toString: String = s"Game: ${tagPairs.toMap}"
+  override def toString: String = s"gameP: ${tagPairs.toMap}"
 
   def iterator: Iterator[(Name, DetailedValue)] = tagPairs.iterator
 

@@ -20,11 +20,20 @@ trait Predicate[T] extends (T => Boolean) {
   def implies(p: Predicate[T]): Predicate[T] = (t: T) => if (self(t)) p(t) else true
 }
 
-class BasePredicate[T](name: String, f: T => Boolean, showMatches: Boolean = true) extends Predicate[T] {
-  override def apply(t: T): Boolean = if (f(t)) {
-    if (showMatches) println(s"$name matched for t=$t");
-    true
-  } else false
+/**
+  * NOTE: strictly speaking, this does not need to be abstract.
+  *
+  * @param name        the name of the predicate.
+  * @param f           the predicate function.
+  * @param showMatches whether to show matches (default should be false).
+  * @tparam T the underlying type.
+  */
+abstract class BasePredicate[T](name: String, f: T => Boolean, showMatches: Boolean = true) extends Predicate[T] {
+  override def apply(t: T): Boolean =
+    if (f(t)) {
+      if (showMatches) println(s"$name matched for t=$t")
+      true
+    } else false
 }
 
 case class IntPredicate(name: String, f: Int => Boolean) extends BasePredicate[Int](name, f)

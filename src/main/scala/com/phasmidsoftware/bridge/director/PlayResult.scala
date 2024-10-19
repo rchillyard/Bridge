@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.director
 
-import com.phasmidsoftware.bridge.director.PlayResult.{partialOK, scoreOK}
+import com.phasmidsoftware.bridge.director.PlayResult.scoreOK
 import com.phasmidsoftware.misc.{BasePredicate, IntPredicate, Predicate}
 import com.phasmidsoftware.number.core.Rational
 
@@ -42,7 +42,6 @@ case class PlayResult(r: Either[String, Int]) {
     case Right(_) => true
     case Left("A-" | "A" | "A+" | "DNP") => true
     case _ => false
-
   }
 
   /**
@@ -55,22 +54,10 @@ case class PlayResult(r: Either[String, Int]) {
     case Right(score) => scoreOK(ScoreVul(score, vul))
   }
 
-  //  object scorePredicate extends ScoreVulPredicate("score", )
-
-  //  case class Predicate(name: String, predicate: Int => Boolean) extends (Int => Boolean)
-  //  case class Condition(name: String, predicate: Int => Boolean, conclusion: Int => Boolean) extends (Int => Boolean) {
-  //    def apply(x: Int): Boolean = {
-  //      val result = predicate(x) && conclusion(x); if (result) println(s"matched $name"); result
-  //    }
-  //
-  //    def orElse(condition: Condition): Condition = Condition(s"$name orElse ${condition.name}", !apply(_), condition)
-  //  }
-
   override def toString: String = r match {
     case Left(x) => x
     case Right(x) => x.toString
   }
-
 }
 
 /**
@@ -90,35 +77,49 @@ object PlayResult {
 
   private def suitPartial(suit: String, value: Int) = IntPredicate(s"$suit partial", score => score :| value && Range(1, 8).contains(score / value))
 
-  private val minorPartial = suitPartial("minor", 20)
-  private val majorPartial = suitPartial("major", 30)
-  private val notrumpPartial = IntPredicate("notrump", score => majorPartial(score - 10))
+  private lazy val minorPartial = suitPartial("minor", 20)
+  private lazy val majorPartial = suitPartial("major", 30)
+  private lazy val notrumpPartial = IntPredicate("notrump", score => majorPartial(score - 10))
   //  val doubledMinorPartial: IntPredicate = suitPartial("Xminor", 40)
   //  val doubledMajorPartial: IntPredicate = suitPartial("Xmajor", 60)
   //  val doubledNotrumpPartial: IntPredicate = IntPredicate("Xnotrump", score => majorPartial(score - 20))
 
-  private val trickScorePredicate = minorPartial orElse majorPartial orElse notrumpPartial
+  private lazy val trickScorePredicate = minorPartial orElse majorPartial orElse notrumpPartial
   //  val partScorePredicate: Predicate[Int] = trickScorePredicate.lens[Int](_ - 50) orElse trickScorePredicate.lens(_ - 100)
 
   //  val penaltyIsOKPred = SBPredicate("penaltyIsOK", (s,v) => penaltyIsOk(s, v))
 
   //     NOTE we don't accept doubled overtricks or redoubled contracts here--they must be questioned.
-  private val gameP: Predicate[SB] = trickScorePredicate.lens[SB](stripBonus(500, 300)) orElse
+  private lazy val gameP: Predicate[SB] = trickScorePredicate.lens[SB](stripBonus(500, 300)) orElse
     trickScorePredicate.lens[SB](stripBonus(1250, 800)) orElse
-    trickScorePredicate.lens[SB](stripBonus(2000, 1400))
+    trickScorePredicate.lens[SB](stripBonus(2000, 1300))
 
-  def Game(b: Boolean): Predicate[ScoreVul] = gameP.lens(u => u.project(b))
+  def partialP(dir: Boolean): Predicate[ScoreVul] = trickScorePredicate.lens[SB](stripBonus(50, 50)).lens[ScoreVul](sv => sv.project(dir))
 
-  val scoreOK: Predicate[ScoreVul] = penaltyP(true) orElse penaltyP(false) orElse Game(true) orElse Game(false) orElse Partial
+  lazy val Partial: Predicate[ScoreVul] = partialP(true) orElse partialP(false)
 
-  private val scoreIsPositive: Predicate[Int] = IntPredicate("positive", _ > 0)
+  def gameP(b: Boolean): Predicate[ScoreVul] = gameP.lens(u => u.project(b))
+
+  val Penalty: Predicate[ScoreVul] = penaltyP(true) orElse penaltyP(false)
+
+  val Game: Predicate[ScoreVul] = gameP(true) orElse gameP(false)
+
+  lazy val scoreOK: Predicate[ScoreVul] = Penalty orElse Game orElse Partial
+
+  private lazy val scoreIsPositive: Predicate[Int] = IntPredicate("positive", _ > 0)
 
   //  def vulnerabilityPredicate(ns: Boolean): Predicate[Vulnerability] = (v: Vulnerability) => if (ns) v.ns else v.ew
 
-  private val SVIsPositive: Predicate[ScoreVul] = scoreIsPositive.lens(sv => sv.score)
+  private lazy val SVIsPositive: Predicate[ScoreVul] = scoreIsPositive.lens(sv => sv.score)
   //  val SVIsPositive2: Predicate[SB] = scoreIsPositive.lens(sb => sb.score)
 
-  private def penaltyP(dir: Boolean): Predicate[ScoreVul] = new BasePredicate[SB]("penalty", penaltyIsOk).lens(sv => sv.project(dir))
+  /**
+    * Predicate to test for a penalty in the direction dir.
+    *
+    * @param dir true if the direction asked about is NS.
+    * @return a Predicate[ScoreVul]
+    */
+  def penaltyP(dir: Boolean): Predicate[ScoreVul] = PenaltyPredicate("penalty", penaltyIsOk).lens[SB](sb => sb.negate).lens(sv => sv.project(dir))
   //  val gameIsOKp: Predicate[ScoreVul] =
   //    trickScorePredicate(sv.score)
   //    gameIsOK(sv.score, sv.vulnerability.ns)
@@ -137,7 +138,7 @@ object PlayResult {
   //    if (score > 0) penaltyIsOk(score, vul.ew)
   //    else penaltyIsOk(-score, vul.ns)
 
-  def partialOK(score: Int, vul: Vulnerability): Boolean = trickScorePredicate(math.abs(score))
+  def partialOK(score: Int): Boolean = trickScorePredicate(math.abs(score))
 
   private def stripBonus(bonusV: Int, bonusN: Int)(sv: SB): Int = sv.score - (if (sv.vulnerability) bonusV else bonusN)
 
@@ -190,12 +191,14 @@ object Vulnerability {
   }
 }
 
+case class PenaltyPredicate(name: String, f: SB => Boolean) extends BasePredicate[SB](name, f)
+
 case class ScoreVulPredicate(name: String, f: ScoreVul => Boolean) extends BasePredicate[ScoreVul](name, f)
 
-//case class SBPredicate(name: String, f: SB => Boolean) extends BasePredicate[SB](name, f)
+case class SBPredicate(name: String, f: SB => Boolean) extends BasePredicate[SB](name, f)
 
 //object Penalty extends ScoreVulPredicate("penalty", sv => penaltyOk(sv.score, sv.vulnerability))
-object Partial extends ScoreVulPredicate("partial", sv => partialOK(sv.score, sv.vulnerability))
+//object Partial extends SBPredicate("partial", PlayResult.partialP)
 
 case class ScoreVul(score: Int, vulnerability: Vulnerability) {
   def rotate: ScoreVul = ScoreVul(-score, vulnerability.invert)
@@ -205,4 +208,6 @@ case class ScoreVul(score: Int, vulnerability: Vulnerability) {
 
 case class SB(score: Int, vulnerability: Boolean) {
   def rotate: SB = SB(-score, !vulnerability)
+
+  def negate: SB = copy(score = -score)
 }
