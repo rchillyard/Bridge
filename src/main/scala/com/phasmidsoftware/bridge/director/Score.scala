@@ -15,7 +15,7 @@ import com.phasmidsoftware.util.{Output, Outputable}
 import java.io.{FileWriter, PrintWriter}
 import scala.io.{BufferedSource, Source}
 import scala.language.postfixOps
-import scala.util.{Failure, Success, _}
+import scala.util._
 
 /**
   * Created by scalaprof on 4/12/16.
@@ -28,7 +28,7 @@ object Score extends App {
   private lazy val tabbedOutput: Output = Output(fileWriter)
   private lazy val untabbedOutput: Output = Output.untabbedWriter(printWriter, 6)
   // TODO set this to use untabbedOutput if you want all tabs turned into spaces.
-  lazy val defaultOutput: Output = tabbedOutput
+  private lazy val defaultOutput: Output = tabbedOutput
 
   doMain(tabbedOutput)
 
@@ -128,6 +128,8 @@ case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit]
 case class Section(preamble: Preamble, travelers: Seq[Traveler], maybeTop: Option[Int] = None) extends Outputable[Unit] {
   lazy val boards: Int = travelers.size
 
+  checkBoards
+
   private lazy val top = calculateTop
 
   private lazy val _ = countResults
@@ -155,7 +157,7 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler], maybeTop: Optio
     *
     * TODO the warning should only appear when a board-play is missing from the pickups (or travelers).
     */
-  lazy val countResults: Int = {
+  private lazy val countResults: Int = {
     val tops: Seq[(Int, Int)] = for (t <- travelers.sortBy(_.board)) yield (t.board, t.ps.count(p => p.result.exists))
     val theTop = tops.distinctBy(x => x._2)
     if (theTop.size != 1 && maybeTop.isEmpty)
@@ -199,6 +201,9 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler], maybeTop: Optio
 
   private lazy val getSwResults: Map[Int, Card] =
     for ((i, i_cs) <- total(true) ++ total(false) groupBy { case (i, _) => i }) yield i -> sum(i_cs)
+
+  private def checkBoards(): Unit = for (t <- travelers; p <- t.ps) p.checkScore(t.board)
+
 }
 
 object Section {
@@ -323,7 +328,7 @@ object Card {
 /**
   * This is the complete results for a particular direction
   *
-  * @param isNS  (optional) Some(true) if this result is for N/S; Some(false) if for E/W; None for single winner.
+  * @param isNS (optional) Some(true) if this result is for N/S; Some(false) if for E/W; None for a single winner movement.
   * @param top   top on a board
   * @param cards a map of tuples containing total score and number of boards played, indexed by the pair number
   */
@@ -346,7 +351,7 @@ case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
     * In the following, n = # players in each direction.
     * cards.size = n.
     * top = n - 1
-    * The total matchpoints overall should be boards * sum{top}, i.e. n * (n - 1)) * boards / 2
+    * The total matchpoints overall should be boards * sum{top}, i.e. n * (n - 1) * boards / 2
     * The total matchpoints for a board should be B = sum (#top), i.e. 1/2 * n * (n - 1)
     * The total matchpoints for a board expressed as a fraction is F = n/2.
     *
@@ -446,7 +451,7 @@ object Matchpoints {
 /**
   * This is a traveler for a specific board (in a specific, unnamed, section).
   * We usually report boards either by travelers or pickup slips.
-  * It is however possible to mix these up.
+  * It is, however, possible to mix these up.
   *
   * @param board the board number.
   * @param ps    the plays.
@@ -579,6 +584,22 @@ case class Play(ns: Int, ew: Int, result: PlayResult) {
     */
   def matchpoints(t: Traveler): Option[Rational] = result.matchpoints(t.matchpoint(this))
 
+  /**
+    * Here we check if the result is one of the common possible results.
+    *
+    * @param board the board number.
+    */
+  def checkScore(board: Int): Boolean = result.checkScore(Vulnerability(board))
+  //    result.r match {
+  //    case Left(_) => true
+  //    case Right(score) =>
+  //      if (score >= 80 && score < 400) partScoreIsOK(score)
+  //      else {
+  //        val vul = Vulnerability(board)
+  //        if (score % 50 == 0) penaltyOk(score, vul)
+  //        else gameOK(score, vul)
+  //      }
+  //  }
 }
 
 /**
@@ -590,60 +611,4 @@ object Play {
     z.recover { case x => System.err.println(s"Exception: $x"); Play(0, 0, PlayResult.error("no match")) }.get
   }
 }
-
-/**
-  * This is a play result, that's to say either a bridge score (+ or - according to what NS scored)
-  * OR a code.
-  *
-  * @param r Either: an integer (multiple of 10), Or: one of the following:
-  *          DNP: did not play
-  *          A+: N/S got Average plus (60%) and E/W Average minus
-  *          A: both sides got Average (50%)
-  *          A-: N/S got Average minus (40%) and E/W Average plus
-  *
-  */
-case class PlayResult(r: Either[String, Int]) {
-  /**
-    * Method to get the matchpoints for this PlayResult
-    *
-    * @param f call-by-name value of the matchpoints where the result is an an Int
-    * @return an optional Rational
-    */
-  def matchpoints(f: => Option[Rational]): Option[Rational] = r match {
-    case Right(_) => f
-    case Left("A-") => Some(Rational(2, 5))
-    case Left("A") => Some(Rational(1, 2))
-    case Left("A+") => Some(Rational(3, 5))
-    case Left("DNP") => None
-    case _ => throw ScoreException(s"matchpoints: unrecognized result: $r")
-  }
-
-  def exists: Boolean = r match {
-    case Right(_) => true
-    case Left("A-" | "A" | "A+" | "DNP") => true
-    case _ => false
-
-  }
-
-  override def toString: String = r match {
-    case Left(x) => x
-    case Right(x) => x.toString
-  }
-}
-
-/**
-  * Companion object to PlayResult class.
-  */
-object PlayResult {
-  def apply(s: String): PlayResult = {
-    val z = Try(s.toInt).toEither match {
-      case Left(_) => Left(s) // we ignore the exception because it is probably just a non-integer
-      case Right(r) => Right(r)
-    }
-    PlayResult(z)
-  }
-
-  def error(s: String): PlayResult = PlayResult(Left(s))
-}
-
 case class ScoreException(str: String) extends Exception(str)
