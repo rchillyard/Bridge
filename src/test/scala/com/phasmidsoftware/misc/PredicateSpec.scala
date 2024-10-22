@@ -64,9 +64,19 @@ class PredicateSpec extends AnyFlatSpec with should.Matchers {
 
   behavior of "Predicate"
 
-  it should "work" in {
-    //    Predicate.weird("Hello") shouldBe true
-    //    Predicate.weird("World") shouldBe false
+  it should "work with a function" in {
+    val p = Predicate[String](w => w == "Hello")
+    p("Hello") shouldBe true
+    p("World") shouldBe false
+  }
+
+  it should "work with a partially-defined function" in {
+    val p = Predicate[String] {
+      case "Hello" => true
+      case _ => false
+    }
+    p("Hello") shouldBe true
+    p("World") shouldBe false
   }
 }
 
