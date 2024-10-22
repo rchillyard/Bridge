@@ -62,6 +62,12 @@ class PredicateSpec extends AnyFlatSpec with should.Matchers {
     oddPredicate(1) shouldBe true
   }
 
+  behavior of "Predicate"
+
+  it should "work" in {
+    //    Predicate.weird("Hello") shouldBe true
+    //    Predicate.weird("World") shouldBe false
+  }
 }
 
 case class IntPredicate(name: String, f: Int => Boolean) extends BasePredicate[Int](name, f)
