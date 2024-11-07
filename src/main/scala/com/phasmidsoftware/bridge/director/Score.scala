@@ -8,7 +8,7 @@ import com.phasmidsoftware.bridge.director.Card.mpsAsString
 import com.phasmidsoftware.bridge.director.Matchpoints.rationalToString
 import com.phasmidsoftware.bridge.director.Score.asPercent
 import com.phasmidsoftware.number.core.Rational
-import com.phasmidsoftware.number.core.Rational.half
+import com.phasmidsoftware.number.core.Rational.{half, zero}
 import com.phasmidsoftware.output.{Using, Util}
 import com.phasmidsoftware.util.{Output, Outputable}
 
@@ -128,17 +128,19 @@ case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit]
 case class Section(preamble: Preamble, travelers: Seq[Traveler], maybeTop: Option[Int] = None) extends Outputable[Unit] {
   lazy val boards: Int = travelers.size
 
+  private lazy val tables = preamble.pairs.size / 2 // NOTE: we assume that all tables that can be filled are filled.
+
   private lazy val top = calculateTop
 
   private lazy val _ = countResults
 
   lazy val createResults: Seq[Result] = preamble.maybeModifier match {
-    case Some(Preamble.SingleWinner) => Seq(Result(None, top, getSwResults))
+    case Some(Preamble.SingleWinner) => Seq(Result(tables, None, top, getSwResults))
     case _ => for {
       d <- Seq(true, false)
       totalMPs: Seq[Pos] = total(d)
       map: Map[Int, Card] = totalMPs.toMap
-    } yield Result(Some(d), top, map)
+    } yield Result(tables, Some(d), top, map)
   }
 
   /**
@@ -184,21 +186,22 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler], maybeTop: Optio
     result
   }
 
-  private def all(n: Int, dir: Boolean): Seq[Option[Rational]] =
+  private def all(n: Int, dir: Boolean): Seq[(BoardResult, Option[Rational])] = // was Seq[Option[Rational]]
     for {
-      t <- recap.travelers // CONSIDER invoking recap somewhere else
-      ms <- t.maybeMatchpoints.toSeq // CONSIDER replace with matchpoints
-      m <- ms.filter(_.matchesPair(n, dir))
-    } yield m.getMatchpoints(dir)
+      t: Traveler <- recap.travelers // CONSIDER invoking recap somewhere else
+      ms: Seq[Matchpoints] <- t.maybeMatchpoints.toSeq // CONSIDER replace with matchpoints
+      m: Matchpoints <- ms.filter(_.matchesPair(n, dir))
+      ro: Option[PlayResult] <- t.ps map (p => p.playResult(n, dir))
+      r: PlayResult <- ro
+      br: BoardResult = BoardResult(t.board, r)
+    } yield (br, m.getMatchpoints(dir))
 
-  private def total(d: Boolean): Seq[Pos] = for {p <- preamble.pairs
-                                                 ros = all(p.number, d)
-                                                 } yield p.number -> Card(ros)
+  private def total(d: Boolean): Seq[Pos] = for (p <- preamble.pairs) yield p.number -> Card(all(p.number, d))
 
   private def sum(iCs: Seq[Pos]): Card = {
     val (is, cs) = iCs.unzip
     if (is.distinct.length > 1) throw ScoreException(s"logic error: sum: indices should be the same")
-    cs.foldLeft(Card(0, 0, 0))(_ + _)
+    cs.foldLeft(Card(0, 0, 0, Nil))(_ + _)
   }
 
   private lazy val getSwResults: Map[Int, Card] =
@@ -236,9 +239,10 @@ case class Preamble(identifier: String, maybeModifier: Option[String], pairs: Se
       case Some(Preamble.SingleWinner) =>
         ws.head
       case _ =>
-        val wt = Util.asTuple2(ws)
         ns match {
-          case Some(b) => if (b) wt._1 else wt._2
+          case Some(b) =>
+            val wt = Util.asTuple2(ws, "phantom pair", b)("pair names")
+            if (b) wt._1 else wt._2
           case _ => throw ScoreException("logic error in Preamble.getNames")
         }
 
@@ -299,41 +303,46 @@ case class Player(name: String) {
   * @param played    the number of boards played.
   * @param notPlayed the number of boards not played.
   */
-case class Card(totalMps: Rational, played: Int, notPlayed: Int) extends Ordered[Card] {
+case class Card(totalMps: Rational, played: Int, notPlayed: Int, ps: Seq[BoardResult]) extends Ordered[Card] {
 
   def toStringMps(top: Int): String = mpsAsString(scaledMps, top)
 
   def compare(that: Card): Int = percentage.compare(that.percentage)
 
-  def +(c: Card): Card = Card(totalMps + c.totalMps, played + c.played, notPlayed + c.notPlayed)
+  def +(c: Card): Card = Card(totalMps + c.totalMps, played + c.played, notPlayed + c.notPlayed, ps ++ c.ps)
 
-  lazy val toStringPercent: String = rationalToString(percentage) + "%"
+  lazy val toStringPercent: String = rationalToString(percentage) + "%" // CONSIDER use renderAsPercent
 
   private lazy val percentage: Rational = asPercent(totalMps, played)
 
-  private def scaledMps = totalMps * (played + notPlayed) / played
+  def scaledMps: Rational = if (played > 0) totalMps * (played + notPlayed) / played else zero
+
+  //  override def toString: String = s"${totalMps.renderExact} for $played boards"
 }
 
 /**
   * Companion object to Card class.
   */
 object Card {
-  def apply(ros: Seq[Option[Rational]]): Card = {
+
+  def apply(zs: Seq[(BoardResult, Option[Rational])]): Card = {
+    val qs = for ((b, ro) <- zs; r <- ro) yield (b.setMPs(r), ro)
+    val (brs, ros) = qs.unzip
     val irs: Seq[Rational] = ros.flatten
-    Card(irs.sum, irs.size, ros.size - irs.size)
+    Card(irs.sum, irs.size, zs.size - irs.size, brs)
   }
 
   def mpsAsString(r: Rational, top: Int): String = rationalToString(r * top)
 }
 
 /**
-  * This is the complete results for a particular direction
+  * This is the complete results for a particular direction of a section.
   *
   * @param isNS (optional) Some(true) if this result is for N/S; Some(false) if for E/W; None for a single winner movement.
   * @param top   top on a board
   * @param cards a map of tuples containing total score and number of boards played, indexed by the pair number
   */
-case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
+case class Result(tables: Int, isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
 
   /**
     * Method to get results, given a nameFunction
@@ -364,9 +373,9 @@ case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
     * @return true if the matchpoint sums check out.
     */
   def checksum(boards: Int): Boolean = {
-    val matchpoints: Rational = cards.map(_._2.totalMps).sum
-    val n = cards.size
-    val expected = Rational(n * boards, 2)
+    val scaledMps = cards.map(_._2.scaledMps)
+    val matchpoints: Rational = scaledMps.sum
+    val expected = Rational(tables * boards, 2)
     val result = matchpoints == expected
     val direction = isNS match {
       case Some(b) if b => "NS"
@@ -374,7 +383,7 @@ case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
       case None => "SW"
     }
     if (!result)
-      System.err.println(s"Total fractional matchpoints for this $direction result ($matchpoints) differ from what is expected for $boards boards and $n players ($boards * $n / 2 = $expected)")
+      System.err.println(s"Total fractional matchpoints for this $direction section result ($matchpoints) differ from what is expected for $boards boards and $tables tables ($boards * $tables / 2 = $expected)")
     result
   }
 
@@ -390,8 +399,10 @@ case class Result(isNS: Option[Boolean], top: Int, cards: Map[Int, Card]) {
       Output(s"""$rank$suffix\t$pairNumber\t${card.toStringMps(top)}\t${card.toStringPercent}\t${nameFunction(pairNumber)}""").insertBreak()
     }
 
-    val keyFunction: Pos => Rational = t => t._2.totalMps
-    val ps: Seq[Pos] = cards.toList.sortBy(_._2).reverse
+    // CONSIDER why do we come here more than twice?
+    for ((i, c) <- cards) println(s"$i: $c")
+    val keyFunction: Pos => Rational = t => t._2.scaledMps
+    val ps: Seq[Pos] = cards.toList.sortBy(_._2.scaledMps).reverse
     val psRm: Map[Rational, Seq[Pos]] = ps.groupBy[Rational](keyFunction)
     val psRs: Seq[(Rational, Seq[Pos])] = psRm.toSeq.sortBy(_._1).reverse
     val psis: Seq[Psi] = psRs.scanLeft(Psi.empty) {
@@ -501,8 +512,14 @@ case class Traveler(board: Int, ps: Seq[Play], maybeMatchpoints: Option[Seq[Matc
     output :+ result.toString
   }
 
-  private def calculateMatchpoints(idealTop: Int): Seq[Matchpoints] =
-    for (p <- ps) yield Matchpoints(p.ns, p.ew, p.result, p.matchpoints(this), top).factorIfRequired(idealTop)
+  private def calculateMatchpoints(idealTop: Int): Seq[Matchpoints] = {
+    val result: Seq[Matchpoints] = for (p <- ps) yield Matchpoints(p.ns, p.ew, p.result, p.matchpoints(this), top).factorIfRequired(idealTop)
+    val total = result.flatMap(_.getMatchpoints(true)).sum
+    val expectedTotal = Rational((idealTop + 1) / 2)
+    if (total != expectedTotal)
+      System.err.println(s"Board $board: has incorrect total matchpoints: $total (expected: $expectedTotal)")
+    result
+  }
 }
 
 /**
@@ -523,8 +540,12 @@ object Traveler {
   * @param board  the board number.
   * @param result the result.
   */
-case class BoardResult(board: Int, result: PlayResult) {
-  override def toString: String = s"$board: $result"
+case class BoardResult(board: Int, result: PlayResult, ro: Option[Rational] = None) {
+  override def toString: String = s"$board: $renderRo$result"
+
+  private def renderRo: String = (ro map (_.renderAsPercent(2) + " for ")).getOrElse("")
+
+  def setMPs(r: Rational): BoardResult = copy(ro = Some(r))
 }
 
 /**
@@ -577,6 +598,10 @@ case class Play(ns: Int, ew: Int, result: PlayResult) {
     case _ => None
   }
 
+  def conditional[X](x: => X)(b: Boolean): Option[X] = if (b) Some(x) else None
+
+  def playResult(n: Int, dirNs: Boolean): Option[PlayResult] = if (dirNs) conditional(result)(n == ns) else conditional(result.invert)(n == ew)
+
   /**
     * Calculate the matchpoints for this Play in the context of the given Traveler (t)
     *
@@ -606,4 +631,5 @@ object Play {
     z.recover { case x => System.err.println(s"Exception: $x"); Play(0, 0, PlayResult.error("no match")) }.get
   }
 }
+
 case class ScoreException(str: String) extends Exception(str)

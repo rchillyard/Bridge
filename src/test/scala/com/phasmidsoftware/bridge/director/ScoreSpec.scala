@@ -292,7 +292,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
   }
   "percentageAsString" should "work" in {
     val r = Rational(3, 4)
-    Card(r, 1, 0).toStringPercent shouldBe "75.00%"
+    Card(r, 1, 0, Nil).toStringPercent shouldBe "75.00%"
   }
   "mpsAsString" should "work" in {
     val r = Rational(3, 4)
@@ -438,11 +438,11 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     resultANS.top shouldBe 5
     val cards: Map[Int, Card] = resultANS.cards
     cards.size shouldBe 6
-    val total: Rational = (for (Card(r, _, _) <- cards.values) yield r).sum
+    val total: Rational = (for (Card(r, _, _, _) <- cards.values) yield r).sum
     total shouldBe Rational(2).invert * cards.size * (resultANS.top + 1)
     val scores = for (score <- cards.keys) yield cards(score)
     scores.size shouldBe 6
-    for ((_, Card(_, t, _)) <- cards) t shouldBe resultANS.top + 1
+    for ((_, Card(_, t, _, _)) <- cards) t shouldBe resultANS.top + 1
   }
 
   // CONSIDER sort this out.
@@ -762,22 +762,22 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
   behavior of "Card"
 
   it should "toStringPercent" in {
-    val target = Card(Rational(5, 2), 5, 0)
+    val target = Card(Rational(5, 2), 5, 0, Nil)
     target.toStringPercent shouldBe "50.00%"
   }
 
   it should "toStringPercentDNP" in {
-    val target = Card(Rational(4, 2), 4, 1)
+    val target = Card(Rational(4, 2), 4, 1, Nil)
     target.toStringPercent shouldBe "50.00%"
   }
 
   it should "toStringMps" in {
-    val target = Card(Rational(5), 5, 0)
+    val target = Card(Rational(5), 5, 0, Nil)
     target.toStringMps(2) shouldBe "10.00"
   }
 
   it should "toStringMpsDNP" in {
-    val target = Card(Rational(5), 4, 1)
+    val target = Card(Rational(5), 4, 1, Nil)
     target.toStringMps(2) shouldBe "12.50"
   }
 

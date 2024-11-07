@@ -17,9 +17,14 @@ object Util {
     * @tparam X the underlying type.
     * @return an (X,X)
     */
-  def asTuple2[X](xs: Seq[X]): (X, X) =
+  def asTuple2[X](xs: Seq[X], missing: X, order: Boolean)(description: => String): (X, X) =
     if (xs.length == 2) xs.head -> xs.last
-    else throw UtilException(s"cannot convert sequence to Tuple2 because cardinality is wrong: ${xs.length}")
+    else if (xs.length == 1) {
+      val tuple = xs.head -> missing
+      if (order) tuple else tuple.swap
+    }
+    else
+      throw UtilException(s"cannot convert $description sequence to Tuple2 because cardinality is not one or two: ${xs.length}")
 }
 
 case class UtilException(s: String) extends Exception(s)

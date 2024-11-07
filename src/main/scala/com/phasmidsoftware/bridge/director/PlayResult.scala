@@ -58,6 +58,8 @@ case class PlayResult(r: Either[String, Int]) {
     case Left(x) => x
     case Right(x) => x.toString
   }
+
+  def invert: PlayResult = if (exists) PlayResult(r.map(x => -x)) else this
 }
 
 /**
@@ -95,7 +97,7 @@ object PlayResult {
     * @param dir true if the direction asked about is NS.
     * @return a Predicate[ScoreVul]
     */
-  def partialP(dir: Boolean, doubled: Boolean): Predicate[ScoreVul] = {
+  private def partialP(dir: Boolean, doubled: Boolean): Predicate[ScoreVul] = {
     val bonus = if (doubled) 100 else 50
     trickScorePredicate.lens[SB](stripBonus(bonus, bonus)).lens(_.project(dir))
   }
