@@ -317,7 +317,22 @@ case class Card(totalMps: Rational, played: Int, notPlayed: Int, ps: Seq[BoardRe
 
   def scaledMps: Rational = if (played > 0) totalMps * (played + notPlayed) / played else zero
 
-  //  override def toString: String = s"${totalMps.renderExact} for $played boards"
+  def render: String = {
+    val rXb: Map[Int, BoardResult] = (for (p <- ps) yield p.board -> p).toMap
+    val boards: Seq[Int] = rXb.keys.toSeq.sorted
+    if (boards.nonEmpty) {
+      val result = new StringBuilder(totalMps.toString())
+      for (b <- 1 to boards.last) {
+        val w = rXb.get(b) match {
+          case Some(r) => r.renderRo("")
+          case None => ""
+        }
+        result.append("\t" + w)
+      }
+      result.toString
+    }
+    else "no boards played"
+  }
 }
 
 /**
@@ -383,7 +398,7 @@ case class Result(tables: Int, isNS: Option[Boolean], top: Int, cards: Map[Int, 
       case None => "SW"
     }
     if (!result)
-      System.err.println(s"Total fractional matchpoints for this $direction section result ($matchpoints) differ from what is expected for $boards boards and $tables tables ($boards * $tables / 2 = $expected)")
+      System.err.println(s"Total fractional matchpoints for this $direction section result ($matchpoints) differ from what is expected for $boards boards and $tables tables ($boards * $tables / 2 = $expected)\n   (Note: this may not be a problem if there is a half-table)")
     result
   }
 
@@ -399,8 +414,7 @@ case class Result(tables: Int, isNS: Option[Boolean], top: Int, cards: Map[Int, 
       Output(s"""$rank$suffix\t$pairNumber\t${card.toStringMps(top)}\t${card.toStringPercent}\t${nameFunction(pairNumber)}""").insertBreak()
     }
 
-    // CONSIDER why do we come here more than twice?
-    for ((i, c) <- cards) println(s"$i: $c")
+//    showCards() // NOTE comment this out for normal running.
     val keyFunction: Pos => Rational = t => t._2.scaledMps
     val ps: Seq[Pos] = cards.toList.sortBy(_._2.scaledMps).reverse
     val psRm: Map[Rational, Seq[Pos]] = ps.groupBy[Rational](keyFunction)
@@ -411,6 +425,15 @@ case class Result(tables: Int, isNS: Option[Boolean], top: Int, cards: Map[Int, 
     val xPs: Seq[(Pos, Int, String)] = for {Psi(_, r, ps) <- psis; x = if (ps.size > 1) "=" else " "; p <- ps} yield (p, r + 1, x)
     val header = Output(s"Rank\tPair\tMPs\tPercent\tNames\n")
     Output.foldLeft(xPs)(header)(_ ++ resultDetails(_))
+  }
+
+  private def showCards(): Unit = {
+    println("pair\ttotal\tboards...")
+    for {
+      pair <- cards.keys.toSeq.sorted
+      card = cards(pair)
+    } println(s"$pair\t${card.render}")
+    println(s"total\t${cards.values.map(_.totalMps).sum}")
   }
 }
 
@@ -541,9 +564,9 @@ object Traveler {
   * @param result the result.
   */
 case class BoardResult(board: Int, result: PlayResult, ro: Option[Rational] = None) {
-  override def toString: String = s"$board: $renderRo$result"
+  override def toString: String = s"$board: ${renderRo(" for ")}$result"
 
-  private def renderRo: String = (ro map (_.renderAsPercent(2) + " for ")).getOrElse("")
+  def renderRo(suffix: String): String = (ro map (_.renderAsPercent(2) + suffix)).getOrElse("")
 
   def setMPs(r: Rational): BoardResult = copy(ro = Some(r))
 }
