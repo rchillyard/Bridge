@@ -35,12 +35,10 @@ class RecapParser extends JavaTokenParsers {
   def pairs: Parser[Seq[Pair]] = rep(pair <~ endOfLine)
 
   // XXX pair parser yields a Players object and is a number followed by "N" or "E" followed by two full names, each terminated by a period
-  def pair: Parser[Pair] = (wholeNumber <~ spacer) ~ opt("E" | "N") ~ playerPlayer ^^ { case n ~ d ~ p => Pair(n.toInt, d, p._1 -> p._2) }
-
-  //  def pair: Parser[Pair] = (wholeNumber <~ spacer) ~ opt("E" | "N") ~ playerPlayer ^^ { case n ~ d ~ p => Pair(n.toInt, d, p._1 -> p._2) }
+  def pair: Parser[Pair] = (wholeNumber <~ spacer) ~ opt("E" | "N" | failure("direction")) ~ playerPlayer ^^ { case n ~ d ~ p => Pair(n.toInt, d, p._1 -> p._2) }
 
   // XXX pair parser yields a tuple of Player objects and is a string, possibly including space characters but not including & or endOfLine.
-  def playerPlayer: Parser[Player ~ Player] = (player <~ """&""") ~ player
+  def playerPlayer: Parser[Player ~ Player] = (player <~ ampersand) ~ player
 
   // XXX player parser yields a Player object and is at least one character that is neither & nor a newline char
   def player: Parser[Player] =
@@ -51,14 +49,14 @@ class RecapParser extends JavaTokenParsers {
 
   // XXX traveler parser yields a Traveler object and must start with a "T" and end with a blank line. In between is a list of Play objects
   def traveler: Parser[Traveler] =
-    opt(spacer) ~> "T" ~> spacer ~> (wholeNumber <~ endOfLine) ~ plays <~ (endOfLine | eoi) ^^ { case b ~ ps => Traveler(Try(b.toInt), ps) }
+    opt(spacer) ~> "T" ~> spacer ~> (wholeNumber <~ endOfLine) ~ plays <~ terminator ^^ { case b ~ ps => Traveler(Try(b.toInt), ps) }
 
   // XXX pickups, each terminated by a endOfLine
   def pickups: Parser[Seq[Pickup]] = rep(pickup)
 
   // XXX pickup parser yields a Pickup object and must start with a "P" and end with a blank line. In between is a list of Play objects
   def pickup: Parser[Pickup] =
-    opt(spacer) ~> "P" ~> spacer ~> wholeNumber ~ (spacer ~> wholeNumber <~ endOfLine) ~ boardResults <~ (endOfLine | eoi) ^^ { case ns ~ ew ~ rs => Pickup(ns.toInt, ew.toInt, rs) }
+    opt(spacer) ~> "P" ~> spacer ~> wholeNumber ~ (spacer ~> wholeNumber <~ endOfLine) ~ boardResults <~ terminator ^^ { case ns ~ ew ~ rs => Pickup(ns.toInt, ew.toInt, rs) }
 
   // XXX plays parser yields a list of Play objects where each play is terminated by a endOfLine.
   def plays: Parser[Seq[Play]] = rep(play <~ endOfLine)
@@ -68,7 +66,7 @@ class RecapParser extends JavaTokenParsers {
     (opt(spacer) ~> wholeNumber <~ spacer) ~ (wholeNumber <~ spacer) ~ result ^^ { case n ~ e ~ r => Play(Try(n.toInt), Try(e.toInt), r) }
 
   // XXX boardResults parser yields a list of BoardResult objects where each result is terminated by a endOfLine.
-  private def boardResults: Parser[Seq[BoardResult]] = rep(boardResult <~ endOfLine)
+  private def boardResults: Parser[Seq[BoardResult]] = rep(boardResult <~ terminator)
 
   // XXX boardResult parser yields a BoardResult
   private def boardResult: Parser[BoardResult] = opt(spacer) ~> (wholeNumber <~ spacer) ~ result ^^ { case n ~ r => BoardResult(n.toInt, r) }
@@ -79,6 +77,8 @@ class RecapParser extends JavaTokenParsers {
   // XXX title parser yields a String and must be a String not including a endOfLine
   def title: Parser[String] = """[^\r\n]+""".r
 
+  private def terminator = endOfLine | eoi | failure("not properly terminated")
+
   def endOfLine: Parser[String] = s"""$newline""".r | """\n""".r // XXX is this OK?
 
   private def spacer: Parser[String] = """[ \t]*""".r
@@ -88,6 +88,8 @@ class RecapParser extends JavaTokenParsers {
   private val newline = sys.props("line.separator")
 
   private val eoi = """\z""".r // end of input
+
+  private def ampersand: Parser[String] = """&""" | failure("& is missing")
 }
 
 object RecapParser {

@@ -386,5 +386,24 @@ class RecapParserSpec extends AnyFlatSpec with should.Matchers {
     pair.players shouldBe(Player("Sue"), Player("Jim"))
     pair.maybeDirection shouldBe Some("N")
   }
+
+  it should "read Newton20241105bad as a resource" in {
+    val resource = "Newton/Newton20241105bad.txt"
+    val ey: Try[Event] = Option(getClass.getResourceAsStream(resource)) match {
+      case Some(s) => RecapParser.readEvent(Source.fromInputStream(s))
+      case None => Failure(new Exception(s"doScoreResource: cannot open resource: $resource"))
+    }
+    ey should matchPattern { case Success(Event(_, _)) => }
+    val event = ey.get
+    val sections = event.sections
+    sections.size shouldBe 1
+    val a = sections.head
+    val preamble = a.preamble
+    preamble should matchPattern { case Preamble("A", Some("DW"), _) => }
+    val pairs = preamble.pairs
+    pairs.size shouldBe 5
+  }
+
+  // com/phasmidsoftware/bridge/director/Newton/Newton20241105bad.txt
 }
 
