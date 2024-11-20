@@ -37,14 +37,19 @@ object Score extends App {
     if (args.length > 0)
       doScoreFromName(isResource = false, args.head, output) match {
         case Success(o) => o.close()
-        case Failure(x) => System.err.println(s"Score ${args.mkString} threw an exception: $x")
+        case Failure(x) =>
+          System.err.println(s"Score ${args.mkString}: parsing failed due to an exception:")
+          System.err.println(x.getLocalizedMessage.translateEscapes())
       }
     else System.err.println("Syntax: Score filename")
   }
 
   def doScoreFromName(isResource: Boolean, name: String, output: Output = defaultOutput): Try[Output] = Using(
     if (isResource) Source.fromResource(name) else Source.fromFile(name)
-  ) { s => doScore(s, output) }
+  ) {
+    System.out.println(s"Opened source from $name")
+    s => doScore(s, output)
+  }
 
   // TODO use the methods in Result
   def doScoreResource(resource: String, output: Output = defaultOutput): Try[Output] =

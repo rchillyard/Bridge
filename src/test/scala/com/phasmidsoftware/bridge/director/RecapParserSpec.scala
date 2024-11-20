@@ -404,6 +404,20 @@ class RecapParserSpec extends AnyFlatSpec with should.Matchers {
     pairs.size shouldBe 5
   }
 
+  it should "handle Windows-style newlines" in {
+    val filename = "/Users/rhillyard/IdeaProjects/Bridge/src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton Scoring 20241119.txt"
+    val ey = RecapParser.readEvent(Source.fromFile(filename))
+    ey should matchPattern { case Success(Event(_, _)) => }
+    val event = ey.get
+    val sections = event.sections
+    sections.size shouldBe 1
+    val a = sections.head
+    val preamble = a.preamble
+    preamble should matchPattern { case Preamble("A", Some("DW"), _) => }
+    val pairs = preamble.pairs
+    pairs.size shouldBe 18
+  }
+
   // com/phasmidsoftware/bridge/director/Newton/Newton20241105bad.txt
 }
 

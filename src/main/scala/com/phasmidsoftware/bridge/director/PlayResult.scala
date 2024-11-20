@@ -24,6 +24,15 @@ import scala.util._
   */
 case class PlayResult(r: Either[String, Int]) {
   /**
+    * Implicit class for case-insensitive matching.
+    *
+    * @param sc a StringContext.
+    */
+  implicit class CaseInsensitiveRegex(sc: StringContext) {
+    def caseInsensitive = ( "(?i)" + sc.parts.mkString ).r
+  }
+
+  /**
     * Method to get the matchpoints for this PlayResult
     *
     * @param f call-by-name value of the matchpoints where the result is an Int
@@ -31,16 +40,17 @@ case class PlayResult(r: Either[String, Int]) {
     */
   def matchpoints(f: => Option[Rational]): Option[Rational] = r match {
     case Right(_) => f
+    // NOTE that the the A annotations are NOT case-insensitive
     case Left("A-") => Some(Rational(2, 5))
     case Left("A") => Some(Rational(1, 2))
     case Left("A+") => Some(Rational(3, 5))
-    case Left("DNP") => None
+    case Left(caseInsensitive"DNP") => None
     case _ => throw ScoreException(s"matchpoints: unrecognized result: $r")
   }
 
   def exists: Boolean = r match {
     case Right(_) => true
-    case Left("A-" | "A" | "A+" | "DNP") => true
+    case Left("A-" | "A" | "A+" | caseInsensitive"DNP") => true
     case _ => false
   }
 

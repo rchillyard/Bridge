@@ -69,6 +69,23 @@ trait Predicate[T] extends (T => Boolean) {
   def implies(p: Predicate[T]): Predicate[T] = (t: T) => if (self(t)) p(t) else true
 }
 
+trait Named {
+  def name: String
+
+  def nameIt[T](w: String): Predicate[T]
+}
+
+trait NamedPredicate[T] extends Predicate[T] {
+  self: Named =>
+
+  /**
+    * Method to reverse the sense of this Predicate[T].
+    *
+    * @return a Predicate[T] that returns true when <code>this</code> Predicate would return false; and false when <code>this</code> would return true.
+    */
+  override def flip: Predicate[T] = super.flip
+}
+
 import com.phasmidsoftware.misc.Predicate.maybeShow
 
 /**
@@ -131,14 +148,14 @@ object Predicate {
   def apply[T](f: T => Boolean): Predicate[T] = (t: T) => f(t)
 
   // TODO (H: 10) what does the expression "_ :| 2" mean? Where is ":|" defined? What is the name for the general mechanism in use here?
-  val isEven: Predicate[Int] = IntPredicate("even", _ :| 2)
+  lazy val isEven: Predicate[Int] = IntPredicate("even", _ :| 2)
 
   // TODO (J: 5) why did the author of this code not simply write "val isOdd: Predicate[Int] = IntPredicate("odd", x => !(x :| 2))"
   // TODO (K (Bonus): 3) as the code stands, what is the disadvantage of the actual definition (Hint: what happens when there's a match?)
   // TODO (L (Bonus--hard): 5) fix that problem while still retaining the code <code>isEven.flip</code>
-  val isOdd: Predicate[Int] = isEven.flip
+  lazy val isOdd: Predicate[Int] = IntPredicate("odd", isEven.flip)
 
-  val isPositive: Predicate[Int] = IntPredicate("pos", _ > 0)
+  lazy val isPositive: Predicate[Int] = IntPredicate("pos", _ > 0)
 
   /**
     * Return the value of <code>b</code> and (as a side-effect), if it is true and if <code>show</code> is true, then print the <code>msg</code>.
