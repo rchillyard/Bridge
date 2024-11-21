@@ -36,6 +36,12 @@ class RecapParserSpec extends AnyFlatSpec with should.Matchers {
     r should matchPattern { case parser.Success(_, _) => }
     r.get.size shouldBe 2
   }
+  it should "parse with commas" in {
+    val parser = new RecapParser(",")
+    val r = parser.parseAll(parser.travelers, "T,1\n1,1,130\n2,2,150\n\nT,2\n1,1,130\n2,2,150\n\n")
+    r should matchPattern { case parser.Success(_, _) => }
+    r.get.size shouldBe 2
+  }
   it should "parse with carriage returns" in {
     val parser = new RecapParser
     val newline = sys.props("line.separator")
@@ -102,6 +108,12 @@ class RecapParserSpec extends AnyFlatSpec with should.Matchers {
   it should "parse pair with tabs" in {
     val parser = new RecapParser
     val r: parser.ParseResult[Pair] = parser.parseAll(parser.pair, """1 Kathy & Thornton \n""")
+    r should matchPattern { case parser.Success(_, _) => }
+  }
+
+  it should "parse pair with commas" in {
+    val parser = new RecapParser(",")
+    val r: parser.ParseResult[Pair] = parser.parseAll(parser.pair, """1,Kathy & Thornton \n""")
     r should matchPattern { case parser.Success(_, _) => }
   }
 
@@ -404,9 +416,9 @@ class RecapParserSpec extends AnyFlatSpec with should.Matchers {
     pairs.size shouldBe 5
   }
 
-  it should "handle Windows-style newlines" in {
+  it should "handle Windows-style newlines and commas for delimiter" in {
     val filename = "/Users/rhillyard/IdeaProjects/Bridge/src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton Scoring 20241119.txt"
-    val ey = RecapParser.readEvent(Source.fromFile(filename))
+    val ey = RecapParser.readEvent(Source.fromFile(filename), ",")
     ey should matchPattern { case Success(Event(_, _)) => }
     val event = ey.get
     val sections = event.sections

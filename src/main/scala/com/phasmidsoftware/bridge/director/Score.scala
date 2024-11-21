@@ -34,34 +34,44 @@ object Score extends App {
 
   // TESTME
   def doMain(output: Output): Unit = {
-    if (args.length > 0)
-      doScoreFromName(isResource = false, args.head, output) match {
+    if (args.length > 0) {
+      val delimiter: String = (args lift 1).getOrElse("")
+      doScoreFromName(isResource = false, args.head, delimiter, output) match {
         case Success(o) => o.close()
         case Failure(x) =>
           System.err.println(s"Score ${args.mkString}: parsing failed due to an exception:")
           System.err.println(x.getLocalizedMessage.translateEscapes())
       }
-    else System.err.println("Syntax: Score filename")
+    } else System.err.println("Syntax: Score filename")
   }
 
-  def doScoreFromName(isResource: Boolean, name: String, output: Output = defaultOutput): Try[Output] = Using(
+  def doScoreFromName(isResource: Boolean, name: String, delimiter: String, output: Output = defaultOutput) = Using(
     if (isResource) Source.fromResource(name) else Source.fromFile(name)
   ) {
     System.out.println(s"Opened source from $name")
-    s => doScore(s, output)
+    s => doScore(s, delimiter, output)
   }
 
   // TODO use the methods in Result
   def doScoreResource(resource: String, output: Output = defaultOutput): Try[Output] =
     Option(getClass.getResourceAsStream(resource)) match {
-      case Some(s) => doScore(Source.fromInputStream(s), output)
+      case Some(s) => doScore(Source.fromInputStream(s), "", output)
       case None => Failure(ScoreException(s"doScoreResource: cannot open resource: $resource"))
     }
 
-  def doScoreFromFile(filename: String, output: Output = defaultOutput): Try[Output] = doScore(Source.fromFile(filename), output)
+  def doScoreFromFile(filename: String, output: Output = defaultOutput): Try[Output] = doScore(Source.fromFile(filename), "", output)
 
   // TESTME
-  def doScore(source: BufferedSource, output: Output = defaultOutput): Try[Output] = {
+
+  /**
+    * Method to do the scoring, given a source, a delimiter, and an Output.
+    *
+    * @param source a Source.
+    * @param delimiter an additional delimiter(s) above and beyond space and tab.
+    * @param output the output filename.
+    * @return Output.
+    */
+  def doScore(source: Source, delimiter: String, output: Output = defaultOutput) = {
 
     implicit val separator: Output = Output.empty.insertBreak()
 
@@ -76,7 +86,7 @@ object Score extends App {
         e.output(Output.empty)
     }
 
-    val ey = RecapParser.readEvent(source)
+    val ey = RecapParser.readEvent(source, delimiter)
 
     for (e <- ey; x = e.score) yield (output :+ x.title).insertBreak ++ (for ((p, rs) <- x.createResults) yield eventResults(x, p, rs, x.boards))
   }

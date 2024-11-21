@@ -423,7 +423,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
   it should "read travelers.lexington.2017.0404 as a resource" in {
     val resource = "travelers.lexington.2017.0404"
     val ey: Try[Event] = Option(getClass.getResourceAsStream(resource)) match {
-      case Some(s) => RecapParser.readEvent(Source.fromInputStream(s))
+      case Some(s) => RecapParser.readEvent(Source.fromInputStream(s), "")
       case None => Failure(new Exception(s"doScoreResource: cannot open resource: $resource"))
     }
     ey should matchPattern { case Success(Event(_, _)) => }
@@ -755,7 +755,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
   // TODO Find out why this doesn't work!
   ignore should "read ConcordCountryClub20191007.txt using doScoreFromName" in {
     val writer = MockWriter(8192)
-    for (o <- Score.doScoreFromName(isResource = true, "ConcordCountryClub20191007.txt", Output(writer))) o.close()
+    for (o <- Score.doScoreFromName(isResource = true, "ConcordCountryClub20191007.txt", "", output = Output(writer))) o.close()
     writer.spilled shouldBe 2642
   }
 
