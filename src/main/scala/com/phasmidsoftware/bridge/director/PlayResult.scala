@@ -10,6 +10,7 @@ import com.phasmidsoftware.number.core.Rational
 
 import scala.language.postfixOps
 import scala.util._
+import scala.util.matching.Regex
 
 /**
   * This is a play result, that's to say either a bridge score (+ or - according to what NS scored)
@@ -29,7 +30,17 @@ case class PlayResult(r: Either[String, Int]) {
     * @param sc a StringContext.
     */
   implicit class CaseInsensitiveRegex(sc: StringContext) {
-    def caseInsensitive = ( "(?i)" + sc.parts.mkString ).r
+    def caseInsensitive: Regex = ("(?i)" + sc.parts.mkString).r
+  }
+
+  /**
+    * Method to determine if this PlayResult was played (a score or an average ruling).
+    *
+    * @return false if this is a DNP otherwise true.
+    */
+  lazy val played: Boolean = r match {
+    case Left(caseInsensitive"DNP") => false
+    case _ => true
   }
 
   /**
@@ -38,21 +49,22 @@ case class PlayResult(r: Either[String, Int]) {
     * @param f call-by-name value of the matchpoints where the result is an Int
     * @return an optional Rational
     */
-  def matchpoints(f: => Option[Rational]): Option[Rational] = r match {
-    case Right(_) => f
-    // NOTE that the the A annotations are NOT case-insensitive
-    case Left("A-") => Some(Rational(2, 5))
-    case Left("A") => Some(Rational(1, 2))
-    case Left("A+") => Some(Rational(3, 5))
-    case Left(caseInsensitive"DNP") => None
-    case _ => throw ScoreException(s"matchpoints: unrecognized result: $r")
-  }
+  def matchpoints(f: => Option[Rational]): Option[Rational] = if (played)
+    r match {
+      case Right(_) => f
+      // NOTE that the the A annotations are NOT case-insensitive
+      case Left("A-") => Some(Rational(2, 5))
+      case Left("A") => Some(Rational(1, 2))
+      case Left("A+") => Some(Rational(3, 5))
+      case _ => throw ScoreException(s"matchpoints: unrecognized result: $r")
+    }
+  else None
 
-  def exists: Boolean = r match {
+  def exists: Boolean = (r match {
     case Right(_) => true
-    case Left("A-" | "A" | "A+" | caseInsensitive"DNP") => true
+    case Left("A-" | "A" | "A+") => true
     case _ => false
-  }
+  }) || !played
 
   /**
     * Here we check if the result is one of the common possible results.

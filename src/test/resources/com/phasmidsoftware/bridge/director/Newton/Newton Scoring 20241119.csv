@@ -1,5 +1,5 @@
 Newton November 19th 2024
-A,DW
+A DW
 1,N,Julie Foster & Maxine Goldberg
 2,N,Rick & Lisa Martin
 3,N,Mary Ellen Clark & Catherine Gerson
@@ -84,17 +84,17 @@ P,7,6
 
 P,8,7
 3,120
-4,Dnp
-
-P,9,8
-3,dnp
 4,DNP
 
-P,1,8
+P,9,8
+3,DNP
+4,DNP
+
+P,1,6
 5,-150
 6,420
 
-P,2,9
+P,2,7
 5,-140
 6,420
 
@@ -118,10 +118,10 @@ P,7,5
 5,-110
 6,170
 
-P,8,6
+P,9,8
 5,50
 6,450
 
-P,9,7
+P,8,7
 5,DNP
 6,DNP

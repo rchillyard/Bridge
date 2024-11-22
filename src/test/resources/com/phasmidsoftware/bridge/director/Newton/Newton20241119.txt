@@ -1,0 +1,98 @@
+Newton Nov 5th 2024
+A DW
+1	N	Judith Tucker & Penny Scharfman
+2	N	Susan Stearns & Chris Battat
+3	N	Robert Greenstein & Marsha Greenstein
+4	N	Rho Cherny & MJ Weinstein
+5	N	Catherine Gerson & LeaAnne Dunton
+6	N	Leslie Greenberg & Amy Avergun
+1	E	Carolyn Draplin & Art Fine
+2	E	Carol Leahy & Kathy Roberts
+3	E	Barbara Linder& Kaj Wilson
+4	E	Robin Zelle & Barbara Berenson
+5	E	Ree Harrington & Alan Gordon
+6	E	Sherrill Kebrick & Gerri Taylor
+7   E   Lise & Robin
+P 1 1
+1 -50
+2 500
+
+P 2 2
+1 110
+2 130
+
+P 3 3
+1 140
+2 120
+
+P 4 4
+1 -100
+2 120
+
+P 5 5
+1 -90
+2 120
+
+P 6 6
+1 -50
+2 150
+
+P 7 7
+1 DNP
+2 DNP
+
+P 1 7
+3 100
+4 140
+
+P 2 1
+3 -120
+4 620
+
+P 3 2
+3 140
+4 140
+
+P 4 3
+3 -130
+4 140
+
+P 5 4
+3 -130
+4 170
+
+P 6 5
+3 300
+4 620
+
+P 7 6
+3 DNP
+4 DNP
+
+P 1 6
+5 -140
+6 100
+
+P 2 7
+5 -140
+6 -600
+
+P 3 1
+5 50
+6 -140
+
+P 4 2
+5 -140
+6 -600
+
+P 5 3
+5 -110
+6 -600
+
+P 6 4
+5 50
+6 -600
+
+P 7 5
+5 DNP
+6 DNP

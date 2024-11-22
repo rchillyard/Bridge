@@ -423,7 +423,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
   it should "read travelers.lexington.2017.0404 as a resource" in {
     val resource = "travelers.lexington.2017.0404"
     val ey: Try[Event] = Option(getClass.getResourceAsStream(resource)) match {
-      case Some(s) => RecapParser.readEvent(Source.fromInputStream(s), "")
+      case Some(s) => RecapParser.readEvent(Source.fromInputStream(s))
       case None => Failure(new Exception(s"doScoreResource: cannot open resource: $resource"))
     }
     ey should matchPattern { case Success(Event(_, _)) => }
@@ -613,10 +613,10 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
         |6 	2	21.44	44.66%	Joanne Hennessy & Veets Veitas
         |7 	5	20.63	42.97%	Vivian Hernandez & Roberta Kosberg
         |8 	4	19.31	40.23%	Marsha & Rob Greenstein
-        |9 	1	18.00	37.50%	Judy & David Taub
+        |9 	1	16.80	35.00%	Judy & David Taub
         |Results for direction E/W
         |Rank	Pair	MPs	Percent	Names
-        |1 	1	37.50	78.13%	Kaj Wilson & Ellen Dockser
+        |1 	1	40.20	83.75%	Kaj Wilson & Ellen Dockser
         |2 	4	34.69	72.27%	Rick & Lisa Martin
         |3 	3	29.31	61.07%	Robin Zelle & Barbara Berenson
         |4 	6	25.88	53.91%	Gerri Taylor & Sherrill Kobrick
@@ -659,9 +659,9 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
         |7	7	110	 5.50
         |8	8	100	 3.00
         |9	9	140	 8.00
-        |Board: 2 with 9 plays
+        |Board: 2 with 8 plays
         |NS pair	EW pair	NS score	NS MPs
-        |1	1	DNP	 3.50
+        |
         |2	2	-180	 3.01
         |3	3	-460	 1.04
         |4	4	-400	 2.02
@@ -670,7 +670,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
         |7	7	-90	 6.45
         |8	8	-90	 6.45
         |9	9	-800	 0.05
-        |""".stripMargin
+        |Board: 3 with""".stripMargin
   }
   it should "output from Newton" in {
     val writer = MockWriter(8192)
@@ -771,14 +771,14 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     target.toStringPercent shouldBe "50.00%"
   }
 
-  it should "toStringMps" in {
+  it should "totalMpsAsString" in {
     val target = Card(Rational(5), 5, 0, Nil)
-    target.toStringMps(2) shouldBe "10.00"
+    target.totalMpsAsString(2) shouldBe "10.00"
   }
 
   it should "toStringMpsDNP" in {
     val target = Card(Rational(5), 4, 1, Nil)
-    target.toStringMps(2) shouldBe "12.50"
+    target.totalMpsAsString(2) shouldBe "12.50"
   }
 
   behavior of "rationalToString"

@@ -13,7 +13,7 @@ import com.phasmidsoftware.output.{Using, Util}
 import com.phasmidsoftware.util.{Output, Outputable}
 
 import java.io.{FileWriter, PrintWriter}
-import scala.io.{BufferedSource, Source}
+import scala.io.Source
 import scala.language.postfixOps
 import scala.util._
 
@@ -313,6 +313,9 @@ case class Player(name: String) {
   * Class to represent a "Card" for a pair.
   *
   * CONSIDER why do we need the number of boards played and not played now that we are doing factoring of DNPs?
+  * The reason is that we do factor the total matchpoints (and percentage) according to those values.
+  * NOTE: when there are unplayed boards, they must be entered as DNP otherwise this mechanism doesn't work
+  * (the percentages will still be correct but not the total matchpoints).
   *
   * @param totalMps  the total matchpoints earned but divided by the top.
   * @param played    the number of boards played.
@@ -320,7 +323,7 @@ case class Player(name: String) {
   */
 case class Card(totalMps: Rational, played: Int, notPlayed: Int, ps: Seq[BoardResult]) extends Ordered[Card] {
 
-  def toStringMps(top: Int): String = mpsAsString(scaledMps, top)
+  def totalMpsAsString(top: Int): String = mpsAsString(scaledTotalMps, top)
 
   def compare(that: Card): Int = percentage.compare(that.percentage)
 
@@ -330,7 +333,7 @@ case class Card(totalMps: Rational, played: Int, notPlayed: Int, ps: Seq[BoardRe
 
   private lazy val percentage: Rational = asPercent(totalMps, played)
 
-  def scaledMps: Rational = if (played > 0) totalMps * (played + notPlayed) / played else zero
+  def scaledTotalMps: Rational = if (played > 0) totalMps * (played + notPlayed) / played else zero
 
   def render: String = {
     val rXb: Map[Int, BoardResult] = (for (p <- ps) yield p.board -> p).toMap
@@ -339,7 +342,7 @@ case class Card(totalMps: Rational, played: Int, notPlayed: Int, ps: Seq[BoardRe
       val result = new StringBuilder(totalMps.toString())
       for (b <- 1 to boards.last) {
         val w = rXb.get(b) match {
-          case Some(r) => r.renderRo("")
+          case Some(r) => b + ": " + r.renderRo("")
           case None => ""
         }
         result.append("\t" + w)
@@ -355,13 +358,29 @@ case class Card(totalMps: Rational, played: Int, notPlayed: Int, ps: Seq[BoardRe
   */
 object Card {
 
-  def apply(zs: Seq[(BoardResult, Option[Rational])]): Card = {
-    val qs = for ((b, ro) <- zs; r <- ro) yield (b.setMPs(r), ro)
-    val (brs, ros) = qs.unzip
-    val irs: Seq[Rational] = ros.flatten
-    Card(irs.sum, irs.size, zs.size - irs.size, brs)
+  /**
+    * Apply method for Card that takes a sequence of tuples.
+    *
+    * @param roB a sequence of (BoardResult, Option[Rational]).
+    * @return a Card.
+    */
+  def apply(roB: Seq[(BoardResult, Option[Rational])]): Card = {
+    val (bs, ros) = (for ((b, ro) <- roB; r <- ro) yield (b.setMPs(r), ro)).unzip
+    val rs: Seq[Rational] = ros.flatten
+    // TODO fix this.
+    //  We shouldn't have to rely on the played vs. not played mechanism
+    //  (which requires DNP entries in order to work properly).
+    Card(rs.sum, rs.size, roB.size - rs.size, bs)
   }
 
+  /**
+    * Method to get the matchpoints as a String.
+    * CONSIDER this should be moved somewhere else as it is not really related to Card.
+    *
+    * @param r   a Rational representing the fractional matchpoints.
+    * @param top the top on a board.
+    * @return a String.
+    */
   def mpsAsString(r: Rational, top: Int): String = rationalToString(r * top)
 }
 
@@ -403,7 +422,7 @@ case class Result(tables: Int, isNS: Option[Boolean], top: Int, cards: Map[Int, 
     * @return true if the matchpoint sums check out.
     */
   def checksum(boards: Int): Boolean = {
-    val scaledMps = cards.map(_._2.scaledMps)
+    val scaledMps = cards.map(_._2.scaledTotalMps)
     val matchpoints: Rational = scaledMps.sum
     val expected = Rational(tables * boards, 2)
     val result = matchpoints == expected
@@ -426,12 +445,13 @@ case class Result(tables: Int, isNS: Option[Boolean], top: Int, cards: Map[Int, 
 
     def resultDetails(s: (Pos, Int, String)): Output = {
       val ((pairNumber, card), rank, suffix) = s
-      Output(s"""$rank$suffix\t$pairNumber\t${card.toStringMps(top)}\t${card.toStringPercent}\t${nameFunction(pairNumber)}""").insertBreak()
+      Output(s"""$rank$suffix\t$pairNumber\t${card.totalMpsAsString(top)}\t${card.toStringPercent}\t${nameFunction(pairNumber)}""").insertBreak()
     }
 
 //    showCards() // NOTE comment this out for normal running.
-    val keyFunction: Pos => Rational = t => t._2.scaledMps
-    val ps: Seq[Pos] = cards.toList.sortBy(_._2.scaledMps).reverse
+
+    val keyFunction: Pos => Rational = _._2.scaledTotalMps
+    val ps: Seq[Pos] = cards.toList.sortBy(keyFunction).reverse
     val psRm: Map[Rational, Seq[Pos]] = ps.groupBy[Rational](keyFunction)
     val psRs: Seq[(Rational, Seq[Pos])] = psRm.toSeq.sortBy(_._1).reverse
     val psis: Seq[Psi] = psRs.scanLeft(Psi.empty) {
@@ -474,7 +494,7 @@ case class Matchpoints(ns: Int, ew: Int, result: PlayResult, ro: Option[Rational
   }
 
   private def factorACBL(idealTop: Int) = ro match {
-    case None => Some(half)
+    case None => None
     case Some(r) => Some(((r * top + half) * (idealTop + 1) / (top + 1) - half) / idealTop)
   }
 
@@ -544,16 +564,19 @@ case class Traveler(board: Int, ps: Seq[Play], maybeMatchpoints: Option[Seq[Matc
     */
   def output(output: Output, xo: Option[Unit] = None): Output = {
     val result = new StringBuilder
-    result.append(s"Board: $board with ${ps.size} plays\n")
+    result.append(s"Board: $board with $actualPlays plays\n")
     result.append(s"""NS pair\tEW pair\tNS score\tNS MPs\n""")
     for (m <- matchpoints) result.append(s"$m\n")
     output :+ result.toString
   }
 
+  private def actualPlays = ps.count(_.result.played)
+
   private def calculateMatchpoints(idealTop: Int): Seq[Matchpoints] = {
     val result: Seq[Matchpoints] = for (p <- ps) yield Matchpoints(p.ns, p.ew, p.result, p.matchpoints(this), top).factorIfRequired(idealTop)
     val total = result.flatMap(_.getMatchpoints(true)).sum
     val expectedTotal = Rational((idealTop + 1) / 2)
+
     if (total != expectedTotal)
       System.err.println(s"Board $board: has incorrect total matchpoints: $total (expected: $expectedTotal)")
     result
