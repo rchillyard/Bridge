@@ -101,13 +101,14 @@ class RecapParser(delimiter: String = "") extends JavaTokenParsers {
 
   override def skipWhitespace: Boolean = false
 
+  // TODO sort out the white space and CSV delimiters properly.
   override val whiteSpace: Regex = """[\t ]+""".r
 
-  private val separator: Regex = """,""".r // CONSIDER allowing configuration to accept tab or vertical bar here.
+  private val separator: Regex = s"""[,\t|$delimiter]""".r // XXX these are the other likely CSV file delimiters which might terminate a line.
 
   private def terminator: Parser[String] = endOfLine | eoi | failure("not properly terminated")
 
-  private def spacer: Parser[String] = whiteSpace | delimiter | failure("not a spacer--should be space or tab")
+  private def spacer: Parser[String] = whiteSpace | delimiter | failure("not a spacer--should be space, tab, or custom delimiter")
 
   private def sectionIdentifier: Parser[String] = """[A-Z]{1,2}""".r | failure("not a section identifier: should be one or two English letters")
 

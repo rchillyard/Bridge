@@ -151,20 +151,45 @@ object PlayResult {
   // NOTE: we accept doubled contracts as OK, but anything redoubled needs to be questioned.
 
   /**
-    * Predicate method of type SB => Boolean.
-    * Recognizes penalties that are positive--i.e. from the point of view of the defenders.
+    * Predicate method of type `SB => Boolean`.
+    * Recognizes penalties that are positive--i.e., from the point of view of the defenders.
     *
-    * @param sb a SB value, i.e. score and vulnerability as a Boolean
-    * @return true if the score matches a valid penalty.
+    * @param sb a `SB` value, i.e. score and vulnerability as a `Boolean`
+    * @return `true` if the score matches a valid penalty: i.e., the first part of the tuple returned by `penaltyIsOkWithMaybeString`.
     */
-  private def penaltyIsOk(sb: SB): Boolean =
+  private def penaltyIsOk(sb: SB): Boolean = penaltyIsOkWithMaybeString(sb)._1
+
+  /**
+    * Method to yield a `Boolean` and an optional `String` which is the explanation of the result (and is defined only if the `Boolean` value is `true`).
+    *
+    * NOTE that the second part of the tuple is always ignored for now. This method is for future use.
+    *
+    * @param sb a `SB` value, i.e. score and vulnerability as a `Boolean`
+    * @return a tuple of `Boolean` and optional `String`.
+    *         If the `Boolean` is `true` (the score matches a valid penalty),
+    *         then the optional `String` will be defined as the reason for the penalty.
+    */
+  private def penaltyIsOkWithMaybeString(sb: SB): (Boolean, Option[String]) =
     sb.score match {
-      case 50 | 150 | 250 | 350 | 450 | 550 | 650 => !sb.vulnerability
-      case 700 | 900 | 1000 | 1200 | 1300 => sb.vulnerability
-      case 100 | 200 | 300 | 400 | 500 | 600 | 800 | 1100 | 1400 | 1700 | 2000 | 2300 | 2600 | 2900 | 3200 | 3500 => true
-      case 3800 => sb.vulnerability
-      case _ => false
+      case 50 | 150 | 250 | 350 | 450 | 550 | 650 =>
+        penalty(!sb.vulnerability, sb)
+      case 700 | 900 | 1000 | 1200 | 1300 =>
+        penalty(sb.vulnerability, sb)
+      case 100 | 200 | 300 | 400 | 500 | 600 if !sb.vulnerability =>
+        penalty(matchVulnerability = true, sb)
+      case 100 | 200 | 300 | 400 | 500 | 600 | 800 | 1100 | 1400 | 1700 | 2000 | 2300 | 2600 | 2900 | 3200 | 3500 | 3800 =>
+        penalty(sb.vulnerability, sb)
+      case _ => false ->
+        None
     }
+
+  private def penalty(matchVulnerability: Boolean, sb: SB): (Boolean, Option[String]) =
+    matchVulnerability -> Play.conditional(down(sb.vulnerability, sb.score))(matchVulnerability)
+
+  private def down(vulnerable: Boolean, score: Int): String = {
+    val perTrick = if (vulnerable) 100 else 50
+    s"Down ${score / perTrick}"
+  }
 
   def error(s: String): PlayResult = PlayResult(Left(s))
 }

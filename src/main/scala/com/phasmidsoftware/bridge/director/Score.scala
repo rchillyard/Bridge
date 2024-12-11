@@ -265,7 +265,7 @@ case class Preamble(identifier: String, maybeModifier: Option[String], pairs: Se
         val maybeN = maybeDirection map (_.getOrElse("") == "N") // CONSIDER making this case-insensitive
         ns match {
           case Some(b) =>
-            val wt = Util.asTuple2(names, "phantom pair", maybeN)("pair names")
+            val wt = Util.asTuple2(names, "Phantom pair", maybeN)("pair names")
             if (b) wt._1 else wt._2
           case _ => throw ScoreException("logic error in Preamble.getNames")
         }
@@ -668,9 +668,8 @@ case class Play(ns: Int, ew: Int, result: PlayResult) {
     case _ => None
   }
 
-  def conditional[X](x: => X)(b: Boolean): Option[X] = if (b) Some(x) else None
 
-  def playResult(n: Int, dirNs: Boolean): Option[PlayResult] = if (dirNs) conditional(result)(n == ns) else conditional(result.invert)(n == ew)
+  def playResult(n: Int, dirNs: Boolean): Option[PlayResult] = if (dirNs) Play.conditional(result)(n == ns) else Play.conditional(result.invert)(n == ew)
 
   /**
     * Calculate the matchpoints for this Play in the context of the given Traveler (t)
@@ -700,6 +699,19 @@ object Play {
     val z = for (x <- ns; y <- ew) yield Play(x, y, result)
     z.recover { case x => System.err.println(s"Exception: $x"); Play(0, 0, PlayResult.error("no match")) }.get
   }
+
+  /**
+    * Method to yield an optional value of `X` based on a condition.
+    *
+    * CONSIDER moving this to a utility object
+    *
+    * @param x the `X` value to be yielded (call-by-name).
+    * @param b the condition.
+    * @tparam X the underlying type of the result.
+    * @return `Some(x)` if `b` is true, otherwise `None`.
+    */
+  def conditional[X](x: => X)(b: Boolean): Option[X] = if (b) Some(x) else None
+
 }
 
 case class ScoreException(str: String) extends Exception(str)
