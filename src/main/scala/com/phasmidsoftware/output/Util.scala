@@ -14,14 +14,17 @@ object Util {
     * Convert a doubleton sequence into a Tuple2.
     *
     * @param xs a sequence of Xs.
+    * @param missing the missing value.
+    * @param bs the order of the tuple (if false, then the result is swapped).
+    * @param description a description that is used only in the event of an error.
     * @tparam X the underlying type.
     * @return an (X,X)
     */
-  def asTuple2[X](xs: Seq[X], missing: X, order: Boolean)(description: => String): (X, X) =
+  def asTuple2[X](xs: Seq[X], missing: X, bs: Seq[Boolean])(description: => String): (X, X) =
     if (xs.length == 2) xs.head -> xs.last
-    else if (xs.length == 1) {
+    else if (xs.length == 1 && bs.length == 1) {
       val tuple = xs.head -> missing
-      if (order) tuple else tuple.swap
+      if (bs.head) tuple else tuple.swap
     }
     else
       throw UtilException(s"cannot convert $description sequence to Tuple2 because cardinality is not one or two: ${xs.length}")

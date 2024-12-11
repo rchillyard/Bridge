@@ -97,11 +97,13 @@ class RecapParser(delimiter: String = "") extends JavaTokenParsers {
     *
     * @return a Parser[String]
     */
-  def endOfLine: Parser[String] = s"""$newline""".r | """\n""".r | """\r\n""".r | failure("not a proper line-end")
+  def endOfLine: Parser[String] = rep(separator) ~> (s"""$newline""".r | """\n""".r | """\r\n""".r | failure("not a proper line-end"))
 
   override def skipWhitespace: Boolean = false
 
   override val whiteSpace: Regex = """[\t ]+""".r
+
+  private val separator: Regex = """,""".r // CONSIDER allowing configuration to accept tab or vertical bar here.
 
   private def terminator: Parser[String] = endOfLine | eoi | failure("not properly terminated")
 

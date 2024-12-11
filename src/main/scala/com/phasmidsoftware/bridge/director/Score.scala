@@ -23,26 +23,33 @@ import scala.util._
   */
 object Score extends App {
 
-  private lazy val fileWriter = new FileWriter("output.csv")
+  private val outputFile = "output.csv"
+  private lazy val fileWriter = new FileWriter(outputFile)
   private lazy val printWriter = new PrintWriter(System.out)
   private lazy val tabbedOutput: Output = Output(fileWriter)
   private lazy val untabbedOutput: Output = Output.untabbedWriter(printWriter, 6)
   // TODO set this to use untabbedOutput if you want all tabs turned into spaces.
   private lazy val defaultOutput: Output = tabbedOutput
 
-  doMain(tabbedOutput)
+  if (doMain(tabbedOutput)) println(s"Successful output to $outputFile")
 
   // TESTME
-  def doMain(output: Output): Unit = {
+  def doMain(output: Output): Boolean = {
     if (args.length > 0) {
       val delimiter: String = (args lift 1).getOrElse("")
       doScoreFromName(isResource = false, args.head, delimiter, output) match {
-        case Success(o) => o.close()
+        case Success(o) =>
+          o.close()
+          true
         case Failure(x) =>
           System.err.println(s"Score ${args.mkString}: parsing failed due to an exception:")
           System.err.println(x.getLocalizedMessage.translateEscapes())
+          false
       }
-    } else System.err.println("Syntax: Score filename")
+    } else {
+      System.err.println("Syntax: Score filename")
+      false
+    }
   }
 
   def doScoreFromName(isResource: Boolean, name: String, delimiter: String, output: Output = defaultOutput) = Using(
@@ -248,15 +255,17 @@ case class Preamble(identifier: String, maybeModifier: Option[String], pairs: Se
   if (!pairs.forall(_.valid(maybeModifier))) throw ScoreException("pairs must have direction unless movement is single-winner")
 
   def getNames(ns: Option[Boolean], n: Int): String = {
-    val ws: Seq[String] = pairs.filter { p => p.number == n } map { p => p.brief }
+    val ws: Seq[(Option[String], String)] = pairs.filter { p => p.number == n } map { p => p.maybeDirection -> p.brief }
 
     maybeModifier match {
       case Some(Preamble.SingleWinner) =>
-        ws.head
+        ws.head._2
       case _ =>
+        val (maybeDirection, names) = ws.unzip
+        val maybeN = maybeDirection map (_.getOrElse("") == "N") // CONSIDER making this case-insensitive
         ns match {
           case Some(b) =>
-            val wt = Util.asTuple2(ws, "phantom pair", b)("pair names")
+            val wt = Util.asTuple2(names, "phantom pair", maybeN)("pair names")
             if (b) wt._1 else wt._2
           case _ => throw ScoreException("logic error in Preamble.getNames")
         }
