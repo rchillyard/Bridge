@@ -4,27 +4,20 @@
 
 package com.phasmidsoftware.misc
 
+import scala.language.reflectiveCalls // XXX what are these?
+
 /**
   * Trait to describe the behavior of Predicate.
   * Predicate extends (T => Boolean) so is a pure function that implements the <code>apply(t)</code> method.
-  *
-  * Mid-term Exam. Total points: 86 with 13 bonus points available
-  *
-  * TODO (A: 6) is Predicate a monad? Why or why not?
-  *
-  * TODO (B: 5) why isn't there a <code>def apply(t: T): Boolean</code> declaration here?
   *
   * @tparam T the underlying type, that's to say the type of the input to <code>this</code> Predicate.
   */
 trait Predicate[T] extends (T => Boolean) {
 
-  // TODO (C: 5) What do you think is the purpose of the following construct (what problem does it solve)? [I don't think I've taught this but you should be able to figure it out.]
   self =>
 
   /**
     * Method to transform <code>this</code> Predicate[T] into a Predicate[U].
-    *
-    * TODO (D: 8 points) why is this method called <code>lens</code> and not <code>map</code>?
     *
     * @param f a function which takes a U and returns a T.
     * @tparam U the underlying type of the result.
@@ -51,8 +44,6 @@ trait Predicate[T] extends (T => Boolean) {
   /**
     * Method to compose a Predicate[T] from <code>this</code> or <code>p</code>.
     *
-    * TODO (E (Bonus): 5) can you rewrite the expression of this method using only <code>flip</code> and <code>andThen</code>? Hint: DeMorgan's rule.
-    *
     * @param p a Predicate[T]
     * @return a Predicate[T] which will yield true for a <code>t</code> value when <code>this</code> or <code>p</code> yield true.
     *         NOTE that <code>p</code> will not be invoked if <code>this</code> yields true.
@@ -67,6 +58,7 @@ trait Predicate[T] extends (T => Boolean) {
     *         NOTE that <code>p</code> will not be invoked if <code>this</code> yields true.
     */
   def implies(p: Predicate[T]): Predicate[T] = (t: T) => if (self(t)) p(t) else true
+
 }
 
 trait Named {
@@ -88,6 +80,8 @@ trait NamedPredicate[T] extends Predicate[T] {
 
 import com.phasmidsoftware.misc.Predicate.maybeShow
 
+import scala.language.reflectiveCalls
+
 /**
   * NOTE: strictly speaking, this does not need to be abstract.
   *
@@ -104,7 +98,7 @@ abstract class BasePredicate[T](name: String, f: T => Boolean, showMatches: Bool
   * NOTE: strictly speaking, this does not need to be abstract.
   *
   * @param name        the name of the predicate.
-  * @param f           a function wuch that a value of r will yield the predicate function.
+  * @param f           a function such that a value of r will yield the predicate function.
   * @param showMatches whether to show matches (default should be false).
   * @tparam R the underlying type of the control.
   * @tparam T the underlying type of the returned Predicate.
@@ -115,8 +109,6 @@ abstract class BaseControlPredicate[R, T](name: String, f: R => T => Boolean, sh
 
 /**
   * Case class representing a concrete Predicate[Int].
-  *
-  * TODO (F: 8) Define another case class StringPredicate that extends BasePredicate[String]. You do NOT need to define a <code>named</code> method.
   *
   * @param name the name of the predicate.
   * @param f    the predicate function.
@@ -134,7 +126,6 @@ case class IntPredicate(name: String, f: Int => Boolean) extends BasePredicate[I
 /**
   * Companion object to the trait Predicate.
   *
-  * TODO (G: 7) what are the rules governing whether a Class/Trait and an Object are companions?
   */
 object Predicate {
 
@@ -147,22 +138,14 @@ object Predicate {
     */
   def apply[T](f: T => Boolean): Predicate[T] = (t: T) => f(t)
 
-  // TODO (H: 10) what does the expression "_ :| 2" mean? Where is ":|" defined? What is the name for the general mechanism in use here?
   lazy val isEven: Predicate[Int] = IntPredicate("even", _ :| 2)
 
-  // TODO (J: 5) why did the author of this code not simply write "val isOdd: Predicate[Int] = IntPredicate("odd", x => !(x :| 2))"
-  // TODO (K (Bonus): 3) as the code stands, what is the disadvantage of the actual definition (Hint: what happens when there's a match?)
-  // TODO (L (Bonus--hard): 5) fix that problem while still retaining the code <code>isEven.flip</code>
   lazy val isOdd: Predicate[Int] = IntPredicate("odd", isEven.flip)
 
   lazy val isPositive: Predicate[Int] = IntPredicate("pos", _ > 0)
 
   /**
-    * Return the value of <code>b</code> and (as a side-effect), if it is true and if <code>show</code> is true, then print the <code>msg</code>.
-    *
-    * TODO (M: 7) is this method pure? What does it mean by "as a side-effect?"
-    *
-    * TODO (N: 8) why does the declaration of <code>msg</code> have a rocket symbol "=>". Give the name of the construct AND offer a reason why it should be used here.
+    * Return the value of <code>b</code> and (as a side effect), if it is true and if <code>show</code> is true, then print the <code>msg</code>.
     *
     * @param b    a Boolean.
     * @param msg  a String to be conditionally printed.
@@ -177,14 +160,10 @@ object Predicate {
   /**
     * Implicit class to represent a compound number (i.e., not a prime).
     *
-    * TODO (O: 6) Explain (briefly) how an implicit class works.
-    * TODO (P: 6) What is the real purpose of this particular class (Hint: I want to know how it is used)?
-    *
     * @param x the value of the number.
     */
   implicit class Compound(x: Int) {
     /**
-      * TODO (Q: 5) explain what this method does.
       *
       * @param y an Int.
       * @return a Boolean.

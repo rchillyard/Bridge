@@ -144,9 +144,9 @@ object PlayResult {
 
   // NOTE we don't accept doubled overtricks or redoubled contracts here--they must be questioned.
   private lazy val trickScorePredicate = minorPartial orElse majorPartial orElse notrumpPartial orElse doubledMinorPartial orElse doubledMajorPartial orElse doubledNotrumpPartial
-  private lazy val gameP: Predicate[SB] = trickScorePredicate.lens[SB](stripBonus(500, 300)) orElse
-    trickScorePredicate.lens[SB](stripBonus(1250, 800)) orElse
-    trickScorePredicate.lens[SB](stripBonus(2000, 1300))
+  private lazy val gameP: Predicate[SB] = trickScorePredicate.lens(stripBonus(500, 300)) orElse
+    trickScorePredicate.lens(stripBonus(1250, 800)) orElse
+    trickScorePredicate.lens(stripBonus(2000, 1300))
 
   // NOTE: we accept doubled contracts as OK, but anything redoubled needs to be questioned.
 
@@ -157,7 +157,7 @@ object PlayResult {
     * @param sb a `SB` value, i.e. score and vulnerability as a `Boolean`
     * @return `true` if the score matches a valid penalty: i.e., the first part of the tuple returned by `penaltyIsOkWithMaybeString`.
     */
-  private def penaltyIsOk(sb: SB): Boolean = penaltyIsOkWithMaybeString(sb)._1
+  private def penaltyIsOk(sb: SB): Boolean = penaltyIsOkWithMaybeString(sb).isDefined
 
   /**
     * Method to yield a `Boolean` and an optional `String` which is the explanation of the result (and is defined only if the `Boolean` value is `true`).
@@ -169,7 +169,7 @@ object PlayResult {
     *         If the `Boolean` is `true` (the score matches a valid penalty),
     *         then the optional `String` will be defined as the reason for the penalty.
     */
-  private def penaltyIsOkWithMaybeString(sb: SB): (Boolean, Option[String]) =
+  private def penaltyIsOkWithMaybeString(sb: SB): Option[String] =
     sb.score match {
       case 50 | 150 | 250 | 350 | 450 | 550 | 650 =>
         penalty(!sb.vulnerability, sb)
@@ -179,12 +179,12 @@ object PlayResult {
         penalty(matchVulnerability = true, sb)
       case 100 | 200 | 300 | 400 | 500 | 600 | 800 | 1100 | 1400 | 1700 | 2000 | 2300 | 2600 | 2900 | 3200 | 3500 | 3800 =>
         penalty(sb.vulnerability, sb)
-      case _ => false ->
+      case _ =>
         None
     }
 
-  private def penalty(matchVulnerability: Boolean, sb: SB): (Boolean, Option[String]) =
-    matchVulnerability -> Play.conditional(down(sb.vulnerability, sb.score))(matchVulnerability)
+  private def penalty(matchVulnerability: Boolean, sb: SB): Option[String] =
+    Play.conditional(down(sb.vulnerability, sb.score))(matchVulnerability)
 
   private def down(vulnerable: Boolean, score: Int): String = {
     val perTrick = if (vulnerable) 100 else 50
@@ -229,3 +229,4 @@ case class ScoreVul(score: Int, vulnerability: Vulnerability) {
 case class SB(score: Int, vulnerability: Boolean) {
   def negate: SB = copy(score = -score)
 }
+
