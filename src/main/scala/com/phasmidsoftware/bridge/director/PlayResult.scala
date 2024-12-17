@@ -5,7 +5,7 @@
 package com.phasmidsoftware.bridge.director
 
 import com.phasmidsoftware.bridge.director.PlayResult.Valid
-import com.phasmidsoftware.misc.{BasePredicate, IntPredicate, Predicate}
+import com.phasmidsoftware.misc.{BasePredicate, IntPredicate, JPredicate, Predicate}
 import com.phasmidsoftware.number.core.Rational
 
 import scala.language.postfixOps
@@ -111,7 +111,7 @@ object PlayResult {
     * @param dir true if the direction asked about is NS.
     * @return a Predicate[ScoreVul]
     */
-  def gameP(dir: Boolean): Predicate[ScoreVul] = gameP.lens(u => u.project(dir))
+  def gameP(dir: Boolean): JPredicate[ScoreVul] = gameP.jlens("gameP")(u => u.project(dir))
 
   /**
     * Predicate to test for a partial in the direction dir.
@@ -131,22 +131,24 @@ object PlayResult {
 
   import Predicate._
 
-  private def suitPartial(suit: String, value: Int) = IntPredicate(s"$suit partial", score => score :| value && Range(1, 8).contains(score / value))
+  private def suitPartialJ(suit: String, value: Int): JPredicate[Int] = JPredicate.when(s"$suit partial") {
+    score => score :| value && Range(1, 8).contains(score / value)
+  }
 
   private def stripBonus(bonusV: Int, bonusN: Int)(sv: SB): Int = sv.score - (if (sv.vulnerability) bonusV else bonusN)
 
-  private lazy val minorPartial = suitPartial("minor", 20)
-  private lazy val majorPartial = suitPartial("major", 30)
+  private lazy val minorPartial = suitPartialJ("minor", 20)
+  private lazy val majorPartial = suitPartialJ("major", 30)
   private lazy val notrumpPartial = majorPartial.lens[Int](_ - 10)
-  private lazy val doubledMinorPartial = suitPartial("Xminor", 40)
-  private lazy val doubledMajorPartial = suitPartial("Xmajor", 60)
+  private lazy val doubledMinorPartial = suitPartialJ("Xminor", 40)
+  private lazy val doubledMajorPartial = suitPartialJ("Xmajor", 60)
   private lazy val doubledNotrumpPartial = doubledMajorPartial.lens[Int](_ - 20)
 
   // NOTE we don't accept doubled overtricks or redoubled contracts here--they must be questioned.
-  private lazy val trickScorePredicate = minorPartial orElse majorPartial orElse notrumpPartial orElse doubledMinorPartial orElse doubledMajorPartial orElse doubledNotrumpPartial
-  private lazy val gameP: Predicate[SB] = trickScorePredicate.lens(stripBonus(500, 300)) orElse
-    trickScorePredicate.lens(stripBonus(1250, 800)) orElse
-    trickScorePredicate.lens(stripBonus(2000, 1300))
+  private lazy val trickScorePredicate: JPredicate[Int] = minorPartial orElse majorPartial orElse notrumpPartial orElse doubledMinorPartial orElse doubledMajorPartial orElse doubledNotrumpPartial
+  private lazy val gameP: JPredicate[SB] = trickScorePredicate.jlens("game")(stripBonus(500, 300)) orElse
+    trickScorePredicate.jlens("slam")(stripBonus(1250, 800)) orElse
+    trickScorePredicate.jlens("grand slam")(stripBonus(2000, 1300))
 
   // NOTE: we accept doubled contracts as OK, but anything redoubled needs to be questioned.
 

@@ -61,6 +61,58 @@ trait Predicate[T] extends (T => Boolean) {
 
 }
 
+trait JPredicate[T] extends Predicate[T] {
+
+  self =>
+
+  def justification(t: T): Option[String]
+
+  def apply(t: T): Boolean = justification(t).isDefined
+
+  /**
+    * Method to reverse the sense of this Predicate[T].
+    *
+    * @return a Predicate[T] that returns true when <code>this</code> Predicate would return false;
+    *         and false when <code>this</code> would return true.
+    */
+  override def flip: JPredicate[T] = (t: T) => self.justification(t) match {
+    case None => Some("not")
+    case _ => None
+  }
+
+  /**
+    * Method to transform <code>this</code> JPredicate[T] into a JPredicate[U].
+    *
+    * @param f a function which takes a U and returns a T.
+    * @param w a String which will be the justification, if any.
+    * @tparam U the underlying type of the result.
+    * @return a JPredicate[U].
+    */
+  def jlens[U](w: => String)(f: U => T): JPredicate[U] = JPredicate.when(w)(lens(f))
+
+  /**
+    * Method to compose a Predicate[T] from <code>this</code> or <code>p</code>.
+    *
+    * CONSIDER re-writing this method
+    *
+    * @param p a Predicate[T]
+    * @return a Predicate[T] which will yield true for a <code>t</code> value when <code>this</code> or <code>p</code> yield true.
+    *         NOTE that <code>p</code> will not be invoked if <code>this</code> yields true.
+    */
+  override def orElse(p: Predicate[T]): JPredicate[T] =
+    (t: T) => self.justification(t) orElse (p match {
+      case j: JPredicate[T] => j.justification(t)
+      case _ if p(t) => Some("")
+      case _ => None
+    })
+}
+
+object JPredicate {
+  def apply[T](f: T => Option[String]): JPredicate[T] = (t: T) => f(t)
+
+  def when[T](w: String)(p: T => Boolean): JPredicate[T] = apply(t => Option.when(p(t))(w))
+}
+
 trait Named {
   def name: String
 
@@ -164,6 +216,7 @@ object Predicate {
     */
   implicit class Compound(x: Int) {
     /**
+      * Method to determine if `y` is a factor of `x`.
       *
       * @param y an Int.
       * @return a Boolean.
@@ -171,3 +224,4 @@ object Predicate {
     def :|(y: Int): Boolean = x % y == 0
   }
 }
+
