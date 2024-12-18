@@ -4,20 +4,21 @@
 
 package com.phasmidsoftware.misc
 
+import scala.annotation.unused
 import scala.language.reflectiveCalls // XXX what are these?
 
 /**
-  * Trait to describe the behavior of Predicate.
-  * Predicate extends (T => Boolean) so is a pure function that implements the <code>apply(t)</code> method.
+  * Trait to describe the behavior of a predicate.
+  * Predicate extends (T => Boolean) so is a pure function that implements the `apply(t)` method.
   *
-  * @tparam T the underlying type, that's to say the type of the input to <code>this</code> Predicate.
+  * @tparam T the underlying type, that's to say the type of the input to `this` Predicate.
   */
 trait Predicate[T] extends (T => Boolean) {
 
   self =>
 
   /**
-    * Method to transform <code>this</code> Predicate[T] into a Predicate[U].
+    * Method to transform `this` Predicate[T] into a Predicate[U].
     *
     * @param f a function which takes a U and returns a T.
     * @tparam U the underlying type of the result.
@@ -28,52 +29,71 @@ trait Predicate[T] extends (T => Boolean) {
   /**
     * Method to reverse the sense of this Predicate[T].
     *
-    * @return a Predicate[T] that returns true when <code>this</code> Predicate would return false; and false when <code>this</code> would return true.
+    * @return a Predicate[T] that returns true when `this` Predicate would return false; and false when `this` would return true.
     */
   def flip: Predicate[T] = (t: T) => !self(t)
 
   /**
-    * Method to compose a Predicate[T] from <code>this</code> and <code>p</code>.
+    * Method to compose a Predicate[T] from `this` and `p`.
     *
     * @param p a Predicate[T]
-    * @return a Predicate[T] which will yield true for a <code>t</code> value only when <code>this</code> and <code>p</code> yield true.
-    *         NOTE that <code>p</code> will not be invoked if <code>this</code> yields false.
+    * @return a Predicate[T] which will yield true for a `t` value only when `this` and `p` yield true.
+    *         NOTE that `p` will not be invoked if `this` yields false.
     */
   def andThen(p: Predicate[T]): Predicate[T] = (t: T) => self(t) && p(t)
 
   /**
-    * Method to compose a Predicate[T] from <code>this</code> or <code>p</code>.
+    * Method to compose a Predicate[T] from `this` or `p`.
     *
     * @param p a Predicate[T]
-    * @return a Predicate[T] which will yield true for a <code>t</code> value when <code>this</code> or <code>p</code> yield true.
-    *         NOTE that <code>p</code> will not be invoked if <code>this</code> yields true.
+    * @return a Predicate[T] which will yield true for a `t` value when `this` or `p` yield true.
+    *         NOTE that `p` will not be invoked if `this` yields true.
     */
   def orElse(p: Predicate[T]): Predicate[T] = (t: T) => self(t) || p(t)
 
   /**
-    * Method to compose a Predicate[T] from <code>this</code> implies <code>p</code>.
+    * Method to compose a Predicate[T] from `this` implies `p`.
     *
     * @param p a Predicate[T]
-    * @return a Predicate[T] which will yield true for a <code>t</code> value when <code>this</code> implies <code>p</code> yields true.
-    *         NOTE that <code>p</code> will not be invoked if <code>this</code> yields true.
+    * @return a Predicate[T] which will yield true for a `t` value when `this` implies `p` yields true.
+    *         NOTE that `p` will not be invoked if `this` yields true.
     */
   def implies(p: Predicate[T]): Predicate[T] = (t: T) => if (self(t)) p(t) else true
 
 }
 
+/**
+  * Trait that extends Predicate[T] but with the added behavior of providing a justification when the predicate succeeds.
+  *
+  * @tparam T the underlying type, that's to say the type of the input to `this JPredicate`.
+  */
 trait JPredicate[T] extends Predicate[T] {
 
   self =>
 
+  /**
+    * Method which yields an optional `String` based on the input value `t`.
+    *
+    * @param t a value of type `T`.
+    * @return an `Option[String]`.
+    */
   def justification(t: T): Option[String]
 
+  /**
+    * The `apply` method for this predicate.
+    *
+    * @param t a value of type `T`.
+    * @return a Boolean: true if `justification(t)` is defined.
+    */
   def apply(t: T): Boolean = justification(t).isDefined
 
   /**
     * Method to reverse the sense of this Predicate[T].
     *
-    * @return a Predicate[T] that returns true when <code>this</code> Predicate would return false;
-    *         and false when <code>this</code> would return true.
+    * CONSIDER re-writing.
+    *
+    * @return a Predicate[T] that returns true when `this` Predicate would return false;
+    *         and false when `this` would return true.
     */
   override def flip: JPredicate[T] = (t: T) => self.justification(t) match {
     case None => Some("not")
@@ -81,53 +101,66 @@ trait JPredicate[T] extends Predicate[T] {
   }
 
   /**
-    * Method to transform <code>this</code> JPredicate[T] into a JPredicate[U].
+    * Method to transform `this` JPredicate[T] into a JPredicate[U].
+    *
+    * CONSIDER changing `w` to a `T => String` (maybe even a `String` of the form s"...$t...")
     *
     * @param f a function which takes a U and returns a T.
-    * @param w a String which will be the justification, if any.
+    * @param g a String which will be the justification, if any (currently, independent of any actual `T` value).
     * @tparam U the underlying type of the result.
     * @return a JPredicate[U].
     */
-  def jlens[U](w: => String)(f: U => T): JPredicate[U] = JPredicate.when(w)(lens(f))
+  def jLens[U](g: U => String)(f: U => T): JPredicate[U] = (u: U) => {
+    self.justification(f(u)) map (g(u) + " " + _)
+    //    JPredicate.when(w)(lens(f))
+  }
 
   /**
-    * Method to compose a Predicate[T] from <code>this</code> or <code>p</code>.
+    * Method to compose a JPredicate[T] from `this` or `p`.
     *
     * CONSIDER re-writing this method
     *
     * @param p a Predicate[T]
-    * @return a Predicate[T] which will yield true for a <code>t</code> value when <code>this</code> or <code>p</code> yield true.
-    *         NOTE that <code>p</code> will not be invoked if <code>this</code> yields true.
+    * @return a Predicate[T] which will yield true for a `t` value when `this` or `p` yield true.
+    *         NOTE that `p` will not be invoked if `this` yields true.
     */
   override def orElse(p: Predicate[T]): JPredicate[T] =
     (t: T) => self.justification(t) orElse (p match {
-      case j: JPredicate[T] => j.justification(t)
-      case _ if p(t) => Some("")
+      case j: JPredicate[T] =>
+        j.justification(t)
+      case _ if p(t) =>
+        Some("orElse")
       case _ => None
     })
+
+  /**
+    * Method to compose a Predicate[T] from `this` and `p`.
+    *
+    * @param p a `Predicate[T]`
+    * @return a `JPredicate[T]` which will yield true for a `t` value only when `this` and `p` yield true.
+    *         NOTE that `p` will not be invoked if `this` yields false.
+    */
+  override def andThen(p: Predicate[T]): JPredicate[T] =
+    (t: T) => self.justification(t) flatMap (
+      w1 =>
+        p match {
+          case j: JPredicate[T] => j.justification(t) map (w2 => w1 + "&" + w2)
+          case _ if p(t) => Some(w1)
+          case _ => None
+        })
 }
 
 object JPredicate {
   def apply[T](f: T => Option[String]): JPredicate[T] = (t: T) => f(t)
 
-  def when[T](w: String)(p: T => Boolean): JPredicate[T] = apply(t => Option.when(p(t))(w))
+  def when[T](f: T => String)(p: T => Boolean): JPredicate[T] = apply(t => Option.when(p(t))(f(t)))
 }
 
 trait Named {
   def name: String
 
+  @unused
   def nameIt[T](w: String): Predicate[T]
-}
-
-trait NamedPredicate[T] extends Predicate[T] {
-  self: Named =>
-
-  /**
-    * Method to reverse the sense of this Predicate[T].
-    *
-    * @return a Predicate[T] that returns true when <code>this</code> Predicate would return false; and false when <code>this</code> would return true.
-    */
-  override def flip: Predicate[T] = super.flip
 }
 
 import com.phasmidsoftware.misc.Predicate.maybeShow
@@ -143,7 +176,7 @@ import scala.language.reflectiveCalls
   * @tparam T the underlying type.
   */
 abstract class BasePredicate[T](name: String, f: T => Boolean, showMatches: Boolean = false) extends Predicate[T] {
-  def apply(t: T): Boolean = maybeShow(f(t), s"$name matched for t=$t", showMatches)
+  def apply(t: T): Boolean = maybeShow(f(t), s"$name matched for sb=$t", showMatches)
 }
 
 /**
@@ -156,7 +189,7 @@ abstract class BasePredicate[T](name: String, f: T => Boolean, showMatches: Bool
   * @tparam T the underlying type of the returned Predicate.
   */
 abstract class BaseControlPredicate[R, T](name: String, f: R => T => Boolean, showMatches: Boolean = false)(r: R) extends Predicate[T] {
-  def apply(t: T): Boolean = maybeShow(f(r)(t), s"$name(r=$r) matched for t=$t", showMatches)
+  def apply(t: T): Boolean = maybeShow(f(r)(t), s"$name(r=$r) matched for sb=$t", showMatches)
 }
 
 /**
@@ -170,8 +203,9 @@ case class IntPredicate(name: String, f: Int => Boolean) extends BasePredicate[I
     * Method to copy this Predicate but with a different name.
     *
     * @param w a String to be used as the new name.
-    * @return a IntPredicate that behaves the same as <code>this</code> but with a different name in the case of a positive match.
+    * @return a IntPredicate that behaves the same as `this` but with a different name in the case of a positive match.
     */
+  @unused
   def named(w: String): IntPredicate = copy(name = w)
 }
 
@@ -182,7 +216,7 @@ case class IntPredicate(name: String, f: Int => Boolean) extends BasePredicate[I
 object Predicate {
 
   /**
-    * Apply method to construct a Predicate[T] from a function <code>f</code> of type T => Boolean.
+    * Apply method to construct a Predicate[T] from a function `f` of type T => Boolean.
     *
     * @param f the function which will be used for the resulting Predicate[T].
     * @tparam T the underlying type.
@@ -197,12 +231,12 @@ object Predicate {
   lazy val isPositive: Predicate[Int] = IntPredicate("pos", _ > 0)
 
   /**
-    * Return the value of <code>b</code> and (as a side effect), if it is true and if <code>show</code> is true, then print the <code>msg</code>.
+    * Return the value of `b` and (as a side effect), if it is true and if `show` is true, then print the `msg`.
     *
     * @param b    a Boolean.
     * @param msg  a String to be conditionally printed.
-    * @param show if true (and if <code>b</code> is true) then print <code>msg</code>.
-    * @return <code>b</code>.
+    * @param show if true (and if `b` is true) then print `msg`.
+    * @return `b`.
     */
   def maybeShow(b: Boolean, msg: => String, show: Boolean): Boolean = {
     if (b && show) println(msg)
@@ -210,7 +244,7 @@ object Predicate {
   }
 
   /**
-    * Implicit class to represent a compound number (i.e., not a prime).
+    * Implicit class to represent a compound number (i.e., not prime).
     *
     * @param x the value of the number.
     */

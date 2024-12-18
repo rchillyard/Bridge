@@ -4,8 +4,7 @@
 
 package com.phasmidsoftware.bridge.director
 
-import com.phasmidsoftware.bridge.director.Card.mpsAsString
-import com.phasmidsoftware.bridge.director.Matchpoints.rationalToString
+import com.phasmidsoftware.bridge.director.Matchpoints.{mpsAsString, rationalToString}
 import com.phasmidsoftware.bridge.director.Score.asPercent
 import com.phasmidsoftware.number.core.Rational
 import com.phasmidsoftware.number.core.Rational.{half, zero}
@@ -13,6 +12,7 @@ import com.phasmidsoftware.output.{Using, Util}
 import com.phasmidsoftware.util.{Output, Outputable}
 
 import java.io.{FileWriter, PrintWriter}
+import scala.annotation.unused
 import scala.io.Source
 import scala.language.postfixOps
 import scala.util._
@@ -27,6 +27,7 @@ object Score extends App {
   private lazy val fileWriter = new FileWriter(outputFile)
   private lazy val printWriter = new PrintWriter(System.out)
   private lazy val tabbedOutput: Output = Output(fileWriter)
+  @unused
   private lazy val untabbedOutput: Output = Output.untabbedWriter(printWriter, 6)
   // TODO set this to use untabbedOutput if you want all tabs turned into spaces.
   private lazy val defaultOutput: Output = tabbedOutput
@@ -95,7 +96,7 @@ object Score extends App {
 
     val ey = RecapParser.readEvent(source, delimiter)
 
-    for (e <- ey; x = e.score) yield (output :+ x.title).insertBreak ++ (for ((p, rs) <- x.createResults) yield eventResults(x, p, rs, x.boards))
+    for (e <- ey; x = e.score) yield (output :+ (x.title + "  " + e.hashCode().toHexString)).insertBreak ++ (for ((p, rs) <- x.createResults) yield eventResults(x, p, rs, x.boards))
   }
 
   /**
@@ -381,16 +382,6 @@ object Card {
     //  (which requires DNP entries in order to work properly).
     Card(rs.sum, rs.size, roB.size - rs.size, bs)
   }
-
-  /**
-    * Method to get the matchpoints as a String.
-    * CONSIDER this should be moved somewhere else as it is not really related to Card.
-    *
-    * @param r   a Rational representing the fractional matchpoints.
-    * @param top the top on a board.
-    * @return a String.
-    */
-  def mpsAsString(r: Rational, top: Int): String = rationalToString(r * top)
 }
 
 /**
@@ -471,6 +462,7 @@ case class Result(tables: Int, isNS: Option[Boolean], top: Int, cards: Map[Int, 
     Output.foldLeft(xPs)(header)(_ ++ resultDetails(_))
   }
 
+  @unused
   private def showCards(): Unit = {
     println("pair\ttotal\tboards...")
     for {
@@ -498,7 +490,7 @@ case class Matchpoints(ns: Int, ew: Int, result: PlayResult, ro: Option[Rational
   def getMatchpoints(dir: Boolean): Option[Rational] = if (dir) ro else invert
 
   override def toString: String = ro match {
-    case Some(x) => s"""$ns\t$ew\t$result\t${Card.mpsAsString(x, top)}"""
+    case Some(x) => s"""$ns\t$ew\t$result\t${Matchpoints.mpsAsString(x, top)}"""
     case _ => ""
   }
 
@@ -508,6 +500,9 @@ case class Matchpoints(ns: Int, ew: Int, result: PlayResult, ro: Option[Rational
   }
 
   private def invert = ro map { r => -(r - 1) }
+
+  def probableContract(board: Int): String = result.getProbableContract(Vulnerability(board)) getOrElse "CHECK!"
+
 }
 
 object Matchpoints {
@@ -525,6 +520,14 @@ object Matchpoints {
     case _ => r.renderApproximate(5, Some(2))
   }
 
+  /**
+    * Method to get the matchpoints as a String.
+    *
+    * @param r   a Rational representing the fractional matchpoints.
+    * @param top the top on a board.
+    * @return a String.
+    */
+  def mpsAsString(r: Rational, top: Int): String = rationalToString(r * top)
 }
 
 /**
@@ -575,7 +578,7 @@ case class Traveler(board: Int, ps: Seq[Play], maybeMatchpoints: Option[Seq[Matc
     val result = new StringBuilder
     result.append(s"Board: $board with $actualPlays plays\n")
     result.append(s"""NS pair\tEW pair\tNS score\tNS MPs\n""")
-    for (m <- matchpoints) result.append(s"$m\n")
+    for (m <- matchpoints) result.append(s"$m (probable contract: ${m.probableContract(board)})\n")
     output :+ result.toString
   }
 
@@ -641,6 +644,7 @@ case class Pickup(ns: Int, ew: Int, boards: Seq[BoardResult]) {
   * @param play  the play.
   */
 case class BoardPlay(board: Int, play: Play) {
+  // CONSIDER moving this method into Traveler
   def addTo(travelerMap: Map[Int, Traveler]): Map[Int, Traveler] = {
     val entry = travelerMap.get(board)
     val traveler = entry.getOrElse(Traveler(board, Nil, None))
@@ -660,6 +664,14 @@ case class BoardPlay(board: Int, play: Play) {
 case class Play(ns: Int, ew: Int, result: PlayResult) {
   override def toString: String = s"$ns vs $ew: $result"
 
+  /**
+    * Method to compare scores for matchpointing.
+    *
+    * CONSIDER rewriting this (perhaps matching on a tuple of play results) and maybe moving it into `PlayResult`.
+    *
+    * @param x the `PlayResult` to be compared with `this.result`.
+    * @return an `Option[Boolean]`.
+    */
   def compare(x: PlayResult): Option[Int] = result match {
     case PlayResult(Right(y)) => x match {
       case PlayResult(Right(z)) => Some(Integer.compare(z, y) + 1)

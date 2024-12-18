@@ -4,8 +4,9 @@
 
 package com.phasmidsoftware.bridge.director
 
-import com.phasmidsoftware.bridge.director.PlayResult.{Partial, Penalty, penaltyP}
+import com.phasmidsoftware.bridge.director.PlayResult._
 import com.phasmidsoftware.bridge.director.Vulnerability._
+import com.phasmidsoftware.misc.JPredicate
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
 
@@ -14,27 +15,32 @@ class PlayResultSpec extends AnyFlatSpec with should.Matchers {
   behavior of "Game"
 
   it should "work for game NS" in {
-    PlayResult.gameP(true)(ScoreVul(600, Vulnerability.N)) shouldBe true
-    PlayResult.gameP(true)(ScoreVul(620, Vulnerability.N)) shouldBe true
-    PlayResult.gameP(true)(ScoreVul(450, Vulnerability.E)) shouldBe true
-    PlayResult.gameP(true)(ScoreVul(480, Vulnerability.E)) shouldBe true
-    PlayResult.gameP(true)(ScoreVul(1430, Vulnerability.N)) shouldBe true
-    PlayResult.gameP(true)(ScoreVul(2210, Vulnerability.N)) shouldBe true
-    PlayResult.gameP(true)(ScoreVul(-50, Vulnerability.N)) shouldBe false
+    val predicate = PlayResult.gameP(true)
+    predicate.justification(ScoreVul(600, Vulnerability.N)) shouldBe Some("NS game 3 NT")
+    predicate(ScoreVul(600, Vulnerability.N)) shouldBe true
+    predicate(ScoreVul(620, Vulnerability.N)) shouldBe true
+    predicate(ScoreVul(450, Vulnerability.E)) shouldBe true
+    predicate(ScoreVul(480, Vulnerability.E)) shouldBe true
+    predicate(ScoreVul(1430, Vulnerability.N)) shouldBe true
+    predicate(ScoreVul(2210, Vulnerability.N)) shouldBe true
+    predicate(ScoreVul(-50, Vulnerability.N)) shouldBe false
   }
   it should "work for game EW" in {
-    PlayResult.gameP(false)(ScoreVul(-600, Vulnerability.E)) shouldBe true
-    PlayResult.gameP(false)(ScoreVul(-620, Vulnerability.E)) shouldBe true
-    PlayResult.gameP(false)(ScoreVul(-650, Vulnerability.E)) shouldBe true
-    PlayResult.gameP(false)(ScoreVul(-680, Vulnerability.E)) shouldBe true
-    PlayResult.gameP(false)(ScoreVul(-980, Vulnerability.N)) shouldBe true
-    PlayResult.gameP(false)(ScoreVul(-1510, Vulnerability.N)) shouldBe true
-    PlayResult.gameP(false)(ScoreVul(50, Vulnerability.E)) shouldBe false
+    val predicate = PlayResult.gameP(false)
+    predicate.justification(ScoreVul(-600, Vulnerability.E)) shouldBe Some("EW game 3 NT")
+    predicate(ScoreVul(-600, Vulnerability.E)) shouldBe true
+    predicate(ScoreVul(-620, Vulnerability.E)) shouldBe true
+    predicate(ScoreVul(-650, Vulnerability.E)) shouldBe true
+    predicate(ScoreVul(-680, Vulnerability.E)) shouldBe true
+    predicate(ScoreVul(-980, Vulnerability.N)) shouldBe true
+    predicate(ScoreVul(-1510, Vulnerability.N)) shouldBe true
+    predicate(ScoreVul(50, Vulnerability.E)) shouldBe false
   }
 
   behavior of "Penalty"
 
   it should "work for NS penalty when not vul" in {
+    Penalty.justification(ScoreVul(50, Vulnerability.O)) shouldBe Some("EW  down 1")
     Penalty(ScoreVul(50, Vulnerability.O)) shouldBe true
     Penalty(ScoreVul(-50, Vulnerability.O)) shouldBe true
   }
@@ -74,7 +80,9 @@ class PlayResultSpec extends AnyFlatSpec with should.Matchers {
   behavior of "Partial"
 
   it should "work for NS notrump partials" in {
-    Partial(ScoreVul(90, Vulnerability.N)) shouldBe true
+    val result = Partial.justification(ScoreVul(90, Vulnerability.N))
+    result.isDefined shouldBe true
+    result.get shouldBe "NS partial 1 NT"
     Partial(ScoreVul(120, Vulnerability.N)) shouldBe true
     Partial(ScoreVul(150, Vulnerability.N)) shouldBe true
     Partial(ScoreVul(180, Vulnerability.N)) shouldBe true
@@ -115,6 +123,23 @@ class PlayResultSpec extends AnyFlatSpec with should.Matchers {
     Partial(ScoreVul(-230, Vulnerability.N)) shouldBe true
     Partial(ScoreVul(-260, Vulnerability.N)) shouldBe true
     Partial(ScoreVul(50, Vulnerability.N)) shouldBe false
+  }
+
+  it should "trickScore 1" in {
+    trickScorePredicate.justification(40) shouldBe Some("1 NT")
+    trickScorePredicate.justification(30) shouldBe Some("1 major")
+    trickScorePredicate.justification(20) shouldBe Some("1 minor")
+  }
+
+  it should "trickScore 2" in {
+    trickScorePredicate.justification(70) shouldBe Some("2 NT")
+    trickScorePredicate.justification(60) shouldBe Some("2 major")
+    trickScorePredicate.justification(40) shouldBe Some("1 NT")
+  }
+
+  it should "jLens" in {
+    val gameP: JPredicate[SB] = trickScorePredicate.jLens[SB](sb => "game")(stripBonus(500, 300))
+    gameP.justification(SB(620, vulnerability = true)) shouldBe Some("game 4 major")
   }
 
   behavior of "PlayResult"

@@ -78,6 +78,34 @@ class PredicateSpec extends AnyFlatSpec with should.Matchers {
     p("Hello") shouldBe true
     p("World") shouldBe false
   }
+
+  behavior of "JPredicate"
+
+  it should "work with a lambda" in {
+    val p: JPredicate[String] = JPredicate[String](w => Some(s"Hello $w"))
+    p.justification("World") shouldBe Some("Hello World")
+    p.apply("World") shouldBe true
+  }
+
+  it should "orElse" in {
+    val p1: JPredicate[String] = JPredicate[String](_ => None)
+    val p2: JPredicate[String] = JPredicate[String](w => Some(s"Hello $w"))
+    val p = p1 orElse p2
+    p.justification("World") shouldBe Some("Hello World")
+  }
+
+  it should "andThen" in {
+    val p1: JPredicate[String] = JPredicate[String](_ => None)
+    val p2: JPredicate[String] = JPredicate[String](w => Some(s"Hello $w"))
+    val p = p1 orElse p2
+    p.justification("World") shouldBe Some("Hello World")
+  }
+
+  it should "jLens" in {
+    val p2: JPredicate[String] = JPredicate[String](w => Some(s"Hello $w"))
+    val p: JPredicate[Option[String]] = p2.jLens[Option[String]](xo => "get")(_.get)
+    p.justification(Some("World")) shouldBe Some("get Hello World")
+  }
 }
 
 case class IntPredicate(name: String, f: Int => Boolean) extends BasePredicate[Int](name, f)

@@ -5,9 +5,10 @@
 package com.phasmidsoftware.bridge.director
 
 import com.phasmidsoftware.bridge.director.PlayResult.Valid
-import com.phasmidsoftware.misc.{BasePredicate, IntPredicate, JPredicate, Predicate}
+import com.phasmidsoftware.misc.{JPredicate, Predicate}
 import com.phasmidsoftware.number.core.Rational
 
+import scala.annotation.unused
 import scala.language.postfixOps
 import scala.util._
 import scala.util.matching.Regex
@@ -66,15 +67,16 @@ case class PlayResult(r: Either[String, Int]) {
     case _ => false
   }) || !played
 
+  def getProbableContract(vul: Vulnerability): Option[String] = r match {
+    case Left(w) => Some(w)
+    case Right(score) => Valid.justification(ScoreVul(score, vul))
+  }
   /**
     * Here we check if the result is one of the common possible results.
     *
     * @param vul the vulnerability.
     */
-  def checkScore(vul: Vulnerability): Boolean = r match {
-    case Left(_) => true
-    case Right(score) => Valid(ScoreVul(score, vul))
-  }
+  def checkScore(vul: Vulnerability): Boolean = getProbableContract(vul).isDefined
 
   override def toString: String = r match {
     case Left(x) => x
@@ -98,57 +100,76 @@ object PlayResult {
   }
 
   /**
-    * Predicate to test for a penalty in the direction dir.
+    * JPredicate to test for a penalty in the direction dir.
     *
     * @param dir true if the direction asked about is NS.
-    * @return a Predicate[ScoreVul]
+    * @return a JPredicate[ScoreVul]
     */
-  def penaltyP(dir: Boolean): Predicate[ScoreVul] = SBPredicate("penalty", penaltyIsOk).lens[SB](sb => sb.negate).lens(sv => sv.project(dir))
-
-  /**
-    * Predicate to test for a game in the direction dir.
-    *
-    * @param dir true if the direction asked about is NS.
-    * @return a Predicate[ScoreVul]
-    */
-  def gameP(dir: Boolean): JPredicate[ScoreVul] = gameP.jlens("gameP")(u => u.project(dir))
-
-  /**
-    * Predicate to test for a partial in the direction dir.
-    *
-    * @param dir true if the direction asked about is NS.
-    * @return a Predicate[ScoreVul]
-    */
-  private def partialP(dir: Boolean, doubled: Boolean): Predicate[ScoreVul] = {
-    val bonus = if (doubled) 100 else 50
-    trickScorePredicate.lens[SB](stripBonus(bonus, bonus)).lens(_.project(dir))
+  def penaltyP(dir: Boolean): JPredicate[ScoreVul] = {
+    // CONSIDER rewriting this with just one jLens (using a function to negate AND project. {
+    val negative: SB => String = sb => s""
+    val value: ScoreVul => String = sv => if (dir) "NS" else "EW"
+    new JPredicate[SB] {
+      def justification(sb: SB): Option[String] = penaltyIsOk(sb)
+    }.jLens[SB](negative)(sb => sb.negate).jLens(value)(sv => sv.project(dir))
   }
 
-  lazy val Partial: Predicate[ScoreVul] = (for (x <- Seq(true, false); y <- Seq(true, false)) yield partialP(x, y)) reduce ((a, b) => a orElse b)
-  lazy val Penalty: Predicate[ScoreVul] = penaltyP(true) orElse penaltyP(false)
-  lazy val Game: Predicate[ScoreVul] = gameP(true) orElse gameP(false)
-  lazy val Valid: Predicate[ScoreVul] = Penalty orElse Game orElse Partial
+  /**
+    * JPredicate to test for a game in the direction dir.
+    *
+    * @param dir true if the direction asked about is NS.
+    * @return a JPredicate[ScoreVul]
+    */
+  def gameP(dir: Boolean): JPredicate[ScoreVul] = {
+    val game: ScoreVul => String = sv => if (dir) "NS" else "EW"
+    gameP.jLens(game)(u => u.project(dir))
+  }
+
+  /**
+    * JPredicate to test for a partial in the direction dir.
+    *
+    * @param dir true if the direction asked about is NS.
+    * @return a JPredicate[ScoreVul]
+    */
+  private def partialP(dir: Boolean, doubled: Boolean): JPredicate[ScoreVul] = {
+    val bonus = if (doubled) 100 else 50
+    val partial: SB => String = sb => s"partial"
+    val value: ScoreVul => String = sv => s"""${if (dir) "NS" else "EW"}"""
+    trickScorePredicate.jLens[SB](partial)(stripBonus(bonus, bonus)).jLens(value)(_.project(dir))
+  }
+
+  lazy val Partial: JPredicate[ScoreVul] = (for (x <- Seq(true, false); y <- Seq(true, false)) yield partialP(x, y)) reduce ((a, b) => a orElse b)
+  lazy val Penalty: JPredicate[ScoreVul] = penaltyP(true) orElse penaltyP(false)
+  lazy val Game: JPredicate[ScoreVul] = gameP(true) orElse gameP(false)
+  lazy val Valid: JPredicate[ScoreVul] = Penalty orElse Game orElse Partial
 
   import Predicate._
 
-  private def suitPartialJ(suit: String, value: Int): JPredicate[Int] = JPredicate.when(s"$suit partial") {
-    score => score :| value && Range(1, 8).contains(score / value)
-  }
+  private def suitPartialJ(strain: String, value: Int): JPredicate[Int] =
+    (score: Int) => {
+      val n = score / value
+      Option.when(score :| value && Range(1, 8).contains(n))(s"$n $strain")
+    }
 
-  private def stripBonus(bonusV: Int, bonusN: Int)(sv: SB): Int = sv.score - (if (sv.vulnerability) bonusV else bonusN)
+  def stripBonus(bonusV: Int, bonusN: Int)(sv: SB): Int = sv.score - (if (sv.vulnerability) bonusV else bonusN)
 
   private lazy val minorPartial = suitPartialJ("minor", 20)
   private lazy val majorPartial = suitPartialJ("major", 30)
-  private lazy val notrumpPartial = majorPartial.lens[Int](_ - 10)
+  private lazy val notrumpPartial = new JPredicate[Int]() {
+    def justification(score: Int): Option[String] = if (score == 40) Some("1 NT") else {
+      suitPartialJ("NT", 30).justification(score - 10)
+    }
+  }
+
   private lazy val doubledMinorPartial = suitPartialJ("Xminor", 40)
   private lazy val doubledMajorPartial = suitPartialJ("Xmajor", 60)
   private lazy val doubledNotrumpPartial = doubledMajorPartial.lens[Int](_ - 20)
 
   // NOTE we don't accept doubled overtricks or redoubled contracts here--they must be questioned.
-  private lazy val trickScorePredicate: JPredicate[Int] = minorPartial orElse majorPartial orElse notrumpPartial orElse doubledMinorPartial orElse doubledMajorPartial orElse doubledNotrumpPartial
-  private lazy val gameP: JPredicate[SB] = trickScorePredicate.jlens("game")(stripBonus(500, 300)) orElse
-    trickScorePredicate.jlens("slam")(stripBonus(1250, 800)) orElse
-    trickScorePredicate.jlens("grand slam")(stripBonus(2000, 1300))
+  lazy val trickScorePredicate: JPredicate[Int] = notrumpPartial orElse majorPartial orElse minorPartial orElse doubledMinorPartial orElse doubledMajorPartial orElse doubledNotrumpPartial
+  private lazy val gameP: JPredicate[SB] = trickScorePredicate.jLens[SB](sb => "game")(stripBonus(500, 300)) orElse
+    trickScorePredicate.jLens[SB](sb => "slam")(stripBonus(1250, 800)) orElse
+    trickScorePredicate.jLens[SB](sb => "grand slam")(stripBonus(2000, 1300))
 
   // NOTE: we accept doubled contracts as OK, but anything redoubled needs to be questioned.
 
@@ -159,7 +180,7 @@ object PlayResult {
     * @param sb a `SB` value, i.e. score and vulnerability as a `Boolean`
     * @return `true` if the score matches a valid penalty: i.e., the first part of the tuple returned by `penaltyIsOkWithMaybeString`.
     */
-  private def penaltyIsOk(sb: SB): Boolean = penaltyIsOkWithMaybeString(sb).isDefined
+  private def penaltyIsOk(sb: SB): Option[String] = penaltyIsOkWithMaybeString(sb)
 
   /**
     * Method to yield a `Boolean` and an optional `String` which is the explanation of the result (and is defined only if the `Boolean` value is `true`).
@@ -190,7 +211,7 @@ object PlayResult {
 
   private def down(vulnerable: Boolean, score: Int): String = {
     val perTrick = if (vulnerable) 100 else 50
-    s"Down ${score / perTrick}"
+    s"down ${score / perTrick}"
   }
 
   def error(s: String): PlayResult = PlayResult(Left(s))
@@ -221,8 +242,6 @@ object Vulnerability {
     case _ => throw new Exception(s"logic error: $x")
   }
 }
-
-case class SBPredicate(name: String, f: SB => Boolean) extends BasePredicate[SB](name, f)
 
 case class ScoreVul(score: Int, vulnerability: Vulnerability) {
   def project(direction: Boolean): SB = if (direction) SB(score, vulnerability.ns) else SB(-score, vulnerability.ew)

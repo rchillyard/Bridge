@@ -65,6 +65,10 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     target.matchpoints(None) shouldBe Some(Rational(2) / 5)
     target.toString shouldBe "A-"
   }
+  it should "get probable contract 1" in {
+    val target = PlayResult(110)
+    target.getProbableContract(Vulnerability(1)) shouldBe Some("NS partial 2 major")
+  }
 
   behavior of "BoardPlay"
   it should "apply" in {
@@ -152,7 +156,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val mps = t.matchpointIt(2).maybeMatchpoints.get
     mps.head.ro shouldBe Some(Rational.zero)
     mps.tail.head.ro shouldBe Some(Rational(3, 4))
-    Card.mpsAsString(mps.tail.head.ro.get, 2) shouldBe " 1.50"
+    Matchpoints.mpsAsString(mps.tail.head.ro.get, 2) shouldBe " 1.50"
     mps.tail.tail.head.ro shouldBe Some(Rational(3, 4))
   }
   it should "calculate BAM mps" in {
@@ -199,8 +203,8 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     writer.spillway shouldBe
       s"""Board: 5 with 2 plays
          |NS pair	EW pair	NS score	NS MPs
-         |13	17	110	 1.00
-         |14	16	100	 0.00
+         |13	17	110	 1.00 (probable contract: NS partial 2 major)
+         |14	16	100	 0.00 (probable contract: EW  down 2)
          |""".stripMargin
   }
 
@@ -296,7 +300,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
   }
   "mpsAsString" should "work" in {
     val r = Rational(3, 4)
-    Card.mpsAsString(r, 6) shouldBe " 4.50"
+    Matchpoints.mpsAsString(r, 6) shouldBe " 4.50"
   }
 
   behavior of "Play"
@@ -477,22 +481,22 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
   it should "read travelers.lexington.2017.0404 as a resource" in {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreResource("travelers.lexington.2017.0404", Output(writer))) o.close()
-    writer.spilled shouldBe 1769
+    writer.spilled shouldBe 3001
   }
   it should "read travelers.lexington.2017.0404P as a resource (includes pickup slips)" in {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreResource("travelers.lexington.2017.0404P", Output(writer))) o.close()
-    writer.spilled shouldBe 1769
+    writer.spilled shouldBe 3001
   }
   it should "read travelers.lexington.2017.0404 as a file" in {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/travelers.lexington.2017.0404", Output(writer))) o.close()
-    writer.spilled shouldBe 1769
+    writer.spilled shouldBe 3001
   }
   it should "read ConcordCountryClub20191007.txt" in {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreResource("ConcordCountryClub20191007.txt", Output(writer))) o.close()
-    writer.spilled shouldBe 2014
+    writer.spilled shouldBe 3682
   }
 
   // FIXME Issue #8
@@ -588,20 +592,20 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/KeremShalom.tsv", Output(writer))) o.close()
     //noinspection SpellCheckingInspection
     //    writer.spillway shouldBe "Kerem Shalom Beginner Duplicate: May 9th 2019\nSection A\nResults for direction N/S\n1 :  6.00 : 75.00% : Dan & Tenley\n3 :  5.67 : 56.67% : Chris & Kathy\n2 :  5.17 : 43.06% : Irene & Robin\n4 :  3.17 : 31.67% : Tom & Jane\nResults for direction E/W\n4 :  6.83 : 68.33% : Ghilaine & Bill\n2 :  3.83 : 47.92% : JoAnn & Margaret\n1 :  4.33 : 43.33% : Marian & Patty\n3 :  5.00 : 41.67% : Wendy & Ruth\n=====================================================\n=====================================================\nKerem Shalom Beginner Duplicate: May 9th 2019\nA\n1N: Dan & Tenley\n1E: Marian & Patty\n2N: Irene & Robin\n2E: JoAnn & Margaret\n3N: Chris & Kathy\n3E: Wendy & Ruth\n4N: Tom & Jane\n4E: Ghilaine & Bill\n\nBoard: 1 with 4 plays\nNS: 1, EW: 1, score: 450, MP: 1.50\nNS: 2, EW: 3, score: 450, MP: 1.50\nNS: 4, EW: 4, score: 450, MP: 1.50\nNS: 3, EW: 2, score: 450, MP: 1.50\nBoard: 2 with 3 plays\nNS: 1, EW: 1, score: -980, MP: 1.00\nNS: 2, EW: 3, score: -1010, MP: 0.00\nNS: 3, EW: 2, score: -510, MP: 2.00\nBoard: 3 with 4 plays\nNS: 2, EW: 2, score: -650, MP: 1.00\nNS: 4, EW: 4, score: -650, MP: 1.00\nNS: 1, EW: 3, score: 50, MP: 3.00\nNS: 3, EW: 1, score: -650, MP: 1.00\nBoard: 4 with 3 plays\nNS: 2, EW: 2, score: -100, MP: 0.50\nNS: 4, EW: 4, score: -100, MP: 0.50\nNS: 1, EW: 3, score: 1430, MP: 2.00\nBoard: 5 with 3 plays\nNS: 3, EW: 3, score: 50, MP: 1.00\nNS: 2, EW: 1, score: 50, MP: 1.00\nNS: 4, EW: 4, score: 50, MP: 1.00\nBoard: 6 with 3 plays\nNS: 3, EW: 3, score: 450, MP: 1.00\nNS: 2, EW: 1, score: 480, MP: 2.00\nNS: 4, EW: 4, score: -50, MP: 0.00\n"
-    writer.spilled shouldBe 1325
+    writer.spilled shouldBe 2004
   }
   it should "output with equal ranks" in {
-    val writer = MockWriter(8192)
+    val writer = MockWriter(10240)
     for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20240924.txt", Output(writer))) o.close()
     println(writer.spillway)
-    writer.spillway.substring(0, 200) shouldBe "Newton Sep 24th 2024\nSection A\nResults for direction N/S\nRank\tPair\tMPs\tPercent\tNames\n1=\t8\t33.50\t69.79%\tAmy Avergun & Penny Scharfman\n1=\t9\t33.50\t69.79%\tMarsha & Robert Greenstein\n3 \t3\t33.00\t68.75%\tKaj "
+    writer.spillway.substring(0, 200) shouldBe "Newton Sep 24th 2024  d971b658\nSection A\nResults for direction N/S\nRank\tPair\tMPs\tPercent\tNames\n1=\t8\t33.50\t69.79%\tAmy Avergun & Penny Scharfman\n1=\t9\t33.50\t69.79%\tMarsha & Robert Greenstein\n3 \t3\t33.00\t6"
   }
 
   it should "output with unplayed boards" in {
-    val writer = MockWriter(8192)
+    val writer = MockWriter(10240)
     for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20241001a.txt", Output(writer))) o.close()
     writer.spillway.substring(0, 2026) shouldBe
-      """Newton Oct 1st 2024
+      """Newton Oct 1st 2024  8c157e2f
         |Section A
         |Results for direction N/S
         |Rank	Pair	MPs	Percent	Names
@@ -650,33 +654,19 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
         |
         |Board: 1 with 9 plays
         |NS pair	EW pair	NS score	NS MPs
-        |1	1	-100	 0.00
-        |2	2	110	 5.50
-        |3	3	110	 5.50
-        |4	4	-50	 1.50
-        |5	5	110	 5.50
-        |6	6	-50	 1.50
-        |7	7	110	 5.50
-        |8	8	100	 3.00
-        |9	9	140	 8.00
-        |Board: 2 with 8 plays
-        |NS pair	EW pair	NS score	NS MPs
-        |
-        |2	2	-180	 3.01
-        |3	3	-460	 1.04
-        |4	4	-400	 2.02
-        |5	5	-130	 4.48
-        |6	6	-130	 4.48
-        |7	7	-90	 6.45
-        |8	8	-90	 6.45
-        |9	9	-800	 0.05
-        |Board: 3 with""".stripMargin
+        |1	1	-100	 0.00 (probable contract: NS  down 2)
+        |2	2	110	 5.50 (probable contract: NS partial 2 major)
+        |3	3	110	 5.50 (probable contract: NS partial 2 major)
+        |4	4	-50	 1.50 (probable contract: NS  down 1)
+        |5	5	110	 5.50 (probable contract: NS partial 2 major)
+        |6	6	-50	 1.50 (probable contract: NS  down 1)
+        |7	""".stripMargin
   }
   it should "output from Newton" in {
-    val writer = MockWriter(8192)
+    val writer = MockWriter(10240)
     for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20241001.txt", Output(writer))) o.close()
     writer.spillway.substring(0, 2000) shouldBe
-      """Newton Oct 1st 2024
+      """Newton Oct 1st 2024  1587e8cb
         |Section A
         |Results for direction N/S
         |Rank	Pair	MPs	Percent	Names
@@ -725,25 +715,12 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
         |
         |Board: 1 with 9 plays
         |NS pair	EW pair	NS score	NS MPs
-        |1	1	-100	 0.00
-        |2	2	110	 5.50
-        |3	3	110	 5.50
-        |4	4	-50	 1.50
-        |5	5	110	 5.50
-        |6	6	-50	 1.50
-        |7	7	110	 5.50
-        |8	8	100	 3.00
-        |9	9	140	 8.00
-        |Board: 2 with 9 plays
-        |NS pair	EW pair	NS score	NS MPs
-        |1	1	-430	 2.00
-        |2	2	-180	 4.00
-        |3	3	-460	 1.00
-        |4	4	-400	 3.00
-        |5	5	-130	 5.50
-        |6	6	-130	 5.50
-        |7	7	-90	 7.50
-        |8	""".stripMargin
+        |1	1	-100	 0.00 (probable contract: NS  down 2)
+        |2	2	110	 5.50 (probable contract: NS partial 2 major)
+        |3	3	110	 5.50 (probable contract: NS partial 2 major)
+        |4	4	-50	 1.50 (probable contract: NS  down 1)
+        |5	5	110	 5.50 (probable contract: NS partial 2 major)
+        |6	6	-50	 1.50 (probabl""".stripMargin
   }
   // Issue #11
   ignore should "output from Newton despite having PhantomPair" in {
