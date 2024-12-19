@@ -19,6 +19,8 @@ class CheckerSpec extends AnyFlatSpec with should.Matchers {
     Valid.justification(ScoreVul(140, Vulnerability.N)) shouldBe Some("NS partial 3 major")
     Valid.justification(ScoreVul(160, Vulnerability.N)) shouldBe Some("NS partial 1 Xmajor")
     Valid.justification(ScoreVul(180, Vulnerability.N)) shouldBe Some("NS partial 4 NT")
+    Valid.justification(ScoreVul(530, Vulnerability.O)) shouldBe Some("NS gameX 3 Xmajor")
+    Valid.justification(ScoreVul(590, Vulnerability.O)) shouldBe Some("NS gameX 4 Xmajor")
     Valid.justification(ScoreVul(600, Vulnerability.N)) shouldBe Some("NS game 3 NT")
     Valid.justification(ScoreVul(400, Vulnerability.O)) shouldBe Some("NS game 3 NT")
     Valid.justification(ScoreVul(-100, Vulnerability.O)) shouldBe Some("NS  down 1X")
@@ -31,7 +33,7 @@ class CheckerSpec extends AnyFlatSpec with should.Matchers {
   behavior of "Game"
 
   it should "work for game NS" in {
-    val predicate = Checker.gameChecker(true, false)
+    val predicate = gameChecker(dir = true)
     predicate.justification(ScoreVul(600, Vulnerability.N)) shouldBe Some("NS game 3 NT")
     predicate(ScoreVul(600, Vulnerability.N)) shouldBe true
     predicate(ScoreVul(620, Vulnerability.N)) shouldBe true
@@ -42,7 +44,7 @@ class CheckerSpec extends AnyFlatSpec with should.Matchers {
     predicate(ScoreVul(-50, Vulnerability.N)) shouldBe false
   }
   it should "work for game EW" in {
-    val predicate = Checker.gameChecker(false, false)
+    val predicate = gameChecker(dir = false)
     predicate.justification(ScoreVul(-600, Vulnerability.E)) shouldBe Some("EW game 3 NT")
     predicate(ScoreVul(-600, Vulnerability.E)) shouldBe true
     predicate(ScoreVul(-620, Vulnerability.E)) shouldBe true

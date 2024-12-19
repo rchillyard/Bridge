@@ -10,6 +10,20 @@ import org.scalatest.matchers.should
 
 class PredicateSpec extends AnyFlatSpec with should.Matchers {
 
+  behavior of "always"
+
+  it should "work" in {
+    val p = JPredicate.always[Int]("OK")
+    p.justification(0) shouldBe Some("OK")
+  }
+
+  behavior of "never"
+
+  it should "work" in {
+    val p = JPredicate.never[Int]
+    p.justification(0) shouldBe None
+  }
+
   behavior of "IntPredicate"
 
   it should "apply" in {

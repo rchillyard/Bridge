@@ -147,6 +147,10 @@ object JPredicate {
   def apply[T](f: T => Option[String]): JPredicate[T] = (t: T) => f(t)
 
   def when[T](f: T => String)(p: T => Boolean): JPredicate[T] = apply(t => Option.when(p(t))(f(t)))
+
+  def always[T](w: String): JPredicate[T] = (_: T) => Some(w)
+
+  def never[T]: JPredicate[T] = (_: T) => None
 }
 
 import com.phasmidsoftware.misc.Predicate.maybeShow
