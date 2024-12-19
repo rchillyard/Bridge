@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.director
 
-import com.phasmidsoftware.bridge.director.PlayResult._
+import com.phasmidsoftware.bridge.director.Checker._
 import com.phasmidsoftware.bridge.director.Vulnerability._
 import com.phasmidsoftware.misc.JPredicate
 import org.scalatest.flatspec.AnyFlatSpec
@@ -15,7 +15,7 @@ class PlayResultSpec extends AnyFlatSpec with should.Matchers {
   behavior of "Game"
 
   it should "work for game NS" in {
-    val predicate = PlayResult.gameP(true)
+    val predicate = Checker.gameP(true)
     predicate.justification(ScoreVul(600, Vulnerability.N)) shouldBe Some("NS game 3 NT")
     predicate(ScoreVul(600, Vulnerability.N)) shouldBe true
     predicate(ScoreVul(620, Vulnerability.N)) shouldBe true
@@ -26,7 +26,7 @@ class PlayResultSpec extends AnyFlatSpec with should.Matchers {
     predicate(ScoreVul(-50, Vulnerability.N)) shouldBe false
   }
   it should "work for game EW" in {
-    val predicate = PlayResult.gameP(false)
+    val predicate = Checker.gameP(false)
     predicate.justification(ScoreVul(-600, Vulnerability.E)) shouldBe Some("EW game 3 NT")
     predicate(ScoreVul(-600, Vulnerability.E)) shouldBe true
     predicate(ScoreVul(-620, Vulnerability.E)) shouldBe true
@@ -138,7 +138,7 @@ class PlayResultSpec extends AnyFlatSpec with should.Matchers {
   }
 
   it should "jLens" in {
-    val gameP: JPredicate[SB] = trickScorePredicate.jLens[SB](sb => "game")(stripBonus(500, 300))
+    val gameP: JPredicate[SB] = trickScorePredicate.jLens[SB](_ => "game")(stripBonus(500, 300))
     gameP.justification(SB(620, vulnerability = true)) shouldBe Some("game 4 major")
   }
 

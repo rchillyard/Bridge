@@ -103,7 +103,7 @@ trait JPredicate[T] extends Predicate[T] {
   /**
     * Method to transform `this` JPredicate[T] into a JPredicate[U].
     *
-    * CONSIDER changing `w` to a `T => String` (maybe even a `String` of the form s"...$t...")
+    * CONSIDER changing `g` to a ` => String`
     *
     * @param f a function which takes a U and returns a T.
     * @param g a String which will be the justification, if any (currently, independent of any actual `T` value).
@@ -154,13 +154,6 @@ object JPredicate {
   def apply[T](f: T => Option[String]): JPredicate[T] = (t: T) => f(t)
 
   def when[T](f: T => String)(p: T => Boolean): JPredicate[T] = apply(t => Option.when(p(t))(f(t)))
-}
-
-trait Named {
-  def name: String
-
-  @unused
-  def nameIt[T](w: String): Predicate[T]
 }
 
 import com.phasmidsoftware.misc.Predicate.maybeShow

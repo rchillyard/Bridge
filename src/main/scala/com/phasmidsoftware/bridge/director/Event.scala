@@ -134,7 +134,7 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler], maybeTop: Optio
   private lazy val getSwResults: Map[Int, Card] =
     for ((i, i_cs) <- total(true) ++ total(false) groupBy { case (i, _) => i }) yield i -> sum(i_cs)
 
-  def boardsOK: Boolean = ((for (t <- travelers; p <- t.ps) yield t.board -> p) map { case (b, p) => p.checkScore(b) }).forall(b => b)
+  private def boardsOK: Boolean = ((for (t <- travelers; p <- t.ps) yield t.board -> p) map { case (b, p) => p.checkScore(b) }).forall(b => b)
 }
 
 /**
@@ -624,7 +624,7 @@ case class Play(ns: Int, ew: Int, result: PlayResult) {
 object Play {
   def apply(ns: Try[Int], ew: Try[Int], result: PlayResult): Play = {
     val z = for (x <- ns; y <- ew) yield Play(x, y, result)
-    z.recover { case x => System.err.println(s"Exception: $x"); Play(0, 0, PlayResult.error("no match")) }.get
+    z.recover { case x => System.err.println(s"Exception: $x"); Play(0, 0, Checker.error("no match")) }.get
   }
 
   /**
