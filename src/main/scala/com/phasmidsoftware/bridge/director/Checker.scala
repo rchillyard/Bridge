@@ -16,7 +16,7 @@ object Checker {
     * @param dir true if the direction asked about is NS.
     * @return a Checker
     */
-  def penaltyP(dir: Boolean): Checker = {
+  def penaltyChecker(dir: Boolean): Checker = {
     // CONSIDER rewriting this with just one jLens (using a function to negate AND project. {
     val negative: String = s""
     val value: String = if (dir) "NS" else "EW"
@@ -31,9 +31,9 @@ object Checker {
     * @param dir true if the direction asked about is NS.
     * @return a Checker
     */
-  def gameP(dir: Boolean): Checker = {
+  def gameChecker(dir: Boolean, doubled: Boolean): Checker = {
     val game: String = if (dir) "NS" else "EW"
-    gameP.jLens(game)(u => u.project(dir))
+    gamePredicate(doubled).jLens(game)(u => u.project(dir))
   }
 
   /**
@@ -42,17 +42,18 @@ object Checker {
     * @param dir true if the direction asked about is NS.
     * @return a Checker
     */
-  private def partialP(dir: Boolean, doubled: Boolean): Checker = {
+  private def partialChecker(dir: Boolean, doubled: Boolean): Checker = {
     val bonus = if (doubled) 100 else 50
     val partial: String = s"partial"
     val value: String = s"""${if (dir) "NS" else "EW"}"""
-    trickScorePredicate.jLens[SB](partial)(sb => sb.deduct(bonus)).jLens(value)(_.project(dir))
+    trickScorePredicate(doubled).jLens[SB](partial)(sb => sb.deduct(bonus)).jLens(value)(_.project(dir))
   }
 
-  lazy val Partial: Checker = (for (x <- Seq(true, false); y <- Seq(false, true)) yield partialP(x, y)) reduce ((a, b) => a orElse b)
-  lazy val Penalty: Checker = penaltyP(true) orElse penaltyP(false)
-  lazy val Game: Checker = gameP(true) orElse gameP(false)
-  lazy val Valid: Checker = Game orElse Penalty orElse Partial
+  lazy val Partial: Checker = (for (x <- Seq(true, false); y <- Seq(false, true)) yield partialChecker(x, y)) reduce ((a, b) => a orElse b)
+  lazy val Penalty: Checker = penaltyChecker(true) orElse penaltyChecker(false)
+  lazy val Game: Checker = gameChecker(dir = true, doubled = false) orElse gameChecker(dir = false, doubled = false)
+  lazy val DoubledGame: Checker = gameChecker(dir = true, doubled = true) orElse gameChecker(dir = false, doubled = true)
+  lazy val Valid: Checker = Game orElse Penalty orElse Partial orElse DoubledGame
 
   import Predicate._
 
@@ -66,9 +67,14 @@ object Checker {
 
   private lazy val minorPartial = suitPartialJ("minor", 20)
   private lazy val majorPartial = suitPartialJ("major", 30)
-  private lazy val notrumpPartial = new JPredicate[Int]() {
-    def justification(score: Int): Option[String] =
-      if (score == 40) Some("1 NT") else suitPartialJ("NT", 30).justification(score - 10)
+
+  private def notrumpPartial(doubled: Boolean) = new JPredicate[Int]() {
+    def justification(score: Int): Option[String] = {
+      if (doubled)
+        if (score == 80) Some("1 NT") else suitPartialJ("NT", 60).justification(score - 20)
+      else if (score == 40) Some("1 NT") else suitPartialJ("NT", 30).justification(score - 10)
+
+    }
   }
 
   private lazy val doubledMinorPartial = suitPartialJ("Xminor", 40)
@@ -76,11 +82,24 @@ object Checker {
   private lazy val doubledNotrumpPartial = doubledMajorPartial.lens[Int](_ - 20)
 
   // NOTE we don't accept doubled overtricks or redoubled contracts here--they must be questioned.
-  lazy val trickScorePredicate: JPredicate[Int] = notrumpPartial orElse majorPartial orElse minorPartial orElse doubledMinorPartial orElse doubledMajorPartial orElse doubledNotrumpPartial
-  private lazy val gameP: JPredicate[SB] =
-    trickScorePredicate.jLens[SB]("game")(stripBonus(500, 300)) orElse
-      trickScorePredicate.jLens[SB]("slam")(stripBonus(1250, 800)) orElse
-      trickScorePredicate.jLens[SB]("grand slam")(stripBonus(2000, 1300))
+
+  /**
+    * Determines the applicable `JPredicate[Int]` for evaluating trick scores,
+    * based on whether the contract is doubled or not. The predicate combines different scoring conditions
+    * (e.g., notrump, major suits, minor suits) through logical composition.
+    *
+    * @param doubled a Boolean value that specifies whether the trick score predicate
+    *                should consider the scenario of a doubled contract. Defaults to false.
+    * @return a `JPredicate[Int]` that evaluates trick scores according to the defined game rules.
+    */
+  def trickScorePredicate(doubled: Boolean = false): JPredicate[Int] =
+    notrumpPartial(doubled) orElse
+      (if (doubled) doubledMinorPartial orElse doubledMajorPartial else majorPartial orElse minorPartial)
+
+  private def gamePredicate(doubled: Boolean): JPredicate[SB] =
+    trickScorePredicate(doubled).jLens[SB]("game")(stripBonus(500, 300)) orElse
+      trickScorePredicate(doubled).jLens[SB]("slam")(stripBonus(1250, 800)) orElse
+      trickScorePredicate(doubled).jLens[SB]("grand slam")(stripBonus(2000, 1300))
 
   // NOTE: we accept doubled contracts as OK, but anything redoubled needs to be questioned.
 

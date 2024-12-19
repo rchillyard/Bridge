@@ -17,6 +17,8 @@ class CheckerSpec extends AnyFlatSpec with should.Matchers {
     Valid.justification(ScoreVul(50, Vulnerability.N)) shouldBe Some("EW  down 1")
     Valid.justification(ScoreVul(110, Vulnerability.N)) shouldBe Some("NS partial 2 major")
     Valid.justification(ScoreVul(140, Vulnerability.N)) shouldBe Some("NS partial 3 major")
+    Valid.justification(ScoreVul(160, Vulnerability.N)) shouldBe Some("NS partial 1 Xmajor")
+    Valid.justification(ScoreVul(180, Vulnerability.N)) shouldBe Some("NS partial 4 NT")
     Valid.justification(ScoreVul(600, Vulnerability.N)) shouldBe Some("NS game 3 NT")
     Valid.justification(ScoreVul(400, Vulnerability.O)) shouldBe Some("NS game 3 NT")
     Valid.justification(ScoreVul(-100, Vulnerability.O)) shouldBe Some("NS  down 1X")
@@ -29,7 +31,7 @@ class CheckerSpec extends AnyFlatSpec with should.Matchers {
   behavior of "Game"
 
   it should "work for game NS" in {
-    val predicate = Checker.gameP(true)
+    val predicate = Checker.gameChecker(true, false)
     predicate.justification(ScoreVul(600, Vulnerability.N)) shouldBe Some("NS game 3 NT")
     predicate(ScoreVul(600, Vulnerability.N)) shouldBe true
     predicate(ScoreVul(620, Vulnerability.N)) shouldBe true
@@ -40,7 +42,7 @@ class CheckerSpec extends AnyFlatSpec with should.Matchers {
     predicate(ScoreVul(-50, Vulnerability.N)) shouldBe false
   }
   it should "work for game EW" in {
-    val predicate = Checker.gameP(false)
+    val predicate = Checker.gameChecker(false, false)
     predicate.justification(ScoreVul(-600, Vulnerability.E)) shouldBe Some("EW game 3 NT")
     predicate(ScoreVul(-600, Vulnerability.E)) shouldBe true
     predicate(ScoreVul(-620, Vulnerability.E)) shouldBe true
@@ -59,36 +61,36 @@ class CheckerSpec extends AnyFlatSpec with should.Matchers {
     Penalty(ScoreVul(-50, Vulnerability.O)) shouldBe true
   }
 
-  behavior of "penaltyP"
+  behavior of "penaltyChecker"
 
   it should "work for NS penalty when not vul" in {
-    penaltyP(true)(ScoreVul(-50, Vulnerability.O)) shouldBe true
-    penaltyP(true)(ScoreVul(-100, Vulnerability.O)) shouldBe true
-    penaltyP(true)(ScoreVul(-150, Vulnerability.O)) shouldBe true
-    penaltyP(true)(ScoreVul(-200, Vulnerability.O)) shouldBe true
-    penaltyP(true)(ScoreVul(-250, Vulnerability.O)) shouldBe true
-    penaltyP(true)(ScoreVul(-300, Vulnerability.O)) shouldBe true
-    penaltyP(true)(ScoreVul(-350, Vulnerability.O)) shouldBe true
+    penaltyChecker(true)(ScoreVul(-50, Vulnerability.O)) shouldBe true
+    penaltyChecker(true)(ScoreVul(-100, Vulnerability.O)) shouldBe true
+    penaltyChecker(true)(ScoreVul(-150, Vulnerability.O)) shouldBe true
+    penaltyChecker(true)(ScoreVul(-200, Vulnerability.O)) shouldBe true
+    penaltyChecker(true)(ScoreVul(-250, Vulnerability.O)) shouldBe true
+    penaltyChecker(true)(ScoreVul(-300, Vulnerability.O)) shouldBe true
+    penaltyChecker(true)(ScoreVul(-350, Vulnerability.O)) shouldBe true
   }
 
   it should "work for NS penalty when vul" in {
-    penaltyP(true)(ScoreVul(-50, Vulnerability.N)) shouldBe false
-    penaltyP(true)(ScoreVul(-100, Vulnerability.N)) shouldBe true
-    penaltyP(true)(ScoreVul(-150, Vulnerability.N)) shouldBe false
-    penaltyP(true)(ScoreVul(-200, Vulnerability.N)) shouldBe true
+    penaltyChecker(true)(ScoreVul(-50, Vulnerability.N)) shouldBe false
+    penaltyChecker(true)(ScoreVul(-100, Vulnerability.N)) shouldBe true
+    penaltyChecker(true)(ScoreVul(-150, Vulnerability.N)) shouldBe false
+    penaltyChecker(true)(ScoreVul(-200, Vulnerability.N)) shouldBe true
   }
 
   it should "work for NS doubled penalty when not vul" in {
-    penaltyP(true)(ScoreVul(-100, Vulnerability.O)) shouldBe true
-    penaltyP(true)(ScoreVul(-300, Vulnerability.O)) shouldBe true
-    penaltyP(true)(ScoreVul(-500, Vulnerability.O)) shouldBe true
+    penaltyChecker(true)(ScoreVul(-100, Vulnerability.O)) shouldBe true
+    penaltyChecker(true)(ScoreVul(-300, Vulnerability.O)) shouldBe true
+    penaltyChecker(true)(ScoreVul(-500, Vulnerability.O)) shouldBe true
   }
 
   it should "work for NS doubled penalty when vul" in {
-    penaltyP(true)(ScoreVul(-200, Vulnerability.N)) shouldBe true
-    penaltyP(true)(ScoreVul(-500, Vulnerability.N)) shouldBe true
-    penaltyP(true)(ScoreVul(-800, Vulnerability.N)) shouldBe true
-    penaltyP(true)(ScoreVul(-1100, Vulnerability.N)) shouldBe true
+    penaltyChecker(true)(ScoreVul(-200, Vulnerability.N)) shouldBe true
+    penaltyChecker(true)(ScoreVul(-500, Vulnerability.N)) shouldBe true
+    penaltyChecker(true)(ScoreVul(-800, Vulnerability.N)) shouldBe true
+    penaltyChecker(true)(ScoreVul(-1100, Vulnerability.N)) shouldBe true
   }
 
   behavior of "Partial"
@@ -140,19 +142,19 @@ class CheckerSpec extends AnyFlatSpec with should.Matchers {
   }
 
   it should "trickScore 1" in {
-    trickScorePredicate.justification(40) shouldBe Some("1 NT")
-    trickScorePredicate.justification(30) shouldBe Some("1 major")
-    trickScorePredicate.justification(20) shouldBe Some("1 minor")
+    trickScorePredicate().justification(40) shouldBe Some("1 NT")
+    trickScorePredicate().justification(30) shouldBe Some("1 major")
+    trickScorePredicate().justification(20) shouldBe Some("1 minor")
   }
 
   it should "trickScore 2" in {
-    trickScorePredicate.justification(70) shouldBe Some("2 NT")
-    trickScorePredicate.justification(60) shouldBe Some("2 major")
-    trickScorePredicate.justification(40) shouldBe Some("1 NT")
+    trickScorePredicate().justification(70) shouldBe Some("2 NT")
+    trickScorePredicate().justification(60) shouldBe Some("2 major")
+    trickScorePredicate().justification(40) shouldBe Some("1 NT")
   }
 
   it should "jLens" in {
-    val gameP: JPredicate[SB] = trickScorePredicate.jLens[SB]("game")(stripBonus(500, 300))
+    val gameP: JPredicate[SB] = trickScorePredicate().jLens[SB]("game")(stripBonus(500, 300))
     gameP.justification(SB(620, vulnerability = true)) shouldBe Some("game 4 major")
   }
 }

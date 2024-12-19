@@ -46,22 +46,22 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
   it should "read travelers.lexington.2017.0404 as a resource" in {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreResource("travelers.lexington.2017.0404", Output(writer))) o.close()
-    writer.spilled shouldBe 3023
+    writer.spilled shouldBe 3018
   }
   it should "read travelers.lexington.2017.0404P as a resource (includes pickup slips)" in {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreResource("travelers.lexington.2017.0404P", Output(writer))) o.close()
-    writer.spilled shouldBe 3023
+    writer.spilled shouldBe 3018
   }
   it should "read travelers.lexington.2017.0404 as a file" in {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/travelers.lexington.2017.0404", Output(writer))) o.close()
-    writer.spilled shouldBe 3023
+    writer.spilled shouldBe 3018
   }
   it should "read ConcordCountryClub20191007.txt" in {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreResource("ConcordCountryClub20191007.txt", Output(writer))) o.close()
-    writer.spilled shouldBe 3704
+    writer.spilled shouldBe 3694
   }
 
   // FIXME Issue #8
