@@ -152,7 +152,7 @@ class CheckerSpec extends AnyFlatSpec with should.Matchers {
   }
 
   it should "jLens" in {
-    val gameP: JPredicate[SB] = trickScorePredicate.jLens[SB](_ => "game")(stripBonus(500, 300))
+    val gameP: JPredicate[SB] = trickScorePredicate.jLens[SB]("game")(stripBonus(500, 300))
     gameP.justification(SB(620, vulnerability = true)) shouldBe Some("game 4 major")
   }
 }

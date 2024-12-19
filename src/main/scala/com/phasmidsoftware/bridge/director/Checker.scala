@@ -18,8 +18,8 @@ object Checker {
     */
   def penaltyP(dir: Boolean): Checker = {
     // CONSIDER rewriting this with just one jLens (using a function to negate AND project. {
-    val negative: SB => String = _ => s""
-    val value: ScoreVul => String = _ => if (dir) "NS" else "EW"
+    val negative: String = s""
+    val value: String = if (dir) "NS" else "EW"
     new JPredicate[SB] {
       def justification(sb: SB): Option[String] = penaltyIsOk(sb)
     }.jLens[SB](negative)(sb => sb.negate).jLens(value)(sv => sv.project(dir))
@@ -32,7 +32,7 @@ object Checker {
     * @return a Checker
     */
   def gameP(dir: Boolean): Checker = {
-    val game: ScoreVul => String = _ => if (dir) "NS" else "EW"
+    val game: String = if (dir) "NS" else "EW"
     gameP.jLens(game)(u => u.project(dir))
   }
 
@@ -44,8 +44,8 @@ object Checker {
     */
   private def partialP(dir: Boolean, doubled: Boolean): Checker = {
     val bonus = if (doubled) 100 else 50
-    val partial: SB => String = _ => s"partial"
-    val value: ScoreVul => String = _ => s"""${if (dir) "NS" else "EW"}"""
+    val partial: String = s"partial"
+    val value: String = s"""${if (dir) "NS" else "EW"}"""
     trickScorePredicate.jLens[SB](partial)(sb => sb.deduct(bonus)).jLens(value)(_.project(dir))
   }
 
@@ -78,9 +78,9 @@ object Checker {
   // NOTE we don't accept doubled overtricks or redoubled contracts here--they must be questioned.
   lazy val trickScorePredicate: JPredicate[Int] = notrumpPartial orElse majorPartial orElse minorPartial orElse doubledMinorPartial orElse doubledMajorPartial orElse doubledNotrumpPartial
   private lazy val gameP: JPredicate[SB] =
-    trickScorePredicate.jLens[SB](_ => "game")(stripBonus(500, 300)) orElse
-    trickScorePredicate.jLens[SB](_ => "slam")(stripBonus(1250, 800)) orElse
-    trickScorePredicate.jLens[SB](_ => "grand slam")(stripBonus(2000, 1300))
+    trickScorePredicate.jLens[SB]("game")(stripBonus(500, 300)) orElse
+      trickScorePredicate.jLens[SB]("slam")(stripBonus(1250, 800)) orElse
+      trickScorePredicate.jLens[SB]("grand slam")(stripBonus(2000, 1300))
 
   // NOTE: we accept doubled contracts as OK, but anything redoubled needs to be questioned.
 
@@ -115,8 +115,8 @@ object Checker {
         penalty(matchVulnerability = true, doubled = true, sb)
       case 100 | 200 | 300 | 400 | 500 | 600 if !sb.vulnerability =>
         penalty(matchVulnerability = true, doubled = false, sb)
-      case 100 | 200 | 300 | 400 | 500 | 600 | 800 | 1100 | 1400 | 1700 | 2000 | 2300 | 2600 | 2900 | 3200 | 3500 | 3800 =>
-        penalty(sb.vulnerability, doubled = false, sb) // NOTE: unreachable?
+      case 100 | 200 | 300 | 400 | 500 | 600 =>
+        penalty(sb.vulnerability, doubled = false, sb)
       case _ =>
         None
     }
@@ -137,22 +137,19 @@ object Checker {
   private def down(vulnerable: Boolean, doubled: Boolean, score: Int): String = {
     val (undertricks, suffix) = (vulnerable, doubled) match {
       case (_, false) =>
-        val perTrick = if (vulnerable) 100 else 50
-        score / perTrick -> ""
+        score / (if (vulnerable) 100 else 50) -> ""
       case (false, true) =>
         (score match {
           case 100 => 1
           case 300 => 2
           case 500 => 3
-          case _ =>
-            3 + (score - 500) / 300
+          case _ => 3 + (score - 500) / 300
         }) -> "X"
       case _ =>
         (score match {
           case 200 => 1
           case 500 => 2
-          case _ =>
-            2 + (score - 500) / 300
+          case _ => 2 + (score - 500) / 300
         }) -> "X"
     }
     s"down $undertricks$suffix"

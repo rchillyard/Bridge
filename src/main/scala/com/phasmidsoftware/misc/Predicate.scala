@@ -103,14 +103,12 @@ trait JPredicate[T] extends Predicate[T] {
   /**
     * Method to transform `this` JPredicate[T] into a JPredicate[U].
     *
-    * CONSIDER changing `g` to a ` => String`
-    *
     * @param f a function which takes a U and returns a T.
-    * @param g a String which will be the justification, if any (currently, independent of any actual `T` value).
+    * @param w a String which will be the justification, if any (currently, independent of any actual `T` value).
     * @tparam U the underlying type of the result.
     * @return a JPredicate[U].
     */
-  def jLens[U](g: U => String)(f: U => T): JPredicate[U] = (u: U) => self.justification(f(u)) map (g(u) + " " + _)
+  def jLens[U](w: => String)(f: U => T): JPredicate[U] = (u: U) => self.justification(f(u)) map (w + " " + _)
 
   /**
     * Method to compose a JPredicate[T] from `this` or `p`.
@@ -123,10 +121,8 @@ trait JPredicate[T] extends Predicate[T] {
     */
   override def orElse(p: Predicate[T]): JPredicate[T] =
     (t: T) => self.justification(t) orElse (p match {
-      case j: JPredicate[T] =>
-        j.justification(t)
-      case _ if p(t) =>
-        Some("orElse")
+      case j: JPredicate[T] => j.justification(t)
+      case _ if p(t) => Some("orElse")
       case _ => None
     })
 

@@ -103,7 +103,7 @@ class PredicateSpec extends AnyFlatSpec with should.Matchers {
 
   it should "jLens" in {
     val p2: JPredicate[String] = JPredicate[String](w => Some(s"Hello $w"))
-    val p: JPredicate[Option[String]] = p2.jLens[Option[String]](xo => "get")(_.get)
+    val p: JPredicate[Option[String]] = p2.jLens[Option[String]]("get")(_.get)
     p.justification(Some("World")) shouldBe Some("get Hello World")
   }
 }
