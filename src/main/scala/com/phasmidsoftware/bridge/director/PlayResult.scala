@@ -66,6 +66,7 @@ case class PlayResult(r: Either[String, Int]) {
 
   def getProbableContract(vul: Vulnerability): Option[String] = r match {
     case Left(w) => Some(w)
+    // CONSIDER getting two probable contracts (if they exist), for example 200 can be 3M+2 or down 2 vulnerable.
     case Right(score) => Valid.justification(ScoreVul(score, vul))
   }
   /**

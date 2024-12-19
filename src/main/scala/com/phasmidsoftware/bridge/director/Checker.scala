@@ -46,13 +46,13 @@ object Checker {
     val bonus = if (doubled) 100 else 50
     val partial: SB => String = _ => s"partial"
     val value: ScoreVul => String = _ => s"""${if (dir) "NS" else "EW"}"""
-    trickScorePredicate.jLens[SB](partial)(stripBonus(bonus, bonus)).jLens(value)(_.project(dir))
+    trickScorePredicate.jLens[SB](partial)(sb => sb.deduct(bonus)).jLens(value)(_.project(dir))
   }
 
-  lazy val Partial: Checker = (for (x <- Seq(true, false); y <- Seq(true, false)) yield partialP(x, y)) reduce ((a, b) => a orElse b)
+  lazy val Partial: Checker = (for (x <- Seq(true, false); y <- Seq(false, true)) yield partialP(x, y)) reduce ((a, b) => a orElse b)
   lazy val Penalty: Checker = penaltyP(true) orElse penaltyP(false)
   lazy val Game: Checker = gameP(true) orElse gameP(false)
-  lazy val Valid: Checker = Penalty orElse Game orElse Partial
+  lazy val Valid: Checker = Game orElse Penalty orElse Partial
 
   import Predicate._
 
@@ -67,9 +67,8 @@ object Checker {
   private lazy val minorPartial = suitPartialJ("minor", 20)
   private lazy val majorPartial = suitPartialJ("major", 30)
   private lazy val notrumpPartial = new JPredicate[Int]() {
-    def justification(score: Int): Option[String] = if (score == 40) Some("1 NT") else {
-      suitPartialJ("NT", 30).justification(score - 10)
-    }
+    def justification(score: Int): Option[String] =
+      if (score == 40) Some("1 NT") else suitPartialJ("NT", 30).justification(score - 10)
   }
 
   private lazy val doubledMinorPartial = suitPartialJ("Xminor", 40)
@@ -78,7 +77,8 @@ object Checker {
 
   // NOTE we don't accept doubled overtricks or redoubled contracts here--they must be questioned.
   lazy val trickScorePredicate: JPredicate[Int] = notrumpPartial orElse majorPartial orElse minorPartial orElse doubledMinorPartial orElse doubledMajorPartial orElse doubledNotrumpPartial
-  private lazy val gameP: JPredicate[SB] = trickScorePredicate.jLens[SB](_ => "game")(stripBonus(500, 300)) orElse
+  private lazy val gameP: JPredicate[SB] =
+    trickScorePredicate.jLens[SB](_ => "game")(stripBonus(500, 300)) orElse
     trickScorePredicate.jLens[SB](_ => "slam")(stripBonus(1250, 800)) orElse
     trickScorePredicate.jLens[SB](_ => "grand slam")(stripBonus(2000, 1300))
 
@@ -106,23 +106,56 @@ object Checker {
   private def penaltyIsOkWithMaybeString(sb: SB): Option[String] =
     sb.score match {
       case 50 | 150 | 250 | 350 | 450 | 550 | 650 =>
-        penalty(!sb.vulnerability, sb)
+        penalty(!sb.vulnerability, doubled = false, sb)
       case 700 | 900 | 1000 | 1200 | 1300 =>
-        penalty(sb.vulnerability, sb)
+        penalty(sb.vulnerability, doubled = false, sb)
+      case 100 | 300 | 500 | 800 | 1100 | 1400 | 1700 | 2000 | 2300 | 2600 | 2900 | 3200 | 3500 if !sb.vulnerability =>
+        penalty(matchVulnerability = true, doubled = true, sb)
+      case 200 | 500 | 800 | 1100 | 1400 | 1700 | 2000 | 2300 | 2600 | 2900 | 3200 | 3500 | 3800 if sb.vulnerability =>
+        penalty(matchVulnerability = true, doubled = true, sb)
       case 100 | 200 | 300 | 400 | 500 | 600 if !sb.vulnerability =>
-        penalty(matchVulnerability = true, sb)
+        penalty(matchVulnerability = true, doubled = false, sb)
       case 100 | 200 | 300 | 400 | 500 | 600 | 800 | 1100 | 1400 | 1700 | 2000 | 2300 | 2600 | 2900 | 3200 | 3500 | 3800 =>
-        penalty(sb.vulnerability, sb)
+        penalty(sb.vulnerability, doubled = false, sb) // NOTE: unreachable?
       case _ =>
         None
     }
 
-  private def penalty(matchVulnerability: Boolean, sb: SB): Option[String] =
-    Play.conditional(down(sb.vulnerability, sb.score))(matchVulnerability)
+  /**
+    * Determines the penalty string for a given scenario based on match vulnerability, doubling, and score board (SB).
+    *
+    * NOTE If `matchVulnerability` is false, the result will always be None.
+    *
+    * @param matchVulnerability Specifies whether the match vulnerability condition is met (true) or not (false).
+    * @param doubled            Indicates whether the contract is doubled (true) or not (false).
+    * @param sb                 An instance of `SB` representing the score and vulnerability status.
+    * @return An optional string representing the penalty if the conditions are met; otherwise, `None`.
+    */
+  private def penalty(matchVulnerability: Boolean, doubled: Boolean, sb: SB): Option[String] =
+    Play.conditional(down(sb.vulnerability, doubled, sb.score))(matchVulnerability)
 
-  private def down(vulnerable: Boolean, score: Int): String = {
-    val perTrick = if (vulnerable) 100 else 50
-    s"down ${score / perTrick}"
+  private def down(vulnerable: Boolean, doubled: Boolean, score: Int): String = {
+    val (undertricks, suffix) = (vulnerable, doubled) match {
+      case (_, false) =>
+        val perTrick = if (vulnerable) 100 else 50
+        score / perTrick -> ""
+      case (false, true) =>
+        (score match {
+          case 100 => 1
+          case 300 => 2
+          case 500 => 3
+          case _ =>
+            3 + (score - 500) / 300
+        }) -> "X"
+      case _ =>
+        (score match {
+          case 200 => 1
+          case 500 => 2
+          case _ =>
+            2 + (score - 500) / 300
+        }) -> "X"
+    }
+    s"down $undertricks$suffix"
   }
 
   def error(s: String): PlayResult = PlayResult(Left(s))
@@ -191,5 +224,7 @@ case class ScoreVul(score: Int, vulnerability: Vulnerability) {
   */
 case class SB(score: Int, vulnerability: Boolean) {
   def negate: SB = copy(score = -score)
+
+  def deduct(bonus: Int): Int = score - bonus
 }
 

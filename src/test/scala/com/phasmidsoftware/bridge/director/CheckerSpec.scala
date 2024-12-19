@@ -11,6 +11,21 @@ import org.scalatest.matchers.should
 
 class CheckerSpec extends AnyFlatSpec with should.Matchers {
 
+  behavior of "Checker"
+
+  it should "Valid" in {
+    Valid.justification(ScoreVul(50, Vulnerability.N)) shouldBe Some("EW  down 1")
+    Valid.justification(ScoreVul(110, Vulnerability.N)) shouldBe Some("NS partial 2 major")
+    Valid.justification(ScoreVul(140, Vulnerability.N)) shouldBe Some("NS partial 3 major")
+    Valid.justification(ScoreVul(600, Vulnerability.N)) shouldBe Some("NS game 3 NT")
+    Valid.justification(ScoreVul(400, Vulnerability.O)) shouldBe Some("NS game 3 NT")
+    Valid.justification(ScoreVul(-100, Vulnerability.O)) shouldBe Some("NS  down 1X")
+    Valid.justification(ScoreVul(-800, Vulnerability.N)) shouldBe Some("NS  down 3X")
+    Valid.justification(ScoreVul(-800, Vulnerability.O)) shouldBe Some("NS  down 4X")
+    Valid.justification(ScoreVul(700, Vulnerability.E)) shouldBe Some("EW  down 7")
+    Valid.justification(ScoreVul(3800, Vulnerability.E)) shouldBe Some("EW  down 13X")
+  }
+
   behavior of "Game"
 
   it should "work for game NS" in {

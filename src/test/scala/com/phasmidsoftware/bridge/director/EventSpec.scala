@@ -154,7 +154,7 @@ class EventSpec extends AnyFlatSpec with should.Matchers {
       s"""Board: 5 with 2 plays
          |NS pair	EW pair	NS score	NS MPs
          |13	17	110	 1.00 (probable contract: NS partial 2 major)
-         |14	16	100	 0.00 (probable contract: EW  down 2)
+         |14	16	100	 0.00 (probable contract: EW  down 1X)
          |""".stripMargin
   }
 

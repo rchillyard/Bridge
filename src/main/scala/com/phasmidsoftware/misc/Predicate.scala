@@ -110,10 +110,7 @@ trait JPredicate[T] extends Predicate[T] {
     * @tparam U the underlying type of the result.
     * @return a JPredicate[U].
     */
-  def jLens[U](g: U => String)(f: U => T): JPredicate[U] = (u: U) => {
-    self.justification(f(u)) map (g(u) + " " + _)
-    //    JPredicate.when(w)(lens(f))
-  }
+  def jLens[U](g: U => String)(f: U => T): JPredicate[U] = (u: U) => self.justification(f(u)) map (g(u) + " " + _)
 
   /**
     * Method to compose a JPredicate[T] from `this` or `p`.
