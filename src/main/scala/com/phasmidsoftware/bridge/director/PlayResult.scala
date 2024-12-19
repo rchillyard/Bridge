@@ -8,7 +8,6 @@ import com.phasmidsoftware.bridge.director.PlayResult.Valid
 import com.phasmidsoftware.misc.{JPredicate, Predicate}
 import com.phasmidsoftware.number.core.Rational
 
-import scala.annotation.unused
 import scala.language.postfixOps
 import scala.util._
 import scala.util.matching.Regex
@@ -18,11 +17,10 @@ import scala.util.matching.Regex
   * OR a code.
   *
   * @param r Either: an integer (multiple of 10), Or: one of the following:
-  *          DNP: did not play
-  *          A+: N/S got Average plus (60%) and E/W Average minus
-  *          A: B sides got Average (50%)
-  *          A-: N/S got Average minus (40%) and E/W Average plus
-  *
+  *          - DNP: did not play
+  *          - A+: N/S got Average plus (60%) and E/W Average minus
+  *          - A: B sides got Average (50%)
+  *          - A-: N/S got Average minus (40%) and E/W Average plus
   */
 case class PlayResult(r: Either[String, Int]) {
   /**
@@ -217,10 +215,27 @@ object PlayResult {
   def error(s: String): PlayResult = PlayResult(Left(s))
 }
 
+/**
+  * Represents vulnerability in a game, modeled with two boolean flags.
+  *
+  * @param ns Indicates North-South vulnerability.
+  * @param ew Indicates East-West vulnerability.
+  */
 case class Vulnerability(ns: Boolean, ew: Boolean) {
   def invert: Vulnerability = Vulnerability(!ns, !ew)
 }
 
+/**
+  * Defines the vulnerability state in a game. It provides predefined
+  * instances for specific vulnerability states (O, N, E, B) and a method
+  * to compute the vulnerability based on a board number.
+  *
+  * Predefined states are:
+  *   - `O`: Neither side is vulnerable.
+  *   - `N`: North-South is vulnerable.
+  *   - `E`: East-West is vulnerable.
+  *   - `B`: Both sides are vulnerable.
+  */
 //noinspection NameBooleanParameters
 object Vulnerability {
   val O: Vulnerability = Vulnerability(false, false)
@@ -243,10 +258,24 @@ object Vulnerability {
   }
 }
 
+/**
+  * Represents a scored result with an associated vulnerability.
+  *
+  * @param score         The integer value of the score.
+  * @param vulnerability The vulnerability associated with the score.
+  */
 case class ScoreVul(score: Int, vulnerability: Vulnerability) {
   def project(direction: Boolean): SB = if (direction) SB(score, vulnerability.ns) else SB(-score, vulnerability.ew)
 }
 
+/**
+  * Represents a score and its associated vulnerability status.
+  *
+  * CONSIDER do we really need this as a separate type from ScoreVul?
+  *
+  * @param score         The score value as an integer.
+  * @param vulnerability Indicates if the instance is vulnerable (true) or not (false).
+  */
 case class SB(score: Int, vulnerability: Boolean) {
   def negate: SB = copy(score = -score)
 }
