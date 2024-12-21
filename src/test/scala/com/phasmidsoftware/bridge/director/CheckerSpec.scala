@@ -13,21 +13,26 @@ class CheckerSpec extends AnyFlatSpec with should.Matchers {
 
   behavior of "Checker"
 
-  it should "Valid" in {
+  it should "Valid plus" in {
     Valid.justification(ScoreVul(50, Vulnerability.N)) shouldBe Some("EW  down 1")
     Valid.justification(ScoreVul(110, Vulnerability.N)) shouldBe Some("NS partial 2 major")
     Valid.justification(ScoreVul(140, Vulnerability.N)) shouldBe Some("NS partial 3 major")
     Valid.justification(ScoreVul(160, Vulnerability.N)) shouldBe Some("NS partial 1 Xmajor")
     Valid.justification(ScoreVul(180, Vulnerability.N)) shouldBe Some("NS partial 4 NT")
+    Valid.justification(ScoreVul(400, Vulnerability.O)) shouldBe Some("NS game 3 NT")
     Valid.justification(ScoreVul(530, Vulnerability.O)) shouldBe Some("NS gameX 3 Xmajor")
     Valid.justification(ScoreVul(590, Vulnerability.O)) shouldBe Some("NS gameX 4 Xmajor")
     Valid.justification(ScoreVul(600, Vulnerability.N)) shouldBe Some("NS game 3 NT")
-    Valid.justification(ScoreVul(400, Vulnerability.O)) shouldBe Some("NS game 3 NT")
+    Valid.justification(ScoreVul(630, Vulnerability.O)) shouldBe Some("+1 NS gameX 3 Xmajor")
+    Valid.justification(ScoreVul(690, Vulnerability.O)) shouldBe Some("+1 NS gameX 4 Xmajor")
+    Valid.justification(ScoreVul(700, Vulnerability.E)) shouldBe Some("EW  down 7")
+    Valid.justification(ScoreVul(3800, Vulnerability.E)) shouldBe Some("EW  down 13X")
+  }
+
+  it should "Valid negative" in {
     Valid.justification(ScoreVul(-100, Vulnerability.O)) shouldBe Some("NS  down 1X")
     Valid.justification(ScoreVul(-800, Vulnerability.N)) shouldBe Some("NS  down 3X")
     Valid.justification(ScoreVul(-800, Vulnerability.O)) shouldBe Some("NS  down 4X")
-    Valid.justification(ScoreVul(700, Vulnerability.E)) shouldBe Some("EW  down 7")
-    Valid.justification(ScoreVul(3800, Vulnerability.E)) shouldBe Some("EW  down 13X")
   }
 
   behavior of "Game"
@@ -156,7 +161,7 @@ class CheckerSpec extends AnyFlatSpec with should.Matchers {
   }
 
   it should "jLens" in {
-    val gameP: JPredicate[SB] = trickScorePredicate().jLens[SB]("game")(stripBonus(500, 300))
+    val gameP: JPredicate[SB] = trickScorePredicate().jLensOpt[SB]("game")(stripBonus(500, 300))
     gameP.justification(SB(620, vulnerability = true)) shouldBe Some("game 4 major")
   }
 }

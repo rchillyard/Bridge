@@ -4,6 +4,9 @@
 
 package com.phasmidsoftware.misc
 
+import com.phasmidsoftware.flog.Flog
+import com.phasmidsoftware.misc.Predicate.NamedFunction
+
 import scala.annotation.unused
 import scala.language.reflectiveCalls // XXX what are these?
 
@@ -71,6 +74,10 @@ trait JPredicate[T] extends Predicate[T] {
 
   self =>
 
+  val flog = Flog[JPredicate[_]].disabled
+
+  import flog._
+
   /**
     * Method which yields an optional `String` based on the input value `t`.
     *
@@ -95,7 +102,7 @@ trait JPredicate[T] extends Predicate[T] {
     * @return a Predicate[T] that returns true when `this` Predicate would return false;
     *         and false when `this` would return true.
     */
-  override def flip: JPredicate[T] = (t: T) => self.justification(t) match {
+  override def flip: JPredicate[T] = (t: T) => s"flip $t $self" !! self.justification(t) match {
     case None => Some("not")
     case _ => None
   }
@@ -108,7 +115,18 @@ trait JPredicate[T] extends Predicate[T] {
     * @tparam U the underlying type of the result.
     * @return a JPredicate[U].
     */
-  def jLens[U](w: => String)(f: U => T): JPredicate[U] = (u: U) => self.justification(f(u)) map (w + " " + _)
+  def jLens[U](w: String)(f: U => T): JPredicate[U] = (u: U) => s"jLens($w, $f): $u" !! self.justification(f(u)) map (w + " " + _)
+
+  /**
+    * Method to transform `this` JPredicate[T] into a JPredicate[U].
+    *
+    * @param f a function which takes a U and returns a T.
+    * @param w a String which will be the justification, if any (currently, independent of any actual `T` value).
+    * @tparam U the underlying type of the result.
+    * @return a JPredicate[U].
+    */
+  def jLensOpt[U](w: String)(f: U => Option[T]): JPredicate[U] = (u: U) =>
+    s"jLensOpt($w, $f): $u" !! (f(u) flatMap self.justification map (w + " " + _))
 
   /**
     * Method to compose a JPredicate[T] from `this` or `p`.
@@ -120,9 +138,9 @@ trait JPredicate[T] extends Predicate[T] {
     *         NOTE that `p` will not be invoked if `this` yields true.
     */
   override def orElse(p: Predicate[T]): JPredicate[T] =
-    (t: T) => self.justification(t) orElse (p match {
-      case j: JPredicate[T] => j.justification(t)
-      case _ if p(t) => Some("orElse")
+    (t: T) => s"orElse($p): $t" !! self.justification(t) orElse (p match {
+      case j: JPredicate[T] => s"orElse JPredicate $t" !! j.justification(t)
+      case _ if p(t) => s"orElse Predicate $t" !! Some("orElse")
       case _ => None
     })
 
@@ -134,23 +152,79 @@ trait JPredicate[T] extends Predicate[T] {
     *         NOTE that `p` will not be invoked if `this` yields false.
     */
   override def andThen(p: Predicate[T]): JPredicate[T] =
-    (t: T) => self.justification(t) flatMap (
+    (t: T) => s"andThen($p): $t" !! self.justification(t) flatMap (
       w1 =>
         p match {
-          case j: JPredicate[T] => j.justification(t) map (w2 => w1 + "&" + w2)
-          case _ if p(t) => Some(w1)
+          case j: JPredicate[T] =>
+            s"andThen flatMap JPredicate $w1 $t" !! j.justification(t) map {
+              case w2 if w1.nonEmpty && w2.nonEmpty => w1 + "&" + w2
+              case _ if w1.nonEmpty => w1
+              case w2 => w2
+            }
+          case _ if p(t) => s"flatMap Predicate $w1 $t" !! Some(w1)
           case _ => None
         })
 }
 
+/**
+  * The `JPredicate` companion object offers utility methods for constructing and manipulating `JPredicate` instances.
+  *
+  * It provides methods to create predicates with specific behaviors, such as always matching, never matching,
+  * or conditional matching based on a function or condition.
+  * The object relies on a logging mechanism (`flog`)
+  * to help trace the logical flow and justification of predicate evaluations.
+  */
 object JPredicate {
-  def apply[T](f: T => Option[String]): JPredicate[T] = (t: T) => f(t)
+  val flog = Flog[JPredicate[_]].disabled
 
-  def when[T](f: T => String)(p: T => Boolean): JPredicate[T] = apply(t => Option.when(p(t))(f(t)))
+  import flog._
 
-  def always[T](w: String): JPredicate[T] = (_: T) => Some(w)
+  /**
+    * Constructs a `JPredicate` from a provided function `f` that maps an input of type `T`
+    * to an `Option[String]`.
+    * The resulting predicate evaluates the input using `f`, and
+    * the justification string is determined by the resulting `Option[String]`.
+    *
+    * @param f a function that takes an input of type `T` and returns an `Option[String]`.
+    *          The `Option[String]` represents the justification for the predicate to succeed.
+    * @tparam T the input type of the predicate.
+    * @return a `JPredicate[T]` that applies the given function `f` to evaluate the justification.
+    */
+  def apply[T](f: T => Option[String], tag: String = ""): JPredicate[T] = (t: T) => s"JPredicate.apply(${showF(f, tag)}: $t" !! f(t)
 
+  /**
+    * Constructs a `JPredicate[T]` that evaluates a given condition on an input `T`
+    * and provides a justification message if the condition is true.
+    *
+    * @param w a lazy-evaluated string representing the justification message when the predicate passes.
+    * @param p a predicate function that takes an input of type `T`
+    *          and returns a boolean indicating whether the condition is satisfied.
+    * @tparam T the input type of the predicate.
+    * @return a `JPredicate[T]` that encapsulates the provided condition and justification logic.
+    */
+  def when[T](w: => String)(p: T => Boolean): JPredicate[T] = apply(t => s"JPredicate.when($w)(${showF(p, w)} $t" !! Option.when(p(t))(w), "predicate on T")
+
+  /**
+    * Constructs a `JPredicate[T]` that always evaluates to `true` and provides a constant justification message.
+    *
+    * @param w the constant justification message as a `String`.
+    * @tparam T the input type of the predicate.
+    * @return a `JPredicate[T]` that always succeeds with the provided justification message.
+    */
+  def always[T](w: String): JPredicate[T] = (_: T) => s"JPredicate.always($w)" !! Some(w)
+
+  /**
+    * Constructs a `JPredicate[T]` that always evaluates to `false` and does not provide any justification.
+    *
+    * @tparam T the input type of the predicate.
+    * @return a `JPredicate[T]` that never succeeds.
+    */
   def never[T]: JPredicate[T] = (_: T) => None
+
+  private def showF(f: _ => _, tag: String) = f match {
+    case NamedFunction(name, _) => name
+    case _ => tag
+  }
 }
 
 import com.phasmidsoftware.misc.Predicate.maybeShow
@@ -193,7 +267,7 @@ case class IntPredicate(name: String, f: Int => Boolean) extends BasePredicate[I
     * Method to copy this Predicate but with a different name.
     *
     * @param w a String to be used as the new name.
-    * @return a IntPredicate that behaves the same as `this` but with a different name in the case of a positive match.
+    * @return an IntPredicate that behaves the same as `this` but with a different name in the case of a positive match.
     */
   @unused
   def named(w: String): IntPredicate = copy(name = w)
@@ -231,6 +305,59 @@ object Predicate {
   def maybeShow(b: Boolean, msg: => String, show: Boolean): Boolean = {
     if (b && show) println(msg)
     b
+  }
+
+  /**
+    * A case class that wraps a function from type `T` to `R`, associating it with a descriptive name.
+    *
+    * CONSIDER achieving this through an implicit class mechanism using the ^^ method.
+    *
+    * @tparam T The input type of the function.
+    * @tparam R The output type of the function.
+    * @param name A descriptive name for the function.
+    * @param f    The function to be wrapped.
+    *
+    *             This class extends the `Function1` trait, allowing instances of `NamedFunction` to
+    *             be used as a standard function from `T` to `R`. The main utility of this class is to
+    *             provide a named representation of the function for enhanced readability and debugging.
+    */
+  case class NamedFunction[T, R](name: String, f: T => R) extends (T => R) {
+    override def apply(t: T): R = f(t)
+
+    override def toString: String = s"$name, T=>R"
+  }
+
+  /**
+    * A companion object for constructing instances of `NamedFunction` with a specified name and function.
+    *
+    */
+  object NamedFunction {
+    /**
+      * Creates an instance of `NamedFunction` by wrapping a given function with a specific name.
+      *
+      * @param name A descriptive name for the function.
+      * @param f    The function to be wrapped, defined as a function from type `T` to `R`.
+      * @tparam T The input type of the function.
+      * @tparam R The output type of the function.
+      * @return A `NamedFunction` instance that associates the provided name with the given function.
+      */
+    def apply[T, R](name: String, f: T => R): NamedFunction[T, R] = new NamedFunction(name, f)
+
+    /**
+      * Implicit class that enriches a plain function of type `T => R` with the ability to attach a descriptive name,
+      * resulting in a `NamedFunction` instance.
+      *
+      * This can be useful for improving code readability, debugging, and logging, as it provides a way to associate
+      * a human-readable identifier with the function's behavior or purpose.
+      *
+      * @tparam T The input type of the function.
+      * @tparam R The output type of the function.
+      * @param f The original function to be enriched.
+      */
+    implicit class RawFunction[T, R](f: T => R) {
+      def ^^(name: String): NamedFunction[T, R] = NamedFunction(name, f)
+    }
+
   }
 
   /**

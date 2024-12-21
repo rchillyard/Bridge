@@ -4,12 +4,18 @@
 
 package com.phasmidsoftware.bridge.director
 
+import com.phasmidsoftware.flog.Flog
+import com.phasmidsoftware.misc.Predicate.NamedFunction
 import com.phasmidsoftware.misc.{JPredicate, Predicate}
 
 import scala.language.postfixOps
 import scala.util._
 
 object Checker {
+  val flog = Flog[Checker].disabled
+
+  import flog._
+
   /**
     * JPredicate to test for a penalty in the direction dir.
     *
@@ -18,11 +24,9 @@ object Checker {
     */
   def penaltyChecker(dir: Boolean): Checker = {
     // CONSIDER rewriting this with just one jLens (using a function to negate AND project. {
-    val negative: String = s""
-    val value: String = if (dir) "NS" else "EW"
     new JPredicate[SB] {
-      def justification(sb: SB): Option[String] = penaltyIsOk(sb)
-    }.jLens[SB](negative)(sb => sb.negate).jLens(value)(sv => sv.project(dir))
+      def justification(sb: SB): Option[String] = s"penaltyChecker($dir, $sb)" !! penaltyStringOpt(sb)
+    }.jLens[SB]("")(NamedFunction("negate", sb => sb.negate)).jLens[ScoreVul](if (dir) "NS" else "EW")(NamedFunction(s"project($dir)", sv => sv.project(dir))).andThen(positive(!dir))
   }
 
   /**
@@ -32,7 +36,7 @@ object Checker {
     * @return a Checker
     */
   def gameChecker(dir: Boolean, doubled: Boolean = false): Checker =
-    gamePredicate(doubled).jLens(if (dir) "NS" else "EW")(u => u.project(dir))
+    positive(dir) andThen gamePredicate(doubled).jLens[ScoreVul](if (dir) "NS" else "EW")(NamedFunction(s"project ($dir)", u => u.project(dir)))
 
   /**
     * JPredicate to test for a partial in the direction dir.
@@ -42,46 +46,66 @@ object Checker {
     */
   private def partialChecker(dir: Boolean, doubled: Boolean): Checker = {
     val bonus = if (doubled) 100 else 50
-    val partial: String = s"partial"
     val value: String = s"""${if (dir) "NS" else "EW"}"""
-    trickScorePredicate(doubled).jLens[SB](partial)(sb => sb.deduct(bonus)).jLens(value)(_.project(dir))
+    positive(dir) andThen trickScorePredicate(doubled).jLensOpt[SB]("partial")(NamedFunction(s"deduct ($bonus)", sb => sb.deduct(bonus))).jLens[ScoreVul](value)(NamedFunction(s"project ($dir)", _.project(dir)))
   }
 
+  private def positive(dir: Boolean): Checker = JPredicate.when[ScoreVul]("")(_.score > 0 == dir)
+
+  private def atLeast(min: Int): Checker = JPredicate.when[ScoreVul](s"score >= $min")(_.score >= min)
+
+  private def atMost(max: Int): Checker = JPredicate.when[ScoreVul](s"score <= $max")(_.score <= max)
+
+  private lazy val Passout: Checker = JPredicate.when("pass out")(z => z.score == 0)
+  // CONSIDER we shouldn't have to guess at the direction
   lazy val Partial: Checker = (for (x <- Seq(true, false); y <- Seq(false, true)) yield partialChecker(x, y)) reduce ((a, b) => a orElse b)
   lazy val Penalty: Checker = penaltyChecker(true) orElse penaltyChecker(false)
   lazy val Game: Checker = gameChecker(dir = true) orElse gameChecker(dir = false)
+  // CONSIDER we shouldn't have to guess at the direction
   private lazy val DoubledGame: Checker = gameChecker(dir = true, doubled = true) orElse gameChecker(dir = false, doubled = true)
 
+  // TODO do this with reduce of foldLeft
+  private def DoubledGameWithOvertricks(dir: Boolean): Checker = overtrickChecker(DoubledGame)(dir, 1) orElse overtrickChecker(DoubledGame)(dir, 2) orElse overtrickChecker(DoubledGame)(dir, 3)
+
+  private def overtrickChecker(checker: Checker)(dir: Boolean, n: Int): Checker = checker.jLensOpt[ScoreVul](s"+$n")(NamedFunction(s"deductForOvertricks($dir,$n)", sv => sv.deductForOvertricks(dir)(n)))
+
   // NOTE: we accept doubled contracts as OK,
-  // but anything redoubled or with doubled overtricks will need to be questioned.
-  lazy val Valid: Checker = Game orElse Penalty orElse Partial orElse DoubledGame
+  // NOTE: we accept doubled contracts as OK,
+  // but anything redoubled will need to be questioned.
+  lazy val Valid: Checker = Passout orElse Game orElse Penalty orElse Partial orElse DoubledGame orElse DoubledGameWithOvertricks(true) orElse DoubledGameWithOvertricks(false)
 
   // Import Compound for :| method
 
   import Predicate.Compound
 
-  private def suitPartialJ(strain: String, value: Int): JPredicate[Int] =
+  private def suitPartial(strain: String, value: Int, min: Int, max: Int): JPredicate[Int] =
     (score: Int) => {
       val n = score / value
-      Option.when(score :| value && Range(1, 8).contains(n))(s"$n $strain")
+      s"suitPartial($strain,$value,$max)($score)" !! Option.when(score :| value && Range.inclusive(min, max).contains(n))(s"$n $strain")
     }
 
-  def stripBonus(bonusV: Int, bonusN: Int)(sv: SB): Int = sv.score - (if (sv.vulnerability) bonusV else bonusN)
-
-  private lazy val minorPartial = suitPartialJ("minor", 20)
-  private lazy val majorPartial = suitPartialJ("major", 30)
-
-  private def notrumpPartial(doubled: Boolean) = new JPredicate[Int]() {
-    def justification(score: Int): Option[String] = {
-      if (doubled)
-        if (score == 80) Some("1 NT") else suitPartialJ("NT", 60).justification(score - 20)
-      else if (score == 40) Some("1 NT") else suitPartialJ("NT", 30).justification(score - 10)
-
-    }
+  def stripBonus(bonusV: Int, bonusN: Int, min: Int = 0)(sv: SB): Option[Int] = {
+    val x = sv.score - (if (sv.vulnerability) bonusV else bonusN)
+    Option.when(x >= min)(x)
   }
 
-  private lazy val doubledMinorPartial = suitPartialJ("Xminor", 40)
-  private lazy val doubledMajorPartial = suitPartialJ("Xmajor", 60)
+  private lazy val minorPartial = suitPartial("minor", 20, 1, 7)
+  private lazy val majorPartial = suitPartial("major", 30, 1, 7)
+
+  private def notrumpPartial(doubled: Boolean) = new JPredicate[Int]() {
+    def justification(score: Int): Option[String] = s"notrumpPartial($doubled, $score )" !!
+      (
+      if (doubled)
+        if (score == 80)
+          Some("1 NT")
+        else
+          suitPartial("NT", 60, 1, 1).justification(score - 20)
+      else if (score == 40) Some("1 NT") else suitPartial("NT", 30, 1, 7).justification(score - 10)
+        )
+  }
+
+  private lazy val doubledMinorPartial = suitPartial("Xminor", 40, 1, 3)
+  private lazy val doubledMajorPartial = suitPartial("Xmajor", 60, 1, 4)
 
   // NOTE we don't accept doubled overtricks or redoubled contracts here--they must be questioned.
 
@@ -96,7 +120,12 @@ object Checker {
     */
   def trickScorePredicate(doubled: Boolean = false): JPredicate[Int] =
     notrumpPartial(doubled) orElse
-      (if (doubled) doubledMajorPartial orElse doubledMinorPartial else majorPartial orElse minorPartial)
+      (
+        if (doubled)
+          doubledMajorPartial orElse doubledMinorPartial
+        else
+          majorPartial orElse minorPartial
+        )
 
   /**
     * Constructs a `JPredicate[SB]` that evaluates whether a given score and vulnerability (`SB`) satisfies
@@ -109,39 +138,26 @@ object Checker {
     *         applying respective bonus deductions.
     */
   private def gamePredicate(doubled: Boolean): JPredicate[SB] =
-    trickScorePredicate(doubled).jLens("game")(stripBonus(500, 300)) orElse
-      trickScorePredicate(doubled).jLens("slam")(stripBonus(1250, 800)) orElse
-      trickScorePredicate(doubled).jLens("grand slam")(stripBonus(2000, 1300)) orElse {
       if (doubled)
-        trickScorePredicate(true).jLens("gameX")(stripBonus(550, 350)) orElse
-          trickScorePredicate(doubled).jLens("slam")(stripBonus(1300, 850)) orElse
-          trickScorePredicate(doubled).jLens("grand slam")(stripBonus(2050, 1350))
+        trickScorePredicate(true).jLensOpt("gameX")(NamedFunction(s"stripBonus doubled (550,350,100)", stripBonus(550, 350, 100))) orElse
+          trickScorePredicate(true).jLensOpt("slam")(NamedFunction(s"stripBonus doubled (1300,850,100)", stripBonus(1300, 850, 100))) orElse
+          trickScorePredicate(true).jLensOpt("grand slam")(NamedFunction(s"stripBonus doubled (2050,1350,100)", stripBonus(2050, 1350, 100)))
       else
-        JPredicate.never
-    }
-
-  // NOTE: we accept doubled contracts as OK, but anything redoubled needs to be questioned.
-
-  /**
-    * Predicate method of type `SB => Boolean`.
-    * Recognizes penalties that are positive--i.e., from the point of view of the defenders.
-    *
-    * @param sb a `SB` value, i.e. score and vulnerability as a `Boolean`
-    * @return `true` if the score matches a valid penalty: i.e., the first part of the tuple returned by `penaltyIsOkWithMaybeString`.
-    */
-  private def penaltyIsOk(sb: SB): Option[String] = penaltyIsOkWithMaybeString(sb)
+        trickScorePredicate().jLensOpt("game")(NamedFunction(s"stripBonus (500,300)", stripBonus(500, 300, 100))) orElse
+          trickScorePredicate().jLensOpt("slam")(NamedFunction(s"stripBonus (1250,800)", stripBonus(1250, 800, 100))) orElse
+          trickScorePredicate().jLensOpt("grand slam")(NamedFunction(s"stripBonus (2000,1300)", stripBonus(2000, 1300, 100)))
 
   /**
-    * Method to yield a `Boolean` and an optional `String` which is the explanation of the result (and is defined only if the `Boolean` value is `true`).
+    * Determines whether the penalty conditions for a given score and vulnerability (`SB`) meet specific thresholds,
+    * and delegates to the `penalty` method for further evaluation.
+    * The method examines the score value
+    * and checks different scenarios (e.g., match vulnerability and doubling) to compute an optional string (or
+    * return `None` if no conditions are met).
     *
-    * NOTE that the second part of the tuple is always ignored for now. This method is for future use.
-    *
-    * @param sb a `SB` value, i.e. score and vulnerability as a `Boolean`
-    * @return a tuple of `Boolean` and optional `String`.
-    *         If the `Boolean` is `true` (the score matches a valid penalty),
-    *         then the optional `String` will be defined as the reason for the penalty.
+    * @param sb An instance of `SB` representing the score value and its associated vulnerability status.
+    * @return An optional string providing a description of the penalty if applicable, or `None` if no penalty is deemed valid.
     */
-  private def penaltyIsOkWithMaybeString(sb: SB): Option[String] =
+  private def penaltyStringOpt(sb: SB): Option[String] =
     sb.score match {
       case 50 | 150 | 250 | 350 | 450 | 550 | 650 =>
         penalty(!sb.vulnerability, doubled = false, sb)
@@ -172,6 +188,16 @@ object Checker {
   private def penalty(matchVulnerability: Boolean, doubled: Boolean, sb: SB): Option[String] =
     Play.conditional(down(sb.vulnerability, doubled, sb.score))(matchVulnerability)
 
+  /**
+    * Computes a descriptive string indicating the number of undertricks and
+    * whether the contract was doubled, based on the given vulnerability,
+    * doubling state, and score.
+    *
+    * @param vulnerable a Boolean indicating whether the match is vulnerable.
+    * @param doubled    a Boolean specifying whether the contract was doubled.
+    * @param score      an integer representing the penalty score that we are trying to match.
+    * @return a string indicating the penalties for the specified conditions.
+    */
   private def down(vulnerable: Boolean, doubled: Boolean, score: Int): String = {
     val (undertricks, suffix) = (vulnerable, doubled) match {
       case (_, false) =>
@@ -193,6 +219,13 @@ object Checker {
     s"down $undertricks$suffix"
   }
 
+  /**
+    * Creates a PlayResult instance representing an error or invalid scenario,
+    * with the provided error message encapsulated as a Left value.
+    *
+    * @param s The error message to be encapsulated in the PlayResult.
+    * @return A PlayResult instance containing the provided error message.
+    */
   def error(s: String): PlayResult = PlayResult(Left(s))
 }
 
@@ -203,6 +236,11 @@ object Checker {
   * @param ew Indicates East-West vulnerability.
   */
 case class Vulnerability(ns: Boolean, ew: Boolean) {
+  /**
+    * Produces a new `Vulnerability` instance with inverted values for the `ns` and `ew` flags.
+    *
+    * @return A `Vulnerability` instance with `ns` and `ew` flags set to their logical negations.
+    */
   def invert: Vulnerability = Vulnerability(!ns, !ew)
 }
 
@@ -225,10 +263,12 @@ object Vulnerability {
   val B: Vulnerability = Vulnerability(true, true)
 
   /**
+    * Get the vulnerability for a particular board.
+    *
     * See https://tedmuller.us/Bridge/Esoterica/BoardVulnerability.htm
     *
-    * @param x the board number.
-    * @return
+    * @param x the board number (1...)
+    * @return an instance of `Vulnerability`.
     */
   def apply(x: Int): Vulnerability = (x - 1) % 16 match {
     case 3 | 6 | 9 | 12 => B
@@ -246,7 +286,35 @@ object Vulnerability {
   * @param vulnerability The vulnerability associated with the score.
   */
 case class ScoreVul(score: Int, vulnerability: Vulnerability) {
-  def project(direction: Boolean): SB = if (direction) SB(score, vulnerability.ns) else SB(-score, vulnerability.ew)
+  val flog = Flog[ScoreVul].disabled
+
+  import flog._
+
+  private def vulnerable(direction: Boolean): Boolean = if (direction) vulnerability.ns else vulnerability.ew
+
+  /**
+    * Projects the score and determines the vulnerability based on the specified direction.
+    *
+    * @param direction A boolean value indicating the direction:
+    *                  - true for 'ns' direction
+    *                  - false for 'ew' direction
+    * @return An instance of `SB` containing the score (positive or negative based on the direction)
+    *         and the computed vulnerability for the given direction.
+    */
+  def project(direction: Boolean): SB = SB(if (direction) score else -score, vulnerable(direction))
+
+  /**
+    * Deducts points from the score for overtricks based on the player's vulnerability status.
+    *
+    * @param direction Indicates the direction (true for ns, false for ew) to determine vulnerability.
+    * @param n         The number of overtricks to be accounted for in the score deduction.
+    * @return An updated `Option[ScoreVul]` with the adjusted score if the deduction is valid,
+    *         or `None` if the deduction would result in a negative score.
+    */
+  def deductForOvertricks(direction: Boolean)(n: Int): Option[ScoreVul] = {
+    val x = (if (vulnerable(direction)) 200 else 100) * n
+    s"deductForOvertricks($direction)($n) i=$x" !! Option.when(x < score)(copy(score = score - x))
+  }
 }
 
 /**
@@ -258,8 +326,19 @@ case class ScoreVul(score: Int, vulnerability: Vulnerability) {
   * @param vulnerability Indicates if the instance is vulnerable (true) or not (false).
   */
 case class SB(score: Int, vulnerability: Boolean) {
+  /**
+    * Method to negate the score.
+    *
+    * @return a new instance of SB with the same vulnerability but the negative score.
+    */
   def negate: SB = copy(score = -score)
 
-  def deduct(bonus: Int): Int = score - bonus
+  /**
+    * Method to deduct the given `bonus` from the score and, if positive, return it wrapped in `Some`.
+    *
+    * @param bonus the value of the bonus.
+    * @return `Some(positive value)` or `None`.
+    */
+  def deduct(bonus: Int): Option[Int] = Option.when(score > bonus)(score - bonus)
 }
 

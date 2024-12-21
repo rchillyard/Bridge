@@ -61,7 +61,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
   it should "read ConcordCountryClub20191007.txt" in {
     val writer = MockWriter(8192)
     for (o <- Score.doScoreResource("ConcordCountryClub20191007.txt", Output(writer))) o.close()
-    writer.spilled shouldBe 3694
+    writer.spilled shouldBe 3661
   }
 
   // FIXME Issue #8
