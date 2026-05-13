@@ -281,9 +281,9 @@ object Holding {
   }
 
   // CONSIDER merge the two create methods
-  def create(suit: Suit, cards: Seq[Card]): Holding = apply(suit, (cards map (_.rank)).sorted.reverse: _*)
+  def create(suit: Suit, cards: Seq[Card]): Holding = apply(suit, (cards map (_.rank)).sorted.reverse*)
 
-  def create(ranks: Seq[Rank], suit: Suit): Holding = apply(suit, ranks.sorted.reverse: _*)
+  def create(ranks: Seq[Rank], suit: Suit): Holding = apply(suit, ranks.sorted.reverse*)
 
   def ranksToString(ranks: Seq[Rank]): String = if (ranks.nonEmpty) ranks.mkString("", "", "") else "-"
   //

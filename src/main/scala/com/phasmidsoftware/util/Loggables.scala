@@ -64,7 +64,7 @@ trait Loggables {
   def mapLoggable[K, T: Loggable](bookends: String = "{}"): Loggable[Map[K, T]] = (tKm: Map[K, T]) => {
     def z(k: K, t: T): String = k.toString + ":" + implicitly[Loggable[T]].toLog(t)
 
-    tKm.map((z _).tupled).mkString(bookends.substring(0, 1), ",", bookends.substring(1, 2))
+    tKm.map((z).tupled).mkString(bookends.substring(0, 1), ",", bookends.substring(1, 2))
   }
 
   /**
@@ -215,7 +215,7 @@ object Reflection {
     * @param classTag rhw class tag.
     * @return an Array of String.
     */
-  def extractFieldNames(classTag: ClassTag[_], method: String): Array[String] = {
+  def extractFieldNames(classTag: ClassTag[?], method: String): Array[String] = {
     import java.lang.reflect.Modifier
     import scala.util.control.NonFatal
 

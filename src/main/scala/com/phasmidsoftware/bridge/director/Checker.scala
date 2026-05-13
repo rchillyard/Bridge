@@ -36,7 +36,7 @@ object Checker {
     * @return a Checker
     */
   def gameChecker(dir: Boolean, doubled: Boolean = false): Checker =
-    positive(dir) andThen gamePredicate(doubled).jLens[ScoreVul](if (dir) "NS" else "EW")(NamedFunction(s"project ($dir)", u => u.project(dir)))
+    positive(dir) `andThen` gamePredicate(doubled).jLens[ScoreVul](if (dir) "NS" else "EW")(NamedFunction(s"project ($dir)", u => u.project(dir)))
 
   /**
     * JPredicate to test for a partial in the direction dir.
@@ -47,7 +47,7 @@ object Checker {
   private def partialChecker(dir: Boolean, doubled: Boolean): Checker = {
     val bonus = if (doubled) 100 else 50
     val value: String = s"""${if (dir) "NS" else "EW"}"""
-    positive(dir) andThen trickScorePredicate(doubled).jLensOpt[SB]("partial")(NamedFunction(s"deduct ($bonus)", sb => sb.deduct(bonus))).jLens[ScoreVul](value)(NamedFunction(s"project ($dir)", _.project(dir)))
+    positive(dir) `andThen` trickScorePredicate(doubled).jLensOpt[SB]("partial")(NamedFunction(s"deduct ($bonus)", sb => sb.deduct(bonus))).jLens[ScoreVul](value)(NamedFunction(s"project ($dir)", _.project(dir)))
   }
 
   private def positive(dir: Boolean): Checker = JPredicate.when[ScoreVul]("")(_.score > 0 == dir)
@@ -58,21 +58,21 @@ object Checker {
 
   private lazy val Passout: Checker = JPredicate.when("pass out")(z => z.score == 0)
   // CONSIDER we shouldn't have to guess at the direction
-  lazy val Partial: Checker = (for (x <- Seq(true, false); y <- Seq(false, true)) yield partialChecker(x, y)) reduce ((a, b) => a orElse b)
-  lazy val Penalty: Checker = penaltyChecker(true) orElse penaltyChecker(false)
-  lazy val Game: Checker = gameChecker(dir = true) orElse gameChecker(dir = false)
+  lazy val Partial: Checker = (for (x <- Seq(true, false); y <- Seq(false, true)) yield partialChecker(x, y)) reduce ((a, b) => a `orElse` b)
+  lazy val Penalty: Checker = penaltyChecker(true) `orElse` penaltyChecker(false)
+  lazy val Game: Checker = gameChecker(dir = true) `orElse` gameChecker(dir = false)
   // CONSIDER we shouldn't have to guess at the direction
-  private lazy val DoubledGame: Checker = gameChecker(dir = true, doubled = true) orElse gameChecker(dir = false, doubled = true)
+  private lazy val DoubledGame: Checker = gameChecker(dir = true, doubled = true) `orElse` gameChecker(dir = false, doubled = true)
 
   // TODO do this with reduce of foldLeft
-  private def DoubledGameWithOvertricks(dir: Boolean): Checker = overtrickChecker(DoubledGame)(dir, 1) orElse overtrickChecker(DoubledGame)(dir, 2) orElse overtrickChecker(DoubledGame)(dir, 3)
+  private def DoubledGameWithOvertricks(dir: Boolean): Checker = overtrickChecker(DoubledGame)(dir, 1) `orElse` overtrickChecker(DoubledGame)(dir, 2) `orElse` overtrickChecker(DoubledGame)(dir, 3)
 
   private def overtrickChecker(checker: Checker)(dir: Boolean, n: Int): Checker = checker.jLensOpt[ScoreVul](s"+$n")(NamedFunction(s"deductForOvertricks($dir,$n)", sv => sv.deductForOvertricks(dir)(n)))
 
   // NOTE: we accept doubled contracts as OK,
   // NOTE: we accept doubled contracts as OK,
   // but anything redoubled will need to be questioned.
-  lazy val Valid: Checker = Passout orElse Game orElse Penalty orElse Partial orElse DoubledGame orElse DoubledGameWithOvertricks(true) orElse DoubledGameWithOvertricks(false)
+  lazy val Valid: Checker = Passout `orElse` Game `orElse` Penalty `orElse` Partial `orElse` DoubledGame `orElse` DoubledGameWithOvertricks(true) `orElse` DoubledGameWithOvertricks(false)
 
   // Import Compound for :| method
 
@@ -119,12 +119,12 @@ object Checker {
     * @return a `JPredicate[Int]` that evaluates trick scores according to the defined game rules.
     */
   def trickScorePredicate(doubled: Boolean = false): JPredicate[Int] =
-    notrumpPartial(doubled) orElse
+    notrumpPartial(doubled) `orElse`
       (
         if (doubled)
-          doubledMajorPartial orElse doubledMinorPartial
+          doubledMajorPartial `orElse` doubledMinorPartial
         else
-          majorPartial orElse minorPartial
+          majorPartial `orElse` minorPartial
         )
 
   /**
@@ -139,12 +139,12 @@ object Checker {
     */
   private def gamePredicate(doubled: Boolean): JPredicate[SB] =
       if (doubled)
-        trickScorePredicate(true).jLensOpt("gameX")(NamedFunction(s"stripBonus doubled (550,350,100)", stripBonus(550, 350, 100))) orElse
-          trickScorePredicate(true).jLensOpt("slam")(NamedFunction(s"stripBonus doubled (1300,850,100)", stripBonus(1300, 850, 100))) orElse
+        trickScorePredicate(true).jLensOpt("gameX")(NamedFunction(s"stripBonus doubled (550,350,100)", stripBonus(550, 350, 100))) `orElse`
+          trickScorePredicate(true).jLensOpt("slam")(NamedFunction(s"stripBonus doubled (1300,850,100)", stripBonus(1300, 850, 100))) `orElse`
           trickScorePredicate(true).jLensOpt("grand slam")(NamedFunction(s"stripBonus doubled (2050,1350,100)", stripBonus(2050, 1350, 100)))
       else
-        trickScorePredicate().jLensOpt("game")(NamedFunction(s"stripBonus (500,300)", stripBonus(500, 300, 100))) orElse
-          trickScorePredicate().jLensOpt("slam")(NamedFunction(s"stripBonus (1250,800)", stripBonus(1250, 800, 100))) orElse
+        trickScorePredicate().jLensOpt("game")(NamedFunction(s"stripBonus (500,300)", stripBonus(500, 300, 100))) `orElse`
+          trickScorePredicate().jLensOpt("slam")(NamedFunction(s"stripBonus (1250,800)", stripBonus(1250, 800, 100))) `orElse`
           trickScorePredicate().jLensOpt("grand slam")(NamedFunction(s"stripBonus (2000,1300)", stripBonus(2000, 1300, 100)))
 
   /**

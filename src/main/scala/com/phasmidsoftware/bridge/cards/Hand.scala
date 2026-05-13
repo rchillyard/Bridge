@@ -34,7 +34,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     * @param trick the trick.
     * @return a new Hand based on this Hand and all of the card plays.
     */
-  def playAll(trick: Trick): Hand = trick.plays.foldLeft[Hand](this)(_ play _)
+  def playAll(trick: Trick): Hand = trick.plays.foldLeft[Hand](this)(_ `play` _)
 
   /**
     * Create new Hand based on the play of a card.
@@ -48,7 +48,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
       this - (cardPlay.suit, priority)
     else
       this
-    result promote(cardPlay.suit, priority)
+    result `promote`(cardPlay.suit, priority)
   }
 
   /**

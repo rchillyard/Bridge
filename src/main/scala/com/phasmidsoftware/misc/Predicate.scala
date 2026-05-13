@@ -74,7 +74,7 @@ trait JPredicate[T] extends Predicate[T] {
 
   self =>
 
-  val flog = Flog[JPredicate[_]].disabled
+  val flog = Flog[JPredicate[?]].disabled
 
   import flog._
 
@@ -175,7 +175,7 @@ trait JPredicate[T] extends Predicate[T] {
   * to help trace the logical flow and justification of predicate evaluations.
   */
 object JPredicate {
-  val flog = Flog[JPredicate[_]].disabled
+  val flog = Flog[JPredicate[?]].disabled
 
   import flog._
 
@@ -221,7 +221,7 @@ object JPredicate {
     */
   def never[T]: JPredicate[T] = (_: T) => None
 
-  private def showF(f: _ => _, tag: String) = f match {
+  private def showF(f: ? => ?, tag: String) = f match {
     case NamedFunction(name, _) => name
     case _ => tag
   }

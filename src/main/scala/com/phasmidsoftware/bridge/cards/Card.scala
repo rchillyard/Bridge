@@ -276,7 +276,7 @@ abstract class BaseRank(val priority: Int, val isHonor: Boolean) extends Rank wi
 
   override def equals(other: Any): Boolean = other match {
     case that: BaseRank =>
-      (that canEqual this) &&
+      (that `canEqual` this) &&
         priority == that.priority
     case _ => false
   }
