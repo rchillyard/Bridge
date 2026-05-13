@@ -6,8 +6,8 @@ package com.phasmidsoftware.bridge.director
 
 import com.phasmidsoftware.bridge.director.Matchpoints.{mpsAsString, rationalToString}
 import com.phasmidsoftware.bridge.director.Score.asPercent
-import com.phasmidsoftware.number.core.Rational
-import com.phasmidsoftware.number.core.Rational.{half, zero}
+import com.phasmidsoftware.number.core.inner.Rational
+import com.phasmidsoftware.number.core.inner.Rational.{half, zero}
 import com.phasmidsoftware.output.Util
 import com.phasmidsoftware.util.{Output, Outputable}
 
@@ -432,7 +432,7 @@ object Matchpoints {
   //noinspection SpellCheckingInspection
   def rationalToString(r: Rational): String = r match {
     case Rational(x, Rational.bigOne) => f"$x%2d.00"
-    case Rational(_, Rational.bigZero) => "infty"
+    case r: Rational if r.isInfinite => "infty"
     case _ => r.renderApproximate(5, Some(2))
   }
 

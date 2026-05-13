@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.director
 
-import com.phasmidsoftware.number.core.Rational
+import com.phasmidsoftware.number.core.inner.Rational
 import com.phasmidsoftware.output.Using
 import com.phasmidsoftware.util.Output
 

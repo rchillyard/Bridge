@@ -5,7 +5,7 @@
 package com.phasmidsoftware.output
 
 import com.phasmidsoftware.bridge.director.{Card, Matchpoints}
-import com.phasmidsoftware.number.core.Rational
+import com.phasmidsoftware.number.core.inner.Rational
 import com.phasmidsoftware.util.{Output, OutputException}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should

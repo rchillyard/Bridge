@@ -5,10 +5,10 @@
 package com.phasmidsoftware.bridge.director
 
 import com.phasmidsoftware.bridge.director.Checker.Valid
-import com.phasmidsoftware.number.core.Rational
+import com.phasmidsoftware.number.core.inner.Rational
 
 import scala.language.postfixOps
-import scala.util._
+import scala.util.*
 import scala.util.matching.Regex
 
 /**
