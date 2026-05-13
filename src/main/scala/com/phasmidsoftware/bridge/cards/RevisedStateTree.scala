@@ -31,7 +31,7 @@ case class RevisedStateTree(state: State)(implicit goal: Goal[State]) extends La
     def empty(s: State): Boolean = goal(s).isEmpty
 
     val z: Iterable[Output] = self.inOrder(empty).map(_.toString).map(Output(_)).take(10)
-    (output :+ "XXX").insertBreak ++ z
+    (output :+ "XXX").insertBreak() ++ z
   }
 
   //  /**

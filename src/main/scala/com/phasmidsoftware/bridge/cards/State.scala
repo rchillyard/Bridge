@@ -5,7 +5,8 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.decisiontree.Fitness
-import com.phasmidsoftware.util._
+import com.phasmidsoftware.flog.Loggable
+import com.phasmidsoftware.util.*
 
 import scala.language.postfixOps
 
@@ -96,8 +97,8 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
   private lazy val _isConsistent = trick.cardsPlayed + deal.nCards == 52 // && validate
 }
 
-
-object State {
+object State:
+  given loggableState: Loggable[State] = s => s.neatOutput
   var count: Int = 0
 
   def getSequence: Int = {
@@ -178,7 +179,7 @@ object State {
   implicit object ShowState extends Show[State] {
     def show(t: State): String = t.neatOutput
   }
-}
+
 
 /**
   * Behavior of something which can be validated.

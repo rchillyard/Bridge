@@ -4,17 +4,17 @@
 
 package com.phasmidsoftware.bridge.director
 
-import com.phasmidsoftware.flog.Flog
+import com.phasmidsoftware.flog.{Flog, Loggable}
 import com.phasmidsoftware.misc.Predicate.NamedFunction
 import com.phasmidsoftware.misc.{JPredicate, Predicate}
 
 import scala.language.postfixOps
-import scala.util._
+import scala.util.*
 
 object Checker {
   val flog = Flog[Checker].disabled
 
-  import flog._
+  import flog.*
 
   /**
     * JPredicate to test for a penalty in the direction dir.
@@ -288,7 +288,7 @@ object Vulnerability {
 case class ScoreVul(score: Int, vulnerability: Vulnerability) {
   val flog = Flog[ScoreVul].disabled
 
-  import flog._
+  import flog.*
 
   private def vulnerable(direction: Boolean): Boolean = if (direction) vulnerability.ns else vulnerability.ew
 
@@ -313,6 +313,8 @@ case class ScoreVul(score: Int, vulnerability: Vulnerability) {
     */
   def deductForOvertricks(direction: Boolean)(n: Int): Option[ScoreVul] = {
     val x = (if (vulnerable(direction)) 200 else 100) * n
+
+    given Loggable[ScoreVul] = s => s.toString
     s"deductForOvertricks($direction)($n) i=$x" !! Option.when(x < score)(copy(score = score - x))
   }
 }

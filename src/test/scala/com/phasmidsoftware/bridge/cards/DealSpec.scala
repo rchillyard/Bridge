@@ -87,7 +87,7 @@ class DealSpec extends AnyFlatSpec with should.Matchers {
 
   it should "evaluate" in {
     val target = Deal("test", 0L, adjustForPartnerships = false)
-    val List(n, _, s, _) = target.hands
+    val List(n, _, s, _): List[Hand] = target.hands
     n.evaluate shouldBe 0.44 +- 0.02
     s.evaluate shouldBe 3.41 +- 0.02
     target.evaluate shouldBe (0.44 + 3.41) +- 0.03
@@ -115,7 +115,7 @@ class DealSpec extends AnyFlatSpec with should.Matchers {
     target.nCards shouldBe 52
     val hands = target.hands
     hands.size shouldBe 4
-    val List(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.head.priority)
+    val Seq(priority1S, priority2S, priority3S, priority4S): Seq[Int] = hands map (_.holdings(Spades).sequences.head.priority)
     val trick =
       Trick.create(0, CardPlay(target, None, 0, Spades, priority1S), CardPlay(target, None, 1, Spades, priority2S), CardPlay(target, None, 2, Spades, priority3S), CardPlay(target, None, 3, Spades, priority4S))
     val played: Deal = target.playAll(trick)
@@ -129,7 +129,7 @@ class DealSpec extends AnyFlatSpec with should.Matchers {
     target.nCards shouldBe 52
     val hands = target.hands
     hands.size shouldBe 4
-    val List(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
+    val Seq(priority1S, priority2S, priority3S, priority4S): Seq[Int] = hands map (_.holdings(Spades).sequences.last.priority)
     val trick =
       Trick.create(0, CardPlay(target, None, 0, Spades, priority1S), CardPlay(target, None, 1, Spades, priority2S), CardPlay(target, None, 2, Spades, priority3S), CardPlay(target, None, 3, Spades, priority4S))
     val played: Deal = target.playAll(trick)
@@ -142,7 +142,7 @@ class DealSpec extends AnyFlatSpec with should.Matchers {
     val target = Deal("test", 0L, adjustForPartnerships = false)
     target.nCards shouldBe 52
     val hands = target.hands
-    val List(priority1S, priority2S, priority3S, priority4S) = hands map (_.holdings(Spades).sequences.last.priority)
+    val Seq(priority1S, priority2S, priority3S, priority4S): Seq[Int] = hands map (_.holdings(Spades).sequences.last.priority)
 
     val trick =
       Trick.create(0, CardPlay(target, None, 0, Spades, priority1S), CardPlay(target, None, 1, Spades, priority2S), CardPlay(target, None, 2, Spades, priority3S), CardPlay(target, None, 3, Spades, priority4S))

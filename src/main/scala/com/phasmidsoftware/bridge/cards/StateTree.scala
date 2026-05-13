@@ -5,6 +5,7 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.decisiontree.{Expandable, GoalDriven, StateNode, Tree}
+import com.phasmidsoftware.flog.Loggable
 import com.phasmidsoftware.util.Show
 
 import scala.language.postfixOps
@@ -44,6 +45,8 @@ object StateTree {
     */
   def apply(whist: Whist)(implicit ev1: Expandable[State], ev2: GoalDriven[State], ev3: Show[State]): StateTree = {
     State.count = 0
+
+    given Loggable[State] = s => s.neatOutput
     StateTree(StateNode(State(whist), None, Nil))
   }
 }

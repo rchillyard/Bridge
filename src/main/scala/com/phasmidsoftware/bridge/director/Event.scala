@@ -13,7 +13,7 @@ import com.phasmidsoftware.util.{Output, Outputable}
 
 import scala.annotation.unused
 import scala.language.postfixOps
-import scala.util._
+import scala.util.*
 
 /**
   * Class to represent an Event.
@@ -43,7 +43,7 @@ case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit]
     * @param xo     an optional value of X, defaulting to None.
     * @return a new instance of Output.
     */
-  def output(output: Output, xo: Option[Unit] = None): Output = (output :+ title).insertBreak ++ Output.apply(sections)(s => s.output(Output.empty))
+  def output(output: Output, xo: Option[Unit] = None): Output = (output :+ title).insertBreak() ++ Output.apply(sections)(s => s.output(Output.empty))
 }
 
 /**
@@ -59,7 +59,9 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler], maybeTop: Optio
 
   private lazy val top = calculateTop
 
-  private lazy val _ = countResults
+  locally {
+    lazy val _ = countResults
+  }
 
   lazy val createResults: Seq[Result] = preamble.maybeModifier match {
     case Some(Preamble.SingleWinner) => Seq(Result(tables, None, top, getSwResults))
@@ -263,8 +265,7 @@ case class Card(totalMps: Rational, played: Int, notPlayed: Int, ps: Seq[BoardRe
       val result = new StringBuilder(totalMps.toString())
       for (b <- 1 to boards.last) {
         val w = rXb.get(b) match {
-          // TODO fix the deprecation
-          case Some(r) => b + ": " + r.renderRo("")
+          case Some(r) => s"$b: ${r.renderRo("")}"
           case None => ""
         }
         result.append("\t" + w)
@@ -311,7 +312,7 @@ case class Result(tables: Int, isNS: Option[Boolean], top: Int, cards: Map[Int, 
     * @param nameFunction a function to yield a name, given an optional direction and a pair number.
     * @return Output
     */
-  def getResults(nameFunction: (Option[Boolean], Int) => String): Output = Output(s"Results" + directionHeader).insertBreak ++ getResultsForDirection(nameFunction(isNS, _))
+  def getResults(nameFunction: (Option[Boolean], Int) => String): Output = Output(s"Results" + directionHeader).insertBreak() ++ getResultsForDirection(nameFunction(isNS, _))
 
   private lazy val directionHeader = isNS match {
     case Some(d) => " for direction " + (if (d) "N/S" else "E/W")

@@ -12,14 +12,15 @@ import java.io.{FileWriter, PrintWriter}
 import scala.annotation.unused
 import scala.io.Source
 import scala.language.postfixOps
-import scala.util._
+import scala.util.*
 
 /**
   * Created by scalaprof on 4/12/16.
   *
   */
-object Score extends App {
+object Score {
 
+  // ... rest unchanged
   private val outputFile = "output.csv"
   private lazy val fileWriter = new FileWriter(outputFile)
   private lazy val printWriter = new PrintWriter(System.out)
@@ -29,10 +30,12 @@ object Score extends App {
   // TODO set this to use untabbedOutput if you want all tabs turned into spaces.
   private lazy val defaultOutput: Output = tabbedOutput
 
-  if (doMain(tabbedOutput)) println(s"Successful output to $outputFile")
+
+  def main(args: Array[String]): Unit =
+    if (doMain(args)(tabbedOutput)) println(s"Successful output to $outputFile")
 
   // TESTME
-  def doMain(output: Output): Boolean = {
+  def doMain(args: Array[String])(output: Output): Boolean = {
     if (args.length > 0) {
       val delimiter: String = (args lift 1).getOrElse("")
       doScoreFromName(isResource = false, args.head, delimiter, output) match {
@@ -93,7 +96,7 @@ object Score extends App {
 
     val ey = RecapParser.readEvent(source, delimiter)
 
-    for (e <- ey; x = e.score) yield (output :+ (x.title + "  " + e.hashCode().toHexString)).insertBreak ++ (for ((p, rs) <- x.createResults) yield eventResults(x, p, rs, x.boards))
+    for (e <- ey; x = e.score) yield (output :+ (x.title + "  " + e.hashCode().toHexString)).insertBreak() ++ (for ((p, rs) <- x.createResults) yield eventResults(x, p, rs, x.boards))
   }
 
   /**

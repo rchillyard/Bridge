@@ -91,7 +91,7 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     * @return a new instance of Output.
     */
   def output(output: Output, xo: Option[Unit]): Output =
-    (output :+ title).insertBreak ++ outputHand("North", n) ++ outputHand("East", e) ++ outputHand("South", s) ++ outputHand("West", w)
+    (output :+ title).insertBreak() ++ outputHand("North", n) ++ outputHand("East", e) ++ outputHand("South", s) ++ outputHand("West", w)
 
   /**
     * Neat output.

@@ -1,31 +1,35 @@
 name := "Bridge"
 
-version := "1.0.3-SNAPSHOT"
+version := "1.1.0"
 
-scalaVersion := "2.13.14"
+scalaVersion := "3.7.4"
 
 val scalaTestVersion = "3.2.19"
 
 resolvers += Resolver.mavenLocal
 resolvers += "Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases"
 
-resolvers += "Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases/"
+lazy val versionFlog = "1.0.13"
 
 libraryDependencies ++= Seq(
-  "com.typesafe.play" %% "play-json" % "2.10.6",
-//  "com.phasmid" %% "lascala" % "1.0.11",
-  "com.phasmidsoftware" %% "decisiontree" % "1.0.5-SNAPSHOT",
-  "com.phasmidsoftware" %% "number" % "1.1.1-SNAPSHOT",
+  "com.phasmidsoftware"        %% "flog"             % versionFlog,
+  "org.scala-lang.modules" %% "scala-xml" % "2.3.0",
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",  // already fine
+  "com.typesafe.play" %% "play-json" % "2.10.8",
+  "com.phasmidsoftware" % "decisiontree_2.13" % "1.0.5-SNAPSHOT"
+    excludeAll(
+    ExclusionRule("org.scala-lang.modules", "scala-parser-combinators_2.13"),
+    ExclusionRule("com.typesafe.scala-logging", "scala-logging_2.13"),
+    ExclusionRule("com.phasmidsoftware", "flog_2.13")
+  ),
+  "com.phasmidsoftware" % "number_2.13" % "1.1.1-SNAPSHOT"
+    excludeAll(
+    ExclusionRule("org.scala-lang.modules", "scala-parser-combinators_2.13"),
+    ExclusionRule("com.typesafe.scala-logging", "scala-logging_2.13"),
+    ExclusionRule("com.phasmidsoftware", "flog_2.13")
+  ),
   "joda-time" % "joda-time" % "2.12.7",
-  "org.scala-lang.modules" %% "scala-xml" % "1.3.1",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0",
   "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
-  "ch.qos.logback" % "logback-classic" % "1.5.9" % "runtime",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
+  "ch.qos.logback" % "logback-classic" % "1.5.9" % "runtime"
 )
-
-//val sprayGroup = "io.spray"
-//val sprayJsonVersion = "1.3.2"
-//libraryDependencies ++= List("spray-json") map {c => sprayGroup %% c % sprayJsonVersion}
-
-//wartremoverErrors ++= Warts.unsafe

@@ -24,7 +24,7 @@ case class Howell(name: String, tables: Seq[Table], movePlan: MovePlan) {
     val head = movement.head
     val tail = movement.tail
     val result = for (e <- current.encounters) yield e.move(head, current)
-    implicit val _: Int = tables.length
+    //    implicit val _: Int = tables.length
     (Position(result), Movement(tail))
   }
 
