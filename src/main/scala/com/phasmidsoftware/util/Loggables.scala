@@ -88,7 +88,6 @@ trait Loggables {
     case Left(_t: T@unchecked) => s"Left(${implicitly[Loggable[T]].toLog(_t)})"
     case Right(u: Vector[T]@unchecked) => val lv = new Loggables {}.vectorLoggable[T]; s"Right(${lv.toLog(u)})"
     case Right(u: U@unchecked) => s"Right(${implicitly[Loggable[U]].toLog(u)})"
-    case x => s"<problem with logging Either: $x"
   }
 
   /**
