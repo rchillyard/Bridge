@@ -19,11 +19,12 @@ resolvers += Resolver.mavenLocal
 
 lazy val versionFlog   = "1.0.13"
 lazy val versionNumber = "1.10.5"
+lazy val versionGambit = "1.1.2-SNAPSHOT"
 
 libraryDependencies ++= Seq(
   "com.phasmidsoftware"        %% "flog"                     % versionFlog,
   "com.phasmidsoftware"        %% "number"                   % versionNumber,
-  "com.phasmidsoftware"        %% "gambit"                   % "1.1.1-SNAPSHOT",
+  "com.phasmidsoftware"        %% "gambit"                   % versionGambit,
   "com.typesafe.play"          %% "play-json"                % "2.10.8",
   "com.typesafe.scala-logging" %% "scala-logging"            % "3.9.6",
   "org.scala-lang.modules"     %% "scala-xml"                % "2.4.0",

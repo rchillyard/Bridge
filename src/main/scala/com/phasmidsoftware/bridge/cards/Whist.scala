@@ -51,36 +51,41 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     * Solve this Whist game as a double-dummy problem using alpha-beta search.
     *
     * NS (or EW, depending on `directionNS`) attempts to reach `tricks` tricks.
-    * The search terminates as soon as the goal is achieved or shown to be impossible.
+    * Uses `WhistState.isGoal` for early termination when the goal is achieved or
+    * shown to be impossible (`goalImpossible` pruning).
     *
     * @param tricks      the number of tricks required by the protagonists.
     * @param directionNS if true, NS are the protagonists; otherwise EW.
     * @param depth       the alpha-beta search depth in plies (default: full game = 52).
     * @return `Some(true)` if the protagonists can achieve their goal,
     *         `Some(false)` if they cannot,
-    *         `None` if the search was inconclusive.
+    *         `None` if no move was available (terminal position on entry).
     */
   def analyzeDoubleDummy(
                           tricks: Int,
                           directionNS: Boolean,
-                          depth: Int = Deal.CardsPerDeal
+                          depth: Int = math.min(Deal.CardsPerDeal, deal.nCards)
                         ): Option[Boolean] =
     val stateTC = WhistState(tricks, directionNS)
     val gameTC = WhistGame(this)
-
     given com.phasmidsoftware.gambit.game.State[State, State] = stateTC
-
     given com.phasmidsoftware.gambit.game.Game[State, CardPlay, Int] = gameTC
 
     val player = AlphaBetaPlayer[State, State, CardPlay, Int](
       me = if directionNS then 0 else 1,
-      depth = depth
+      depth = depth,
+      keyFn = Some(_.evaluateKey)
     )
+
     val initialState = State(this)
-    player.chooseMove(initialState, new Random(0L))
-    stateTC.getStates(initialState)
-      .map(stateTC.isGoal)
-      .collectFirst { case Some(result) => result }
+    logger.info(s"analyzeDoubleDummy: neededTricks=$tricks, directionNS=$directionNS, depth=$depth, branching=${initialState.enumeratePlays.size}")
+    val t0 = System.currentTimeMillis()
+    val result = player.chooseMove(initialState, new Random(0L)).map { cardPlay =>
+      val bestSuccessor = gameTC.applyMove(initialState, cardPlay, openingLeader)
+      stateTC.heuristic(bestSuccessor) > 0
+    }
+    logger.info(s"analyzeDoubleDummy: result=$result, elapsed=${System.currentTimeMillis() - t0}ms, tableSize=${player.tableSize}")
+    result
 
   override def toString: String = s"Whist($deal, ${Hand.name(openingLeader)}, $sStrain)"
 
@@ -98,6 +103,9 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
   lazy val createState: State = State(this)
 
   lazy val sStrain: String = strain.map(_.toString).getOrElse("NT")
+
+  private val logger = org.slf4j.LoggerFactory.getLogger(getClass)
+
 
 object Whist:
   val MAX_STATES = 1000000

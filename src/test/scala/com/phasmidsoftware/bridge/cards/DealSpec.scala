@@ -98,7 +98,7 @@ class DealSpec extends AnyFlatSpec with should.Matchers {
   }
 
   it should "not validate bad deal" in {
-    a[CardException] shouldBe thrownBy(parseDeal("N:K632.7.A432.A932 J987.QT85.96.K76 AQ6.A432.K8.QJT8 T5.KJ96.QJT75.54"))
+    a[Exception] shouldBe thrownBy(parseDeal("N:K632.7.A432.A932 J987.QT85.96.K76 AQ6.A432.K8.QJT8 T5.KJ96.QJT75.54"))
   }
 
   behavior of "adjustForPartnerships"

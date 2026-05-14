@@ -162,7 +162,7 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
     state50.trick.index shouldBe 2
   }
   it should "enumerate plays 2" in {
-    val deal = Deal.fromHandStrings("test", "N", List(List("AQ", "", "J", "3"), List("K3", "T", "", "6"), List("", "87", "J", "8"), List("", "A", "9", "T9")))
+    val deal = Deal.fromHandStrings("test", "N", List(List("AQ", "", "J", "3"), List("K3", "T", "", "6"), List("", "87", "T", "8"), List("", "A", "9", "T9")))
     val whist0 = Whist(deal, 0, Some(Clubs))
     val state0 = State(whist0)
     val states = state0.enumeratePlays

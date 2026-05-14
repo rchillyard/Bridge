@@ -1,6 +1,6 @@
 package com.phasmidsoftware.bridge.gambit
 
-import com.phasmidsoftware.bridge.cards.*
+import com.phasmidsoftware.bridge.cards.{Deal, State}
 import com.phasmidsoftware.gambit.game.{Move, Transition, State as GState}
 
 /**
@@ -41,15 +41,31 @@ class WhistState(neededTricks: Int, directionNS: Boolean) extends GState[State, 
   def isWin(s: State): Boolean = isGoal(s).contains(true)
 
   /**
-    * Goal detection:
+    * Goal detection, incorporating early termination:
+    *
     * - `Some(true)`  — protagonists have reached `neededTricks`
-    * - `Some(false)` — opponents have made it impossible (counter-goal reached), or all 13 tricks played
+    * - `Some(false)` — opponents have made it impossible (counter-goal), OR
+    *   there are insufficient moves remaining to reach the goal
+    *   (port of `WhistGoalDriven.goalImpossible`)
     * - `None`        — game still in progress
+    *
+    * The `goalImpossible` check is critical for performance: without it the
+    * search explores branches that can never achieve the goal, making the
+    * search intractable on a full 52-card deal.
     */
-  def isGoal(s: State): Option[Boolean] =
-    s.tricks.decide(neededTricks, directionNS) match
-      case Some(x) => Some(x)
-      case None => if s.tricks.ns + s.tricks.ew == 13 then Some(false) else None
+  def isGoal(s: State): Option[Boolean] = {
+    //    println(s"neededTricks=$neededTricks, directionNS=$directionNS")
+    val result = s.tricks.decide(neededTricks, directionNS) match
+      case Some(x) =>
+        Some(x)
+      case None =>
+        val movesRemaining = Deal.CardsPerDeal - s.cardsPlayed
+        if !s.trick.sufficientMovesRemaining(movesRemaining, directionNS, neededTricks, s.tricks)
+        then Some(false)
+        else None
+    result.foreach(r => logger.debug(s"isGoal=$r at tricks=${s.tricks}, cardsPlayed=${s.cardsPlayed}"))
+    result
+  }
 
   /**
     * Heuristic from the perspective of the player who just moved.
@@ -84,6 +100,8 @@ class WhistState(neededTricks: Int, directionNS: Boolean) extends GState[State, 
     }
 
   def render(s: State): String = s.neatOutput
+
+  private val logger = org.slf4j.LoggerFactory.getLogger(getClass)
 
   // ---------------------------------------------------------------------------
   // Helpers

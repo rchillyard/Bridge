@@ -37,4 +37,7 @@
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>
     </root>
+
+    <logger name="com.phasmidsoftware.bridge.gambit.WhistState" level="INFO"/>
+
 </configuration>

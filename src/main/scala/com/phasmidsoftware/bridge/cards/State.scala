@@ -22,6 +22,13 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 
   val sequence: Int = State.getSequence
 
+  def evaluateKey: Map[Int, Map[Suit, Seq[Seq[Card]]]] =
+    whist.deal.holdings.map {
+      case (k, v) => k -> v.map {
+        case (suit, holding) => suit -> holding.sequences.map(_.cards)
+      }
+    }
+    
   /**
     * Method to enumerate all of the possible states that could be children of this State.
     *

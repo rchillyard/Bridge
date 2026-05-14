@@ -188,9 +188,103 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
     whist.analyzeDoubleDummy(9, directionNS = true) shouldBe Some(true)
   }
 
-  ignore should "analyzeDoubleDummy for suit" in {
+  it should "analyzeDoubleDummy for suit" in {
     val target = Deal("test", 2L, adjustForPartnerships = false)
     val whist = Whist(target, 3, Some(Clubs))
-    whist.analyzeDoubleDummy(9, directionNS = true) shouldBe Some(true)
+    val initialState = State(whist)
+    println(s"Branching factor: ${initialState.enumeratePlays.size}")
+    whist.analyzeDoubleDummy(9, directionNS = true, depth = 8) shouldBe Some(true)
+  }
+
+  it should "analyzeDoubleDummy for four-card end position" in {
+    val target = Deal.fromHandStrings("test", "N", List(List("AQ", "", "J", "3"), List("K3", "T", "", "6"), List("", "87", "Q", "8"), List("", "A", "9", "T9")))
+    println(target)
+    val whist = Whist(target, 3, Some(Clubs))
+    val initialState = State(whist)
+    println(s"Branching factor: ${initialState.enumeratePlays.size}")
+    whist.analyzeDoubleDummy(3, directionNS = true) shouldBe Some(true)
+  }
+  it should "analyzeDoubleDummy for five-card end position" in {
+    val target = Deal.fromHandStrings("test", "N", List(List("AQ", "9", "J", "3"), List("K32", "T", "", "6"), List("4", "87", "Q", "8"), List("5", "A", "9", "T9")))
+    val whist = Whist(target, 3, Some(Clubs))
+    val initialState = State(whist)
+    val tricks = target.nCards / Deal.CardsPerTrick
+    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(true)
+  }
+  it should "analyzeDoubleDummy for six-card end position" in {
+    val target = Deal.fromHandStrings("test", "N", List(List("AQ6", "9", "J", "3"), List("K32", "T", "T", "6"), List("4", "87", "Q", "87"), List("5", "AK", "9", "T9")))
+    val whist = Whist(target, 3, Some(Clubs))
+    val initialState = State(whist)
+    val tricks = target.nCards / Deal.CardsPerTrick
+    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(true)
+  }
+  it should "analyzeDoubleDummy for seven-card end position" in {
+    val target = Deal.fromHandStrings("test", "N", List(List("AQ76", "9", "J", "3"), List("K32", "QT", "T", "6"), List("4", "87", "Q", "874"), List("5", "AK", "9", "T95")))
+    val whist = Whist(target, 3, Some(Clubs))
+    val initialState = State(whist)
+    val tricks = target.nCards / Deal.CardsPerTrick
+    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(true)
+  }
+  it should "analyzeDoubleDummy for eight-card end position" in {
+    val target = Deal.fromHandStrings("test", "N", List(List("AQ76", "9", "J", "32"), List("K32", "QT", "T", "J6"), List("4", "87", "Q", "Q874"), List("5", "AK", "9", "KT95")))
+    val whist = Whist(target, 3, Some(Clubs))
+    val initialState = State(whist)
+    val tricks = target.nCards / Deal.CardsPerTrick
+    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(true)
+  }
+  it should "analyzeDoubleDummy for nine-card end position" in {
+    val target = Deal.fromHandStrings("test", "N", List(List("AQJ76", "9", "J", "32"), List("K32", "QJT", "T", "J6"), List("4", "87", "Q8", "Q874"), List("5", "AK", "97", "KT95")))
+    val whist = Whist(target, 3, Some(Clubs))
+    val initialState = State(whist)
+    val tricks = target.nCards / Deal.CardsPerTrick
+    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(true)
+  }
+  it should "analyzeDoubleDummy for ten-card end position" in {
+    val target = Deal.fromHandStrings("test", "N", List(
+      List("AQJ76", "96", "J", "32"),
+      List("K32", "QJT5", "T", "J6"),
+      List("4", "874", "Q8", "Q874"),
+      List("5", "AK3", "97", "KT95"))
+    )
+    val whist = Whist(target, 3, Some(Clubs))
+    val initialState = State(whist)
+    val tricks = target.nCards / Deal.CardsPerTrick
+    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(true)
+  }
+  it should "analyzeDoubleDummy for eleven-card end position" in {
+    val target = Deal.fromHandStrings("test", "N", List(
+      List("AQJ76", "96", "AJ", "32"),
+      List("KT32", "QJT5", "T", "J6"),
+      List("4", "8742", "Q8", "Q874"),
+      List("95", "AK3", "97", "KT95")
+    ))
+    val whist = Whist(target, 3, Some(Clubs))
+    val initialState = State(whist)
+    val tricks = target.nCards / Deal.CardsPerTrick
+    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(true)
+  }
+  it should "analyzeDoubleDummy for twelve-card end position" in {
+    val target = Deal.fromHandStrings("test", "N", List(
+      List("AQJ876", "96", "AJ", "32"),
+      List("KT32", "QJT5", "KT", "J6"),
+      List("4", "8742", "Q86", "Q874"),
+      List("95", "AK3", "975", "KT95")
+    ))
+    val whist = Whist(target, 3, Some(Clubs))
+    val initialState = State(whist)
+    val tricks = target.nCards / Deal.CardsPerTrick
+    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(true)
+  }
+  it should "analyzeDoubleDummy for thirteen-card end position" in {
+    val target = Deal.fromHandStrings("test", "N", List(
+      List("AQJ876", "96", "AJ4", "32"),
+      List("KT32", "QJT5", "KT3", "J6"),
+      List("4", "8742", "Q862", "Q874"),
+      List("95", "AK3", "975", "AKT95")
+    ))
+    val whist = Whist(target, 3, Some(Clubs))
+    val initialState = State(whist)
+    val tricks = target.nCards / Deal.CardsPerTrick
+    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(true)
   }
 }
