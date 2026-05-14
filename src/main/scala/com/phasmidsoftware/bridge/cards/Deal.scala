@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.util.{Output, Outputable, Shuffle}
+import com.phasmidsoftware.gambit.util.{Output, Outputable, Shuffle}
 
 import java.io.Writer
 import scala.language.postfixOps

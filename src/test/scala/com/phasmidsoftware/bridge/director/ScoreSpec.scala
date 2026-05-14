@@ -4,8 +4,8 @@
 
 package com.phasmidsoftware.bridge.director
 
+import com.phasmidsoftware.gambit.util.Output
 import com.phasmidsoftware.output.MockWriter
-import com.phasmidsoftware.util.Output
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
 

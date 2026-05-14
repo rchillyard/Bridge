@@ -4,9 +4,9 @@
 
 package com.phasmidsoftware.bridge.director
 
+import com.phasmidsoftware.gambit.util.Output
 import com.phasmidsoftware.number.core.inner.Rational
 import com.phasmidsoftware.output.Using
-import com.phasmidsoftware.util.Output
 
 import java.io.{FileWriter, PrintWriter}
 import scala.annotation.unused
@@ -81,7 +81,7 @@ object Score {
     */
   def doScore(source: Source, delimiter: String, output: Output = defaultOutput) = {
 
-    implicit val separator: Output = Output.empty.insertBreak()
+    implicit val separator: Output = Output.empty.insertBreak
 
     def eventResults(e: Event, p: Preamble, rs: Seq[Result], boards: Int): Output = {
       val z = for {
@@ -96,7 +96,7 @@ object Score {
 
     val ey = RecapParser.readEvent(source, delimiter)
 
-    for (e <- ey; x = e.score) yield (output :+ (x.title + "  " + e.hashCode().toHexString)).insertBreak() ++ (for ((p, rs) <- x.createResults) yield eventResults(x, p, rs, x.boards))
+    for (e <- ey; x = e.score) yield (output :+ (x.title + "  " + e.hashCode().toHexString)).insertBreak ++ (for ((p, rs) <- x.createResults) yield eventResults(x, p, rs, x.boards))
   }
 
   /**

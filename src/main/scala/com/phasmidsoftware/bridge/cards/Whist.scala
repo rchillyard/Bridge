@@ -4,21 +4,21 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.decisiontree.{Expandable, GoalDriven}
+import com.phasmidsoftware.bridge.gambit.{WhistGame, WhistState}
+import com.phasmidsoftware.gambit.game.AlphaBetaPlayer
 
-import scala.language.implicitConversions
+import scala.util.Random
 
 /**
   * This class represents a game of Whist.
   * In Whist, there are four players around a table.
   * Players sitting opposite each other are part of the same "team." They are said to be partners.
-  * Play goes clockwise around the table, each player contributing one card, and the team which contributed the highest card (or possibly the highest trump)
-  * is credited with that "trick".
+  * Play goes clockwise around the table, each player contributing one card, and the team which
+  * contributed the highest card (or possibly the highest trump) is credited with that "trick".
   * There being 52 cards in a deck (pack), there will be 13 tricks.
   * The player (not the team) who wins one trick must lead to the following trick.
-  * At the start of the game, it is arbitrary which player is the opening leader--there are various schemes to determine
-  * who leads, most notably Auction and Contract Bridge designate the player sitting on "declarer's" left.
-  * Here, however, the opening leader is simply determined by parameter.
+  * At the start of the game, it is arbitrary which player is the opening leader — here it is
+  * simply determined by parameter.
   *
   * The particular arrangement (shuffle) of the cards is determined by the deal parameter.
   *
@@ -26,48 +26,61 @@ import scala.language.implicitConversions
   * @param openingLeader the player on opening lead (0 thru 3 for "North" thru "West").
   * @param strain        the (optional) trump suit: None indicates notrump.
   */
-case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None) extends Playable[Whist] with Quittable[Whist] {
+case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
+  extends Playable[Whist] with Quittable[Whist]:
 
   /**
     * Method to make a sequence of States from the given sequence of Trick instances.
-    *
-    * NOTE: this originally had a filter that removed States that did not have a high fitness.
     *
     * @param tricks the current value of Tricks (i.e. current score NS vs. EW).
     * @param ts     a sequence of Trick instances.
     * @return a sequence of State objects corresponding to the values of ts.
     */
-  def makeStates(tricks: Tricks, ts: Seq[Trick]): Seq[State] = ts.map(t => State.create(this, t, tricks))
+  def makeStates(tricks: Tricks, ts: Seq[Trick]): Seq[State] =
+    ts.map(t => State.create(this, t, tricks))
 
   /**
     * Play a card from this Playable object.
     *
     * @param cardPlay the card play.
-    * @return a new Playable.
+    * @return a new Whist.
     */
   def play(cardPlay: CardPlay): Whist = Whist(deal.play(cardPlay), openingLeader, strain)
 
   /**
-    * Solve this Whist game as a double-dummy problem where one side or the other (depending on directionNS)
-    * attempts to reach a total of tricks. As soon as our protagonists have reached the trick total, all expansion will cease.
-    * When the opponents have made it impossible for the protagonists to reach said trick total, all expansion will cease.
+    * Solve this Whist game as a double-dummy problem using alpha-beta search.
     *
-    * @param tricks      the number of tricks required.
-    * @param directionNS if true then the direction we care about is NS else EW.
-    * @return an optional State which indicates the first "solution" found.
-    *         It may represent success or failure on the part of the protagonists.
-    *         If the result is None, it means that no solution of any sort was found.
+    * NS (or EW, depending on `directionNS`) attempts to reach `tricks` tricks.
+    * The search terminates as soon as the goal is achieved or shown to be impossible.
+    *
+    * @param tricks      the number of tricks required by the protagonists.
+    * @param directionNS if true, NS are the protagonists; otherwise EW.
+    * @param depth       the alpha-beta search depth in plies (default: full game = 52).
+    * @return `Some(true)` if the protagonists can achieve their goal,
+    *         `Some(false)` if they cannot,
+    *         `None` if the search was inconclusive.
     */
-  def analyzeDoubleDummy(tricks: Int, directionNS: Boolean): Option[Boolean] = {
-    implicit val sg: GoalDriven[State] = Whist.goal(tricks, directionNS)
-    //    implicit val se: Expandable[State] = (t: State) => t.enumeratePlays
-    implicit val se: Expandable[State] = new Expandable[State] {
-      def successors(t: State): List[State] = t.enumeratePlays to List
+  def analyzeDoubleDummy(
+                          tricks: Int,
+                          directionNS: Boolean,
+                          depth: Int = Deal.CardsPerDeal
+                        ): Option[Boolean] =
+    val stateTC = WhistState(tricks, directionNS)
+    val gameTC = WhistGame(this)
 
-      override def runaway(t: State): Boolean = t.sequence > Whist.MAX_STATES
-    }
-    StateTree(this).expand().so flatMap (sn => sn.tricks.decide(tricks, directionNS))
-  }
+    given com.phasmidsoftware.gambit.game.State[State, State] = stateTC
+
+    given com.phasmidsoftware.gambit.game.Game[State, CardPlay, Int] = gameTC
+
+    val player = AlphaBetaPlayer[State, State, CardPlay, Int](
+      me = if directionNS then 0 else 1,
+      depth = depth
+    )
+    val initialState = State(this)
+    player.chooseMove(initialState, new Random(0L))
+    stateTC.getStates(initialState)
+      .map(stateTC.isGoal)
+      .collectFirst { case Some(result) => result }
 
   override def toString: String = s"Whist($deal, ${Hand.name(openingLeader)}, $sStrain)"
 
@@ -80,137 +93,11 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None) ex
 
   /**
     * Create an initial state for this Whist game.
-    *
     * NOTE: only used in unit testing.
-    *
-    * @return a State using deal and openingLeader
     */
   lazy val createState: State = State(this)
 
-  lazy val sStrain: String = strain map (_.toString) getOrElse "NT"
-}
+  lazy val sStrain: String = strain.map(_.toString).getOrElse("NT")
 
-object Whist {
-
+object Whist:
   val MAX_STATES = 1000000
-  //
-  //  implicit object LoggableWhist extends Loggable[Whist] with Loggables {
-  //    def toLog(t: Whist): String = s"${implicitly[Loggable[Deal]].toLog(t.deal)}@${Hand.name(t.openingLeader)}:${t.sStrain}"
-  //  }
-
-  def goal(_neededTricks: Int, _directionNS: Boolean, _totalTricks: Int = Deal.TricksPerDeal): WhistGoalDriven = new WhistGoalDriven {
-    val neededTricks: Int = _neededTricks
-    val directionNS: Boolean = _directionNS
-    val totalTricks: Int = _totalTricks
-  }
-
-}
-
-/**
-  * Trait to customize the behavior of GoalDriven for a whist/bridge game.
-  */
-trait WhistGoalDriven extends GoalDriven[State] {
-  val neededTricks: Int
-  val directionNS: Boolean
-  val totalTricks: Int
-
-  def goalAchieved(t: State): Boolean = t.tricks.decide(neededTricks, directionNS) match {
-    case Some(x) => x
-    case None => false
-  }
-
-  def goalImpossible(t: State, moves: Int): Boolean =
-    !t.trick.sufficientMovesRemaining(moves, directionNS, neededTricks, t.tricks)
-}
-
-/**
-  * The behavior of this trait is to (eagerly) quit a trick (holding, sequence),
-  * which is to say take the (lazy) promotions of a sequence and to promote them eagerly according to the
-  * quitting of the current trick.
-  *
-  * @tparam X the underlying type.
-  */
-trait Quittable[X] {
-  /**
-    * Method to enact the pending promotions on this Quittable.
-    *
-    * @return an eagerly promoted X.
-    */
-  def quit: X
-}
-
-/**
-  * The behavior of this trait is to (eagerly) quit a trick (holding, sequence),
-  * which is to say take the (lazy) promotions of a sequence and to promote them eagerly according to the
-  * quitting of the current trick.
-  *
-  * @tparam X the underlying type.
-  */
-trait Cooperative[X] {
-  /**
-    * Method to adjust for the virtual promotions on this Cooperative.
-    *
-    * @param x the cooperating object
-    * @return an eagerly promoted X.
-    */
-  def cooperate(x: X): X
-}
-
-/**
-  * The behavior of this trait is to reprioritize an X
-  *
-  * @tparam X the underlying type.
-  */
-trait Reprioritizable[X] {
-  /**
-    * Method to reprioritize.
-    *
-    * @return
-    */
-  def reprioritize: X
-}
-
-/**
-  * Trait to describe behavior of a type which can experience the play of a card.
-  *
-  * For example, Holding, Sequence, etc. can have cards played.
-  *
-  * NOTE: in practice, this trait is implemented via hierarchy, not type-class.
-  *
-  * @tparam X the underlying type.
-  */
-trait Playable[X] {
-  /**
-    * Play a card from this Playable object.
-    *
-    * @param cardPlay the card play.
-    * @return a new Playable.
-    */
-  def play(cardPlay: CardPlay): X
-}
-
-/**
-  * Trait to model the property of being (heuristically) evaluated.
-  */
-trait Evaluatable {
-
-  /**
-    * Evaluate this Evaluatable object for its (heuristic) trick-taking capability.
-    *
-    * @return a Double
-    */
-  def evaluate: Double
-}
-
-trait Removable {
-  /**
-    * Method to remove an element of the appropriate priority from a Removable.
-    *
-    * CONSIDER renaming this and also adding a suit parameter so that Hand can define it.
-    *
-    * @param priority the priority.
-    * @return a new Removable without an element of the given priority.
-    */
-  //noinspection ScalaStyle
-  def -(priority: Int): Removable
-}

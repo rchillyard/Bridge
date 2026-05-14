@@ -5,8 +5,8 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.pbn.PBNParser
+import com.phasmidsoftware.gambit.util.Output
 import com.phasmidsoftware.output.MockWriter
-import com.phasmidsoftware.util.Output
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
 

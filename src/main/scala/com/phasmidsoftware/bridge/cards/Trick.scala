@@ -8,7 +8,7 @@ package com.phasmidsoftware.bridge.cards
   * Module which includes Trick and Winner
   */
 
-import com.phasmidsoftware.util.{Output, Outputable}
+import com.phasmidsoftware.gambit.util.{Output, Outputable}
 
 import scala.language.postfixOps
 

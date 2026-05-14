@@ -20,7 +20,7 @@ class ProblemSpec extends AnyFlatSpec with should.Matchers {
 
   behavior of "double dummy analysis"
   // NOTE: there is another copy of this test in the functional specs. It currently takes 19 seconds to run this test.
-  it should "analyze deal 16" in {
+  ignore should "analyze deal 16" in {
     val game = pbn(15)
     println(game)
     analyzeMakeableContracts(game)

@@ -6,10 +6,10 @@ package com.phasmidsoftware.bridge.director
 
 import com.phasmidsoftware.bridge.director.Matchpoints.{mpsAsString, rationalToString}
 import com.phasmidsoftware.bridge.director.Score.asPercent
+import com.phasmidsoftware.gambit.util.{Output, Outputable}
 import com.phasmidsoftware.number.core.inner.Rational
 import com.phasmidsoftware.number.core.inner.Rational.{half, zero}
 import com.phasmidsoftware.output.Util
-import com.phasmidsoftware.util.{Output, Outputable}
 
 import scala.annotation.unused
 import scala.language.postfixOps
@@ -43,7 +43,7 @@ case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit]
     * @param xo     an optional value of X, defaulting to None.
     * @return a new instance of Output.
     */
-  def output(output: Output, xo: Option[Unit] = None): Output = (output :+ title).insertBreak() ++ Output.apply(sections)(s => s.output(Output.empty))
+  def output(output: Output, xo: Option[Unit] = None): Output = (output :+ title).insertBreak ++ Output.apply(sections)(s => s.output(Output.empty))
 }
 
 /**
@@ -312,7 +312,7 @@ case class Result(tables: Int, isNS: Option[Boolean], top: Int, cards: Map[Int, 
     * @param nameFunction a function to yield a name, given an optional direction and a pair number.
     * @return Output
     */
-  def getResults(nameFunction: (Option[Boolean], Int) => String): Output = Output(s"Results" + directionHeader).insertBreak() ++ getResultsForDirection(nameFunction(isNS, _))
+  def getResults(nameFunction: (Option[Boolean], Int) => String): Output = Output(s"Results" + directionHeader).insertBreak ++ getResultsForDirection(nameFunction(isNS, _))
 
   private lazy val directionHeader = isNS match {
     case Some(d) => " for direction " + (if (d) "N/S" else "E/W")
@@ -358,7 +358,7 @@ case class Result(tables: Int, isNS: Option[Boolean], top: Int, cards: Map[Int, 
 
     def resultDetails(s: (Pos, Int, String)): Output = {
       val ((pairNumber, card), rank, suffix) = s
-      Output(s"""$rank$suffix\t$pairNumber\t${card.totalMpsAsString(top)}\t${card.toStringPercent}\t${nameFunction(pairNumber)}""").insertBreak()
+      Output(s"""$rank$suffix\t$pairNumber\t${card.totalMpsAsString(top)}\t${card.toStringPercent}\t${nameFunction(pairNumber)}""").insertBreak
     }
 
     //    showCards() // NOTE comment this out for normal running.

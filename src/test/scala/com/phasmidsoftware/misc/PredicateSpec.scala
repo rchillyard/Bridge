@@ -50,11 +50,11 @@ class PredicateSpec extends AnyFlatSpec with should.Matchers {
     (isOdd andThen isPositive)(-2) shouldBe false
   }
 
-  it should "get orElse right" in {
-    (isOdd orElse isPositive)(1) shouldBe true
-    (isOdd orElse isPositive)(-1) shouldBe true
-    (isOdd orElse isPositive)(2) shouldBe true
-    (isOdd orElse isPositive)(-2) shouldBe false
+  it should "get `orElse` right" in {
+    (isOdd `orElse` isPositive)(1) shouldBe true
+    (isOdd `orElse` isPositive)(-1) shouldBe true
+    (isOdd `orElse` isPositive)(2) shouldBe true
+    (isOdd `orElse` isPositive)(-2) shouldBe false
   }
 
   it should "get implies right" in {
@@ -101,17 +101,17 @@ class PredicateSpec extends AnyFlatSpec with should.Matchers {
     p.apply("World") shouldBe true
   }
 
-  it should "orElse" in {
+  it should "`orElse`" in {
     val p1: JPredicate[String] = JPredicate[String](_ => None)
     val p2: JPredicate[String] = JPredicate[String](w => Some(s"Hello $w"))
-    val p = p1 orElse p2
+    val p = p1 `orElse` p2
     p.justification("World") shouldBe Some("Hello World")
   }
 
   it should "andThen" in {
     val p1: JPredicate[String] = JPredicate[String](_ => None)
     val p2: JPredicate[String] = JPredicate[String](w => Some(s"Hello $w"))
-    val p = p1 orElse p2
+    val p = p1 `orElse` p2
     p.justification("World") shouldBe Some("Hello World")
   }
 

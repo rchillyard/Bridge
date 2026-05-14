@@ -4,7 +4,8 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.util._
+import com.phasmidsoftware.gambit.util.{Output, Outputable}
+import com.phasmidsoftware.util.*
 
 import scala.language.implicitConversions
 

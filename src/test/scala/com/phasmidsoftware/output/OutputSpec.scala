@@ -5,8 +5,8 @@
 package com.phasmidsoftware.output
 
 import com.phasmidsoftware.bridge.director.{Card, Matchpoints}
+import com.phasmidsoftware.gambit.util.{Output, OutputException}
 import com.phasmidsoftware.number.core.inner.Rational
-import com.phasmidsoftware.util.{Output, OutputException}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
 
@@ -26,7 +26,7 @@ class OutputSpec extends AnyFlatSpec with should.Matchers {
     val output: Output = Output(writer)
 
     def getResultsForDirection(@unused preamble: (String, Option[String], List[(Int, String, String)]), r: (Boolean, Int, Map[Int, (Rational, Int)]), top: Int): Output = {
-      def resultDetails(s: (Int, (Rational, Int))): Output = Output(s"${s._1} : ${Matchpoints.mpsAsString(s._2._1, top)} : ${Card(s._2._1, s._2._2, 0, Nil).toStringPercent} : Tweedledum & Tweedledee").insertBreak()
+      def resultDetails(s: (Int, (Rational, Int))): Output = Output(s"${s._1} : ${Matchpoints.mpsAsString(s._2._1, top)} : ${Card(s._2._1, s._2._2, 0, Nil).toStringPercent} : Tweedledum & Tweedledee").insertBreak
 
       Output.foldLeft(r._3.toList.sortBy(_._2._1).reverse)()(_ ++ resultDetails(_))
     }

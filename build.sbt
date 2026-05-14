@@ -23,12 +23,7 @@ lazy val versionNumber = "1.10.5"
 libraryDependencies ++= Seq(
   "com.phasmidsoftware"        %% "flog"                     % versionFlog,
   "com.phasmidsoftware"        %% "number"                   % versionNumber,
-  "com.phasmidsoftware"         % "decisiontree_2.13"        % "1.0.5-SNAPSHOT"
-    excludeAll(
-    ExclusionRule("org.scala-lang.modules",    "scala-parser-combinators_2.13"),
-    ExclusionRule("com.typesafe.scala-logging", "scala-logging_2.13"),
-    ExclusionRule("com.phasmidsoftware",        "flog_2.13")
-  ),
+  "com.phasmidsoftware"        %% "gambit"                   % "1.1.1-SNAPSHOT",
   "com.typesafe.play"          %% "play-json"                % "2.10.8",
   "com.typesafe.scala-logging" %% "scala-logging"            % "3.9.6",
   "org.scala-lang.modules"     %% "scala-xml"                % "2.4.0",

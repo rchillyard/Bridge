@@ -6,9 +6,9 @@ package com.phasmidsoftware.bridge.director
 
 import com.phasmidsoftware.bridge.director
 import com.phasmidsoftware.bridge.director.Matchpoints.rationalToString
+import com.phasmidsoftware.gambit.util.Output
 import com.phasmidsoftware.number.core.inner.Rational
 import com.phasmidsoftware.output.MockWriter
-import com.phasmidsoftware.util.Output
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
 
