@@ -21,6 +21,8 @@ import scala.language.implicitConversions
 case class Card(suit: Suit, rank: Rank) {
   lazy val priority: Int = rank.priority
 
+  lazy val cardIndex: Int = suit.priority * 13 + rank.priority
+
   override def toString: String = s"$suit$rank" // XXX Bridge order (not Poker)
 }
 
@@ -59,8 +61,8 @@ object Card {
     */
   implicit object CardOrdering extends Ordering[Card] {
     override def compare(x: Card, y: Card): Int = {
-      import Rank._
-      import Suit._
+      import Rank.*
+      import Suit.*
       val cf = SuitOrdering.compare(x.suit, y.suit)
       if (cf != 0) cf
       else RankOrdering.compare(x.rank, y.rank)
@@ -111,6 +113,8 @@ sealed trait Suit {
     * True if this Suit is Hearts or Diamonds.
     */
   val isRed: Boolean
+
+  def priority: Int
 }
 
 /**
@@ -162,7 +166,7 @@ abstract class BaseSuit(val isRound: Boolean, val isRed: Boolean) extends Suit w
   /**
     * @return the priority of this Suit
     */
-  def priority: Int = _priority
+  lazy val priority: Int = _priority
 
   override def toString: String = Seq("S", "H", "D", "C")(priority)
 

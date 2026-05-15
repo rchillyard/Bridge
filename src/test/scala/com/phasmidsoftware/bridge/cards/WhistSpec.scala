@@ -182,7 +182,8 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   // CONSIDER moving this to it because it takes almost 1/4 second.
   behavior of "double dummy"
-  ignore should "analyzeDoubleDummy2" in {
+  it should "analyzeDoubleDummy2" in {
+    pending
     val target = Deal("test", 2L, adjustForPartnerships = false)
     val whist = Whist(target, 3)
     whist.analyzeDoubleDummy(9, directionNS = true) shouldBe Some(true)
