@@ -19,9 +19,9 @@ class ProblemSpec extends AnyFlatSpec with should.Matchers {
   private val pbn: PBN = py.get
 
   behavior of "double dummy analysis"
-  // NOTE: there is another copy of this test in the functional specs. It currently takes 19 seconds to run this test.
+  // NOTE: there is another copy of this test in the functional specs.
+  //  It currently takes 3.5 seconds to run this test.
   it should "analyze deal 16" in {
-    pending
     val game = pbn(15)
     println(game)
     analyzeMakeableContracts(game)

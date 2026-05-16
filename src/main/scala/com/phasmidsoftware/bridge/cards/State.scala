@@ -4,6 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards
 
+import com.phasmidsoftware.bridge.cards.State.count
 import com.phasmidsoftware.flog.Loggable
 import com.phasmidsoftware.gambit.util.{Output, Outputable}
 
@@ -20,16 +21,37 @@ import scala.language.postfixOps
   */
 case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[Unit] with Validatable:
 
+  /**
+    * Represents the current sequence number of the State instance, incremented with each call.
+    * Utilizes a shared mutable counter to determine the sequence value.
+    *
+    * This value is fetched from the singleton object `State`, maintaining a global counter
+    * for tracking the order of state creation or identification.
+    * Primarily used for sequencing and unique determination within the current session.
+    */
   val sequence: Int = State.getSequence
 
-  def evaluateKey: (Long, Long, Long, Long) = {
+  /**
+    * Evaluates the current state of the hands in the deal and generates a key
+    * representing the combined bitwise representation of holdings for all four hands.
+    * Each sequence encodes its effective priority (not its original rank).
+    * This change resulted in approximately 3x performance improvement for the end-position tests.
+    * It resulted in being able to complete for the double-dummy analysis.
+    *
+    * @return a tuple of four Long values, each representing the bitwise encoding
+    *         of the card sequences held in one of the four hands in the deal.
+    */
+  def evaluateKey: (Long, Long, Long, Long) =
     def handBits(hand: Hand): Long =
-      hand.cards.foldLeft(0L)((acc, c) => acc | (1L << c.cardIndex))
+      hand.holdings.foldLeft(0L) { case (acc, (suit, holding)) =>
+        holding.sequences.foldLeft(acc) { (a, seq) =>
+          a | (1L << (suit.priority * 13 + seq.priority))
+        }
+      }
 
-    val h: Seq[Hand] = whist.deal.hands
+    val h = whist.deal.hands
     (handBits(h.head), handBits(h(1)), handBits(h(2)), handBits(h(3)))
-  }
-    
+
   /**
     * Method to enumerate all of the possible states that could be children of this State.
     *
@@ -95,17 +117,18 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
   def output(output: Output, xo: Option[Unit] = None): Output =
     trick.output(output, Some(deal)) :+ s" ($fitness)"
 
-  private lazy val _enumeratePlays = whist.makeStates(tricks, trick.enumerateSubsequentPlays(whist))
-  private lazy val _validate: Boolean = trick.plays.forall(_.validate)
-  private lazy val _isConsistent = trick.cardsPlayed + deal.nCards == 52
+  private lazy val _enumeratePlays =
+    whist.makeStates(tricks, trick.enumerateSubsequentPlays(whist))
+  private lazy val _validate: Boolean =
+    trick.plays.forall(_.validate)
+  private lazy val _isConsistent =
+    trick.cardsPlayed + deal.nCards == 52
 
 object State:
 
   given loggableState: Loggable[State] = s => s.neatOutput
 
   var count: Int = 0
-
-  def getSequence: Int = { count = count + 1; count }
 
   /**
     * Evaluate the heuristic fitness of a State.
@@ -125,7 +148,8 @@ object State:
     * @param trick the current trick.
     * @return a new State based on the game.
     */
-  def apply(whist: Whist, trick: Trick): State = apply(whist, trick, Tricks.zero.increment(trick))
+  def apply(whist: Whist, trick: Trick): State =
+    apply(whist, trick, Tricks.zero.increment(trick))
 
   /**
     * Method to create an initial state based on a Whist game.
@@ -147,9 +171,12 @@ object State:
     */
   def create(whist: Whist, trick: Trick, tricks: Tricks): State =
     if trick.started then
-      if trick.isComplete then State(whist.play(trick.plays.last).quit, trick, tricks.increment(trick))
-      else State(whist.play(trick.plays.last), trick, tricks)
-    else throw CardException(s"cannot create a new State based on an empty trick")
+      if trick.isComplete then
+        State(whist.play(trick.plays.last).quit, trick, tricks.increment(trick))
+      else
+        State(whist.play(trick.plays.last), trick, tricks)
+    else
+      throw CardException(s"cannot create a new State based on an empty trick")
 
   given StateOrdering: Ordering[State] with
     /**
@@ -158,8 +185,15 @@ object State:
     def compare(x: State, y: State): Int =
       y.cardsPlayed - x.cardsPlayed
 
+  private def getSequence: Int = { count = count + 1; count }
+
 /**
   * Behavior of something which can be validated.
   */
 trait Validatable:
+  /**
+    * Validates the current instance, ensuring it meets the required criteria or conditions.
+    *
+    * @return true if the instance is valid, false otherwise.
+    */
   def validate: Boolean
