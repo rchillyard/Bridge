@@ -86,7 +86,7 @@ class CardSpec extends AnyFlatSpec with should.Matchers {
 
   it should "sort in order" in {
     val target: List[Suit] = List(Diamonds, Hearts, Spades, Clubs)
-    target.sorted.reverse shouldBe List(Spades, Hearts, Diamonds, Clubs)
+    target.sorted.reverse shouldBe Suit.suits
   }
 
   it should "implement priority" in {

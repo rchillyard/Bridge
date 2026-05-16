@@ -83,7 +83,7 @@ class HoldingSpec extends AnyFlatSpec with should.Matchers {
   it should "form string" in {
     Holding(Spades, "2", "A").toString shouldBe "{S: A[0], 2[12]} (clean)"
     Holding(Spades).toString shouldBe "{S: } (clean)"
-    import Rank._
+    import Rank.*
     Holding.create(List[Rank]("2", "A"), Spades).toString shouldBe "{S: A[0], 2[12]} (clean)"
   }
 
@@ -136,7 +136,7 @@ class HoldingSpec extends AnyFlatSpec with should.Matchers {
   }
 
   it should "apply fourth best lead strategy" in {
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val holding: Holding = deal.hands.head.longestSuit
     val suit = holding.suit
     suit shouldBe Hearts
@@ -149,7 +149,7 @@ class HoldingSpec extends AnyFlatSpec with should.Matchers {
   }
 
   it should "apply win it strategy" in {
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val holding: Holding = deal.hands.head.longestSuit
     val leads: Seq[CardPlay] = holding.choosePlays(deal, None, 0, FourthBest, None)
     leads.size shouldBe 3
@@ -270,7 +270,7 @@ class HoldingSpec extends AnyFlatSpec with should.Matchers {
   }
 
   it should "choose Play" in {
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val hand1 = deal.hands(1)
     val holding: Holding = deal.hands.head.longestSuit
     holding.suit shouldBe Hearts

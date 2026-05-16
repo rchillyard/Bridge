@@ -32,7 +32,8 @@ case class Sequence(priority: Int, cards: Seq[Card]) extends Evaluatable with Re
   /**
     * @return a String primarily for debugging purposes.
     */
-  override def toString: String = s"${cards.map(_.rank).mkString("")}[$priority]"
+  override def toString: String =
+    s"${cards.map(_.rank).mkString("")}[$priority]"
 
   /**
     * Merge this Sequence into a sequence of Sequences (ss).
@@ -122,7 +123,8 @@ object Sequence {
     * Lower values of priority precede higher values.
     */
   implicit object SequenceOrdering extends Ordering[Sequence] {
-    override def compare(x: Sequence, y: Sequence): Int = x.priority - y.priority
+    override def compare(x: Sequence, y: Sequence): Int =
+      x.priority - y.priority
   }
   //
   //  /**

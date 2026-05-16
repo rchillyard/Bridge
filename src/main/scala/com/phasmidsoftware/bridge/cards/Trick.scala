@@ -89,7 +89,8 @@ case class Trick(index: Int, plays: Seq[CardPlay], maybePrior: Option[Trick]) ex
     */
   def evaluate: Double = _evaluate
 
-  override def toString: String = s"T$index ${leader.map(_.toString).getOrElse("")} ${plays.map(_.asCard).mkString("{", ", ", "}")}"
+  override def toString: String =
+    s"T$index ${leader.map(_.toString).getOrElse("")} ${plays.map(_.asCard).mkString("{", ", ", "}")}"
 
   /**
     * Refactor this
@@ -232,11 +233,6 @@ object Trick {
     * Create an empty (non-) trick
     */
   val empty: Trick = apply(0, Nil, None)
-  //
-  //  implicit object LoggableTrick extends Loggable[Trick] with Loggables {
-  //    def toLog(t: Trick): String = s"T${t.index} ${t.plays.mkString("{", ", ", "}")}"
-  //  }
-
 }
 
 /**

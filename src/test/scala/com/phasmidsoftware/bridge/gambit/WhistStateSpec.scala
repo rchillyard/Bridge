@@ -6,7 +6,7 @@ import org.scalatest.matchers.should
 
 class WhistStateSpec extends AnyFlatSpec with should.Matchers:
 
-  private val deal0 = Deal("test", 0L, adjustForPartnerships = false)
+  private val deal0 = Deal.createRandom("test", 0L)
   private val whist0 = Whist(deal0, 0)
 
   // ---------------------------------------------------------------------------
@@ -130,7 +130,7 @@ class WhistStateSpec extends AnyFlatSpec with should.Matchers:
 
   it should "return MaxValue when NS wins terminally and NS just moved" in {
     val ws = WhistState(1, directionNS = true)
-    val deal = Deal("test", 1L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 1L, adjustForPartnerships = false)
     val whist = Whist(deal, 0)
     // Get a natural successor state with cardsPlayed=1
     val s0 = State(whist)
@@ -159,10 +159,9 @@ class WhistStateSpec extends AnyFlatSpec with should.Matchers:
     ws.moves(s) should not be empty
   }
 
-
 class WhistGameSpec extends AnyFlatSpec with should.Matchers:
 
-  private val deal0 = Deal("test", 0L, adjustForPartnerships = false)
+  private val deal0 = Deal.createRandom("test", 0L)
   private val whist0 = Whist(deal0, 0)
   private val game0 = WhistGame(whist0)
 

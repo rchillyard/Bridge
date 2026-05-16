@@ -64,7 +64,8 @@ case class MockWriter(n: Int = 4096, var isOpen: Boolean = true) extends Writer 
 
   def content: String = chars.mkString.substring(0, length)
 
-  override def toString: String = s"""MockWriter: isOpen=$isOpen, length=$length, spilled=$spilled and content="$content""""
+  override def toString: String =
+    s"""MockWriter: isOpen=$isOpen, length=$length, spilled=$spilled and content="$content""""
 
   def spill(len: Int): String = {
     val toSpill = math.min(length, length + len - n)

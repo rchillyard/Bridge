@@ -50,25 +50,24 @@ case class Position(encounters: List[Encounter]) {
 case class Round(round: Int, position: Position) {
   override def toString: String = s"Round $round: $position"
 }
-//
-//abstract class MappedProduct3[T, F[_]](_1: T, _2: T, _3: T) extends Product3[T, T, T] {
-//  def map[U](f: T => U)(implicit cbf: CanBuildFrom[F[U], U, F[U]]): F[U] = {
-//    val ts = productIterator
-//    val us = for (t <- ts) yield f(t.asInstanceOf[T])
-//    val x: mutable.Builder[U, F[U]] = cbf()
-//    for (u <- us) x += u
-//    x.result()
-//  }
-//
-//  override def toString: String = s"n:${_1} e:${_2} b:${_3}"
-//}
 
+/**
+  * A case class representing a tuple of three elements of the same type.
+  *
+  * @tparam T the type of all three elements in the Triple
+  */
 case class Triple[T](_1: T, _2: T, _3: T) extends Product3[T, T, T] {
   def map[U](f: T => U): Triple[U] = Triple(f(_1), f(_2), f(_3))
 
   override def toString: String = s"n:${_1} e:${_2} b:${_3}"
 }
 
+/**
+  * Provides utility methods for working with instances of the `Triple` case class.
+  *
+  * This object includes methods for transforming and manipulating triples in
+  * conjunction with collections such as `LazyList` and `List`.
+  */
 object Triple {
   def zip[U](ust: Triple[LazyList[U]]): LazyList[Triple[U]] = ust._1 zip ust._2 zip ust._3 map { case ((x, y), z) => Triple(x, y, z) }
 
@@ -87,14 +86,16 @@ object Movement {
 }
 
 case class Table(number: Int, phantom: Boolean) {
-  override def toString: String = s"T$number" + (if (phantom) "*" else " ")
+  override def toString: String =
+    s"T$number" + (if (phantom) "*" else " ")
 }
 
 object Table {
   //  def apply(x: Int): Table = Table(x, phantom = false)
   //  def phantom(x: Int): Table = Table(x, phantom = true)
 
-  def tables(phantoms: Int*)(implicit tables: Int): List[Table] = (for (i <- 1 to tables) yield Table(i, phantoms contains i)) to List
+  def tables(phantoms: Int*)(implicit tables: Int): List[Table] =
+    (for (i <- 1 to tables) yield Table(i, phantoms contains i)) to List
 }
 
 //noinspection ScalaStyle
@@ -230,7 +231,8 @@ case class Encounter(table: Int, n: Int, e: Int, b: Int)(implicit tables: List[T
   }
 
   // Transforms a number n in the range 1-tables..infinity into the range 1..tables
-  def modulo(n: Int): Int = (n + nTables - 1) % nTables + 1
+  def modulo(n: Int): Int =
+    (n + nTables - 1) % nTables + 1
 
   /**
     * Adjust for the situation where the N/S and E/W pairs of a team meet.
@@ -241,7 +243,8 @@ case class Encounter(table: Int, n: Int, e: Int, b: Int)(implicit tables: List[T
   val pairsInOrder: List[(Int, Int)] = List(if (e < x) e -> x else x -> e)
   val boardPairs: List[(Int, Int)] = List(b -> x, b -> e)
 
-  override def toString: String = s"${tables(table - 1)}: $x-$e@#$b"
+  override def toString: String =
+    s"${tables(table - 1)}: $x-$e@#$b"
 }
 
 object Encounter {

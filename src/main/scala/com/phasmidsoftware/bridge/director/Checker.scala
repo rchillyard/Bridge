@@ -25,7 +25,8 @@ object Checker {
   def penaltyChecker(dir: Boolean): Checker = {
     // CONSIDER rewriting this with just one jLens (using a function to negate AND project. {
     new JPredicate[SB] {
-      def justification(sb: SB): Option[String] = s"penaltyChecker($dir, $sb)" !! penaltyStringOpt(sb)
+      def justification(sb: SB): Option[String] =
+        s"penaltyChecker($dir, $sb)" !! penaltyStringOpt(sb)
     }.jLens[SB]("")(NamedFunction("negate", sb => sb.negate)).jLens[ScoreVul](if (dir) "NS" else "EW")(NamedFunction(s"project($dir)", sv => sv.project(dir))).andThen(positive(!dir))
   }
 
@@ -93,7 +94,7 @@ object Checker {
   private lazy val majorPartial = suitPartial("major", 30, 1, 7)
 
   private def notrumpPartial(doubled: Boolean) = new JPredicate[Int]() {
-    def justification(score: Int): Option[String] = s"notrumpPartial($doubled, $score )" !!
+    def justification(score: Int): Option[String] =
       (
       if (doubled)
         if (score == 80)

@@ -5,7 +5,6 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.gambit.util.{Output, Outputable}
-import com.phasmidsoftware.util.*
 
 import scala.language.implicitConversions
 
@@ -169,7 +168,8 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     // XXX figure out why we can't just import SuitOrdering from Suit
     // NOTE: unused
     implicit object SuitOrdering extends Ordering[Suit] {
-      override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
+      override def compare(x: Suit, y: Suit): Int =
+        -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
     }
     val keys = holdings.keys.toList.sorted.reverse
     output ++ (for (k <- keys) yield holdings(k).output(output.copy))
@@ -184,7 +184,8 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     // XXX figure out why we can't just import SuitOrdering from Suit
     // NOTE: unused
     implicit object SuitOrdering extends Ordering[Suit] {
-      override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
+      override def compare(x: Suit, y: Suit): Int =
+        -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
     }
     val keys = holdings.keys.toList.sorted.reverse
     s"""${(for (k <- keys) yield s"${holdings(k)}").mkString("", "\n", "")}"""
@@ -198,7 +199,8 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
   lazy val neatOutput: String = {
     // XXX figure out why we can't just import SuitOrdering from Suit
     implicit object SuitOrdering extends Ordering[Suit] {
-      override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
+      override def compare(x: Suit, y: Suit): Int =
+        -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
     }
     val keys = holdings.keys.toList.sorted.reverse
     (for (k <- keys) yield holdings(k).neatOutput).mkString(" ")
@@ -251,7 +253,8 @@ object Hand {
     * @param step  the number of moves clockwise around the table.
     * @return subsequent hand.
     */
-  def next(index: Int, step: Int): Int = (index + step) % Deal.HandsPerDeal
+  def next(index: Int, step: Int): Int =
+    (index + step) % Deal.HandsPerDeal
 
   /**
     * Method to determine if the given hand is on the same side as the other hand.
@@ -260,7 +263,8 @@ object Hand {
     * @param other the other hand's index.
     * @return true if their difference is an even number.
     */
-  def sameSide(hand: Int, other: Int): Boolean = (other - hand) % 2 == 0
+  def sameSide(hand: Int, other: Int): Boolean =
+    (other - hand) % 2 == 0
 
   /**
     * Method to determine if the given hand is declarer or dummy.
@@ -269,7 +273,8 @@ object Hand {
     * @param index       the hand index.
     * @return true if the hand is on declaring side.
     */
-  def isDeclaringSide(directionNS: Boolean, index: Int): Boolean = (index % 2 == 1) ^ directionNS
+  def isDeclaringSide(directionNS: Boolean, index: Int): Boolean =
+    (index % 2 == 1) ^ directionNS
 
   //  implicit val z: Loggable[Hand] = (t: Hand) => t.neatOutput
 

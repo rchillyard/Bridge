@@ -15,7 +15,7 @@ class StateSpec extends AnyFlatSpec with should.Matchers {
   behavior of "StateSpec"
 
   private val north = 0
-  private val deal = Deal("test", 0L)
+  private val deal = Deal.createRandom("test", 0L)
   private val whist = Whist(deal, north)
   private val trick0 = Trick.empty
   private val tricks0 = Tricks(0, 0)
@@ -59,7 +59,8 @@ class StateSpec extends AnyFlatSpec with should.Matchers {
 
   it should "deal" in {
     val target = State(whist)
-    target.deal shouldBe deal.quit
+    val quitted = deal.quit
+    target.deal shouldBe quitted
   }
 
   it should "trick" in {
@@ -131,7 +132,7 @@ class StateSpec extends AnyFlatSpec with should.Matchers {
   }
 
   it should "get complex neat output" in {
-    val deal = Deal("test", 0L)
+    val deal = Deal.createRandom("test", 0L)
     val whist0 = Whist(deal, 0)
     val state0 = State(whist0)
     val states = state0.enumeratePlays

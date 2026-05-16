@@ -27,7 +27,7 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
   }
 
   it should "history" in {
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val whist0 = Whist(deal, 0)
     val state0 = State(whist0)
     val states = state0.enumeratePlays
@@ -52,7 +52,7 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
   it should "append" in {
     val index = 0
     val nothing = Trick(index, Nil, None)
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val play = CardPlay(deal, None, 0, Spades, 5)
     val target = nothing :+ play
     target.plays shouldBe List(play)
@@ -66,14 +66,14 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
   }
 
   it should "not append" in {
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val play1 = CardPlay(deal, None, 0, Spades, 5) // S9
     a[CardException] should be thrownBy Trick.empty :+ play1 :+ play1
   }
 
   it should "pick correct winner0" in {
     val index = 0
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val play1 = CardPlay(deal, None, index, Hearts, 10) // H4
     val play2 = CardPlay(deal, None, index + 1, Hearts, 0) // HA
     val play3 = CardPlay(deal, None, index + 2, Diamonds, 12) // D2
@@ -84,7 +84,7 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   it should "pick correct winner1" in {
     val index = 0
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val play1 = CardPlay(deal, None, index, Spades, 5) // S9
     val play2 = CardPlay(deal, None, index + 1, Spades, 1) // SK
     val play3 = CardPlay(deal, None, index + 2, Diamonds, 12) // D2
@@ -95,7 +95,7 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   it should "pick correct winner2" in {
     val index = 0
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val play1 = CardPlay(deal, None, index, Spades, 5) // S9
     val play2 = CardPlay(deal, None, index + 1, Diamonds, 11) // D3
     val play3 = CardPlay(deal, None, index + 2, Spades, 0) // SA
@@ -106,7 +106,7 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   it should "pick correct winner3" in {
     val index = 0
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val play1 = CardPlay(deal, Some(Diamonds), index, Spades, 5) // S9
     val play2 = CardPlay(deal, Some(Diamonds), index + 1, Diamonds, 11) // D3
     val play3 = CardPlay(deal, Some(Diamonds), index + 2, Spades, 0) // SA
@@ -116,7 +116,7 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
   }
 
   it should "enumerate plays 1" in {
-    val deal = Deal("test", 0L)
+    val deal = Deal.createRandom("test", 0L)
     val whist0 = Whist(deal, 0)
     val state0 = State(whist0)
     val states = state0.enumeratePlays

@@ -76,7 +76,7 @@ trait JPredicate[T] extends Predicate[T] {
 
   val flog = Flog[JPredicate[?]].disabled
 
-  import flog._
+  import flog.*
 
   /**
     * Method which yields an optional `String` based on the input value `t`.
@@ -102,7 +102,7 @@ trait JPredicate[T] extends Predicate[T] {
     * @return a Predicate[T] that returns true when `this` Predicate would return false;
     *         and false when `this` would return true.
     */
-  override def flip: JPredicate[T] = (t: T) => s"flip $t $self" !! self.justification(t) match {
+  override def flip: JPredicate[T] = (t: T) => self.justification(t) match {
     case None => Some("not")
     case _ => None
   }
@@ -177,7 +177,7 @@ trait JPredicate[T] extends Predicate[T] {
 object JPredicate {
   val flog = Flog[JPredicate[?]].disabled
 
-  import flog._
+  import flog.*
 
   /**
     * Constructs a `JPredicate` from a provided function `f` that maps an input of type `T`
@@ -211,7 +211,8 @@ object JPredicate {
     * @tparam T the input type of the predicate.
     * @return a `JPredicate[T]` that always succeeds with the provided justification message.
     */
-  def always[T](w: String): JPredicate[T] = (_: T) => s"JPredicate.always($w)" !! Some(w)
+  def always[T](w: String): JPredicate[T] =
+    (_: T) => s"JPredicate.always($w)" !! Some(w)
 
   /**
     * Constructs a `JPredicate[T]` that always evaluates to `false` and does not provide any justification.

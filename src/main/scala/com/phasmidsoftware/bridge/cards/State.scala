@@ -122,7 +122,8 @@ object State:
     * @param s the State to evaluate.
     * @return the fitness as a Double.
     */
-  def heuristicFitness(s: State): Double = s.tricks.ns + s.deal.evaluate
+  def heuristicFitness(s: State): Double =
+    s.tricks.ns + s.deal.evaluate
 
   /**
     * Method to create an initial state based on a deal.
@@ -161,7 +162,8 @@ object State:
     /**
       * Compare two States by number of cards played (more played = later in sequence).
       */
-    def compare(x: State, y: State): Int = y.cardsPlayed - x.cardsPlayed
+    def compare(x: State, y: State): Int =
+      y.cardsPlayed - x.cardsPlayed
 
 /**
   * Behavior of something which can be validated.

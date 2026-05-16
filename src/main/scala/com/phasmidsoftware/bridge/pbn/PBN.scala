@@ -47,7 +47,7 @@ object Game {
 
   implicit object GameOrdering extends Ordering[Game] {
     def compare(x: Game, y: Game): Int = {
-      import DetailedValue._
+      import DetailedValue.*
       val eventName = "Event"
       val cfEvent = DetailedValueOrdering.compare(x(eventName), y(eventName))
       if (cfEvent != 0) cfEvent
@@ -64,21 +64,23 @@ object Game {
 case class DetailedValue(value: Value, detail: Seq[String]) extends Value {
   override def toInt: Int = value.toInt
 
-  override def toString: String = s""""$value"${detail.mkString(" ", ",", "")}"""
+  override def toString: String =
+    s""""$value"${detail.mkString(" ", ",", "")}"""
 }
 
 object DetailedValue {
   def trim(value: Value, detail: Seq[String]): DetailedValue = DetailedValue(value, trim(detail))
 
   // CONSIDER simplify this because we no longer have newlines embedded in the strings.
-  private def trim(detail: Seq[String]): Seq[String] = (detail.reverse.filter(_.nonEmpty) match {
-    case Nil => Nil
-    case h :: t =>
-      h.reverse.replaceFirst("\n", "") match {
-        case "" => t
-        case x => x.reverse :: t
-      }
-  }).reverse
+  private def trim(detail: Seq[String]): Seq[String] =
+    (detail.reverse.filter(_.nonEmpty) match {
+      case Nil => Nil
+      case h :: t =>
+        h.reverse.replaceFirst("\n", "") match {
+          case "" => t
+          case x => x.reverse :: t
+        }
+    }).reverse
 
   implicit object DetailedValueOrdering extends Ordering[DetailedValue] {
     def compare(x: DetailedValue, y: DetailedValue): Int = Value.ValueOrdering.compare(x.value, y.value)

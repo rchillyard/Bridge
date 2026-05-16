@@ -58,12 +58,25 @@ case class PlayResult(r: Either[String, Int]) {
     }
   else None
 
+  /**
+    * Checks if the result exists based on specific conditions.
+    * The method evaluates whether the result is valid either by matching specific cases 
+    * from the `r` value or by the state of the `played` field.
+    *
+    * @return true if the result is valid based on the given conditions or if the `played` field is false. Otherwise, returns false.
+    */
   def exists: Boolean = (r match {
     case Right(_) => true
     case Left("A-" | "A" | "A+") => true
     case _ => false
   }) || !played
 
+  /**
+    * Determines the probable contract based on the given vulnerability.
+    *
+    * @param vul the vulnerability context specifying whether North-South or East-West is vulnerable.
+    * @return an optional string representing the probable contract, or None if it cannot be determined.
+    */
   def getProbableContract(vul: Vulnerability): Option[String] = r match {
     case Left(w) => Some(w)
     // CONSIDER getting two probable contracts (if they exist), for example 200 can be 3M+2 or down 2 vulnerable.

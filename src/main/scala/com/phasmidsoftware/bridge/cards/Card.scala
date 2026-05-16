@@ -68,11 +68,6 @@ object Card {
       else RankOrdering.compare(x.rank, y.rank)
     }
   }
-  //
-  //  implicit object LoggableCard extends Loggable[Card] with Loggables {
-  //    def toLog(t: Card): String = t.toString
-  //  }
-
 
   private[cards] def bool2Int(b: Boolean): Int = if (b) 1 else 0
 
@@ -129,6 +124,8 @@ object Suit {
     */
   implicit def convertStringToSuit(s: String): Suit = apply(s.head)
 
+  val suits: Seq[Suit] = Seq(Spades, Hearts, Diamonds, Clubs)
+
   /**
     * Explicitly convert a Char into a Suit.
     *
@@ -145,15 +142,13 @@ object Suit {
 
   /**
     * Define an ordering for Suits.
+    *
+    * CONSIDER merge with RankOrdering.
     */
   implicit object SuitOrdering extends Ordering[Suit] {
-    override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
+    override def compare(x: Suit, y: Suit): Int =
+      -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
   }
-  //
-  //  implicit object LoggableSuit extends Loggable[Suit] with Loggables {
-  //    def toLog(t: Suit): String = t.toString
-  //  }
-
 }
 
 /**
@@ -208,8 +203,11 @@ object Rank {
     * Defines an ordering of Ranks
     */
   implicit object RankOrdering extends Ordering[Rank] {
-    override def compare(x: Rank, y: Rank): Int = -x.priority + y.priority
+    override def compare(x: Rank, y: Rank): Int =
+      -x.priority + y.priority
   }
+
+  val ranks: Seq[BaseRank] = Seq(Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)
 
   /**
     * Method to create a Rank from an honor String (A, K, Q, J, or T)
@@ -256,11 +254,6 @@ object Rank {
     * The priority of the lowest card, the fictional zero: 14
     */
   val lowestPriority: Int = 14
-  //
-  //  implicit object LoggableSuit extends Loggable[Suit] with Loggables {
-  //    def toLog(t: Suit): String = t.toString
-  //  }
-
 
   private val spotR = """(\d\d?)""".r
   private val honorR = """([AKQJT])""".r

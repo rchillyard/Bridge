@@ -34,7 +34,8 @@ case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit]
 
   def score: Event = copy(title, sections map (_.recap))
 
-  def createResults: Map[Preamble, Seq[Result]] = (for (s <- sections) yield s.preamble -> s.createResults).toMap
+  def createResults: Map[Preamble, Seq[Result]] =
+    (for (s <- sections) yield s.preamble -> s.createResults).toMap
 
   /**
     * Method to output this object (and, recursively, all of its children).
@@ -530,11 +531,14 @@ object Traveler {
   * @param result the result.
   */
 case class BoardResult(board: Int, result: PlayResult, ro: Option[Rational] = None) {
-  override def toString: String = s"$board: ${renderRo(" for ")}$result"
+  override def toString: String =
+    s"$board: ${renderRo(" for ")}$result"
 
-  def renderRo(suffix: String): String = (ro map (_.renderAsPercent(2) + suffix)).getOrElse("")
+  def renderRo(suffix: String): String =
+    (ro map (_.renderAsPercent(2) + suffix)).getOrElse("")
 
-  def setMPs(r: Rational): BoardResult = copy(ro = Some(r))
+  def setMPs(r: Rational): BoardResult =
+    copy(ro = Some(r))
 }
 
 /**
@@ -548,7 +552,8 @@ case class BoardResult(board: Int, result: PlayResult, ro: Option[Rational] = No
 case class Pickup(ns: Int, ew: Int, boards: Seq[BoardResult]) {
   def asBoardPlays: Seq[BoardPlay] = for (e <- boards) yield BoardPlay(e.board, Play(ns, ew, e.result))
 
-  override def toString: String = s"Pickup: $ns vs $ew: ${boards.mkString(", ")}"
+  override def toString: String =
+    s"Pickup: $ns vs $ew: ${boards.mkString(", ")}"
 }
 
 /**

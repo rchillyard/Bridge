@@ -12,7 +12,7 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   behavior of "Whist"
   it should "" in {
-    val deal0 = Deal("test", 0L, adjustForPartnerships = false)
+    val deal0 = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val north = 0
     val whist00 = Whist(deal0, north)
     whist00.deal shouldBe deal0.quit
@@ -43,7 +43,7 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
   }
 
   it should "play" in {
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val target = deal.hands.head
     target.nCards shouldBe 13
     val result = target.play(CardPlay(deal, None, 0, Spades, 5))
@@ -52,7 +52,7 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   it should "playAll CardPlays" in {
 
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val hands = deal.hands
     hands.size shouldBe 4
     val List(priority1S, priority2S, priority3S, priority4S): List[Int] =
@@ -85,7 +85,7 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   behavior of "State"
   it should "create1" in {
-    val deal0 = Deal("test", 0L, adjustForPartnerships = false)
+    val deal0 = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
     state0.deal.nCards shouldBe 52
@@ -102,7 +102,7 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
   }
 
   it should "create2" in {
-    val deal0 = Deal("test", 0L, adjustForPartnerships = false)
+    val deal0 = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val whist00 = Whist(deal0, 0)
     val deal00 = whist00.deal
     val state0 = State(whist00)
@@ -120,7 +120,7 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
   }
 
   it should "enumeratePlays to one level" in {
-    val deal0 = Deal("test", 0L, adjustForPartnerships = false)
+    val deal0 = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
     val states: Seq[State] = state0.enumeratePlays
@@ -129,7 +129,7 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
   }
 
   it should "enumeratePlays to two levels" in {
-    val deal0 = Deal("test", 0L, adjustForPartnerships = false)
+    val deal0 = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
     val states1: Seq[State] = state0.enumeratePlays
@@ -139,7 +139,7 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
   }
 
   it should "enumeratePlays to three levels" in {
-    val deal0 = Deal("test", 0L)
+    val deal0 = Deal.createRandom("test", 0L)
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
     val states1: Seq[State] = state0.enumeratePlays
@@ -151,7 +151,7 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
   }
 
   it should "enumeratePlays to four levels" in {
-    val deal0 = Deal("test", 0L)
+    val deal0 = Deal.createRandom("test", 0L)
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
     val states1: Seq[State] = state0.enumeratePlays
@@ -165,7 +165,7 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
   }
 
   it should "enumeratePlays to five levels" in {
-    val deal0 = Deal("test", 0L)
+    val deal0 = Deal.createRandom("test", 0L)
     val whist00 = Whist(deal0, 0)
     val state0 = State(whist00)
     val states1: Seq[State] = state0.enumeratePlays
@@ -184,13 +184,13 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
   behavior of "double dummy"
   it should "analyzeDoubleDummy2" in {
     pending
-    val target = Deal("test", 2L, adjustForPartnerships = false)
+    val target = Deal.createRandom("test", 2L)
     val whist = Whist(target, 3)
     whist.analyzeDoubleDummy(9, directionNS = true) shouldBe Some(true)
   }
 
   it should "analyzeDoubleDummy for suit" in {
-    val target = Deal("test", 2L, adjustForPartnerships = false)
+    val target = Deal.createRandom("test", 2L)
     val whist = Whist(target, 3, Some(Clubs))
     val initialState = State(whist)
     println(s"Branching factor: ${initialState.enumeratePlays.size}")

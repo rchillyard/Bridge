@@ -32,7 +32,7 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
   /**
     * Method to make a sequence of States from the given sequence of Trick instances.
     *
-    * @param tricks the current value of Tricks (i.e. current score NS vs. EW).
+    * @param tricks the current value of Tricks (i.e., current score NS vs. EW).
     * @param ts     a sequence of Trick instances.
     * @return a sequence of State objects corresponding to the values of ts.
     */
@@ -71,6 +71,8 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     given com.phasmidsoftware.gambit.game.State[State, State] = stateTC
     given com.phasmidsoftware.gambit.game.Game[State, CardPlay, Int] = gameTC
 
+    assert(deal.isAdjusted, "Deal must be adjusted before double-dummy analysis")
+
     val player = AlphaBetaPlayer[State, State, CardPlay, Int](
       me = if directionNS then 0 else 1,
       depth = depth,
@@ -87,7 +89,8 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     logger.info(s"analyzeDoubleDummy: result=$result, elapsed=${System.currentTimeMillis() - t0}ms, tableSize=${player.tableSize}")
     result
 
-  override def toString: String = s"Whist($deal, ${Hand.name(openingLeader)}, $sStrain)"
+  override def toString: String =
+    s"Whist($deal, ${Hand.name(openingLeader)}, $sStrain)"
 
   /**
     * Method to enact the pending promotions on this Quittable.
@@ -102,7 +105,7 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     */
   lazy val createState: State = State(this)
 
-  lazy val sStrain: String = strain.map(_.toString).getOrElse("NT")
+  private lazy val sStrain: String = strain.map(_.toString).getOrElse("NT")
 
   private val logger = org.slf4j.LoggerFactory.getLogger(getClass)
 
