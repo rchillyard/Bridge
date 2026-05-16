@@ -138,10 +138,13 @@ trait JPredicate[T] extends Predicate[T] {
     *         NOTE that `p` will not be invoked if `this` yields true.
     */
   override def orElse(p: Predicate[T]): JPredicate[T] =
-    (t: T) => s"orElse($p): $t" !! self.justification(t) orElse (p match {
-      case j: JPredicate[T] => s"orElse JPredicate $t" !! j.justification(t)
-      case _ if p(t) => s"orElse Predicate $t" !! Some("orElse")
-      case _ => None
+    (t: T) => self.justification(t) orElse (p match {
+      case j: JPredicate[T] =>
+        j.justification(t)
+      case _ if p(t) =>
+        Some("orElse")
+      case _ =>
+        None
     })
 
   /**
@@ -157,12 +160,17 @@ trait JPredicate[T] extends Predicate[T] {
         p match {
           case j: JPredicate[T] =>
             s"andThen flatMap JPredicate $w1 $t" !! j.justification(t) map {
-              case w2 if w1.nonEmpty && w2.nonEmpty => w1 + "&" + w2
-              case _ if w1.nonEmpty => w1
-              case w2 => w2
+              case w2 if w1.nonEmpty && w2.nonEmpty =>
+                w1 + "&" + w2
+              case _ if w1.nonEmpty =>
+                w1
+              case w2 =>
+                w2
             }
-          case _ if p(t) => s"flatMap Predicate $w1 $t" !! Some(w1)
-          case _ => None
+          case _ if p(t) =>
+            s"flatMap Predicate $w1 $t" !! Some(w1)
+          case _ =>
+            None
         })
 }
 

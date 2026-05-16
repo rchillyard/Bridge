@@ -56,7 +56,8 @@ case class CardPlay(deal: Deal, strain: Option[Suit], hand: Int, suit: Suit, pri
     */
   lazy val asCard: Card =
     findSequence match {
-      case Some(s) => s.last
+      case Some(s) =>
+        s.last
       case None =>
         throw CardException(s"CardPlay (deal=${deal.title}, hand=$hand, suit=$suit, priority=$priority) cannot find actual card.")
     }

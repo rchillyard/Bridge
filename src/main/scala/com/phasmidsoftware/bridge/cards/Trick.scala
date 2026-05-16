@@ -138,25 +138,6 @@ case class Trick(index: Int, plays: Seq[CardPlay], maybePrior: Option[Trick]) ex
   def enumerateSubsequentPlays(whist: Whist): Seq[Trick] = enumerateSubsequentPlays(whist.deal, whist.openingLeader, whist.strain) //.invariant(ts => ts.nonEmpty)
 
   /**
-    * Determine if the declaring side still has a play left in this trick.
-    *
-    * @param directionNS true if NS is the declaring side.
-    * @return true if fewer than three cards have been played; or if the leader is None, or leader belongs to the opposition.
-    */
-  def declaringSideStillToPlay(directionNS: Boolean): Boolean = size < 3 || (leader match {
-    case Some(x) => !Hand.isDeclaringSide(directionNS, x)
-    case None => true
-  })
-
-  /**
-    * Determine if the declaring side still has a play left in this trick.
-    *
-    * @param directionNS true if NS is the declaring side.
-    * @return true if fewer than three cards have been played; or if the leader is None, or leader belongs to the opposition.
-    */
-  def declaringSideCanWin(directionNS: Boolean): Boolean = declaringSideStillToPlay(directionNS) || Winner.isDeclaringSideWinning(winner, directionNS)
-
-  /**
     * Determine the number of remaining moves that are required to build up sufficient tricks.
     *
     * @param directionNS  the direction of the declarer.
@@ -168,6 +149,25 @@ case class Trick(index: Int, plays: Seq[CardPlay], maybePrior: Option[Trick]) ex
     val requiredMoves = (neededTricks - (if (directionNS) tricks.ns else tricks.ew)) * Deal.CardsPerTrick
     moves >= requiredMoves || (declaringSideCanWin(directionNS) && (plays.size >= requiredMoves - moves))
   }
+
+  /**
+    * Determine if the declaring side still has a play left in this trick.
+    *
+    * @param directionNS true if NS is the declaring side.
+    * @return true if fewer than three cards have been played; or if the leader is None, or leader belongs to the opposition.
+    */
+  private def declaringSideStillToPlay(directionNS: Boolean): Boolean = size < 3 || (leader match {
+    case Some(x) => !Hand.isDeclaringSide(directionNS, x)
+    case None => true
+  })
+
+  /**
+    * Determine if the declaring side still has a play left in this trick.
+    *
+    * @param directionNS true if NS is the declaring side.
+    * @return true if fewer than three cards have been played; or if the leader is None, or leader belongs to the opposition.
+    */
+  private def declaringSideCanWin(directionNS: Boolean): Boolean = declaringSideStillToPlay(directionNS) || Winner.isDeclaringSideWinning(winner, directionNS)
 
   /**
     * NOTE: this doesn't look right

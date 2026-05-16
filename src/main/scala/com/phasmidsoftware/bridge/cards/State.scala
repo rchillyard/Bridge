@@ -22,13 +22,6 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
 
   val sequence: Int = State.getSequence
 
-  //  def evaluateKey: Map[Int, Map[Suit, Seq[Seq[Card]]]] =
-  //    whist.deal.holdings.map {
-  //      case (k, v) => k -> v.map {
-  //        case (suit, holding) => suit -> holding.sequences.map(_.cards)
-  //      }
-  //    }
-
   def evaluateKey: (Long, Long, Long, Long) = {
     def handBits(hand: Hand): Long =
       hand.cards.foldLeft(0L)((acc, c) => acc | (1L << c.cardIndex))

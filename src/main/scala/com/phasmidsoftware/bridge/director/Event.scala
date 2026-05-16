@@ -213,8 +213,10 @@ case class Pair(number: Int, maybeDirection: Option[String], players: (Player, P
 
   // CONSIDER making this more elegant
   def valid(x: Option[String]): Boolean = x match {
-    case Some(Preamble.SingleWinner) => "N" == (maybeDirection getOrElse "N")
-    case _ => maybeDirection.isDefined
+    case Some(Preamble.SingleWinner) =>
+      "N" == (maybeDirection getOrElse "N")
+    case _ =>
+      maybeDirection.isDefined
   }
 
   lazy val brief: String = s"${players._1} & ${players._2}"
@@ -341,9 +343,12 @@ case class Result(tables: Int, isNS: Option[Boolean], top: Int, cards: Map[Int, 
     val expected = Rational(tables * boards, 2)
     val result = matchpoints == expected
     val direction = isNS match {
-      case Some(b) if b => "NS"
-      case Some(_) => "EW"
-      case None => "SW"
+      case Some(b) if b =>
+        "NS"
+      case Some(_) =>
+        "EW"
+      case None =>
+        "SW"
     }
     if (!result)
       System.err.println(s"Total fractional matchpoints for this $direction section result ($matchpoints) differ from what is expected for $boards boards and $tables tables ($boards * $tables / 2 = $expected)\n   (Note: this may not be a problem if there is a half-table)")
@@ -404,8 +409,10 @@ case class Matchpoints(ns: Int, ew: Int, result: PlayResult, ro: Option[Rational
   def getMatchpoints(dir: Boolean): Option[Rational] = if (dir) ro else invert
 
   override def toString: String = ro match {
-    case Some(x) => s"""$ns\t$ew\t$result\t${Matchpoints.mpsAsString(x, top)}"""
-    case _ => ""
+    case Some(x) =>
+      s"""$ns\t$ew\t$result\t${Matchpoints.mpsAsString(x, top)}"""
+    case _ =>
+      ""
   }
 
   private def factorACBL(idealTop: Int) = ro match {
@@ -432,9 +439,12 @@ object Matchpoints {
     */
   //noinspection SpellCheckingInspection
   def rationalToString(r: Rational): String = r match {
-    case Rational(x, Rational.bigOne) => f"$x%2d.00"
-    case r: Rational if r.isInfinite => "infty"
-    case _ => r.renderApproximate(5, Some(2))
+    case Rational(x, Rational.bigOne) =>
+      f"$x%2d.00"
+    case r: Rational if r.isInfinite =>
+      "infty"
+    case _ =>
+      r.renderApproximate(5, Some(2))
   }
 
   /**

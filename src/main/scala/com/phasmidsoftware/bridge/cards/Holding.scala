@@ -89,8 +89,10 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
   def choosePlays(deal: Deal, strain: Option[Suit], hand: Int, strategy: Strategy, currentWinner: Option[Winner]): Seq[CardPlay] = {
     def createPlay(priority: Int): CardPlay = CardPlay(deal, strain, hand, suit, priority)
 
-    lazy val priorityToBeat = currentWinner.map(_.priorityToBeat(hand)).getOrElse(Rank.lowestPriority)
-    lazy val isPartnerWinning = currentWinner.exists(_.partnerIsWinning(hand))
+    lazy val priorityToBeat =
+      currentWinner.map(_.priorityToBeat(hand)).getOrElse(Rank.lowestPriority)
+    lazy val isPartnerWinning =
+      currentWinner.exists(_.partnerIsWinning(hand))
 
     def redirect(s: Strategy) = choosePlays(deal, strain, hand, s, currentWinner)
 
