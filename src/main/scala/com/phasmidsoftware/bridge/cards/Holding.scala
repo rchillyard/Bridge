@@ -89,24 +89,26 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
   def choosePlays(deal: Deal, strain: Option[Suit], hand: Int, strategy: Strategy, currentWinner: Option[Winner]): Seq[CardPlay] = {
     def createPlay(priority: Int): CardPlay = CardPlay(deal, strain, hand, suit, priority)
 
-    lazy val priorityToBeat = (currentWinner map (_.priorityToBeat(hand))).getOrElse(Rank.lowestPriority)
-    lazy val isPartnerWinning = currentWinner exists (_.partnerIsWinning(hand))
+    lazy val priorityToBeat = currentWinner.map(_.priorityToBeat(hand)).getOrElse(Rank.lowestPriority)
+    lazy val isPartnerWinning = currentWinner.exists(_.partnerIsWinning(hand))
+
+    def redirect(s: Strategy) = choosePlays(deal, strain, hand, s, currentWinner)
+
     strategy match {
       case StandardOpeningLead if hasHonorSequence =>
-        choosePlays(deal, strain, hand, LeadTopOfSequence, currentWinner)
-      case StandardOpeningLead => // "Fourth best" although that's not followed precisely--we just lead low
-        chooseLeadSuitPlays(createPlay, strategy)
+        redirect(LeadTopOfSequence)
+      case StandardOpeningLead =>
+        sortLeadSuitPlays(createPlay, strategy)
       case Ruff if isPartnerWinning =>
-        choosePlays(deal, strain, hand, Discard, currentWinner)
+        redirect(Discard)
       case Ruff | Discard =>
-        // NOTE: these cards will be ordered appropriately by the caller.
-        sequences.lastOption.toList map (s => createPlay(s.priority))
+        sequences.lastOption.toList.map(s => createPlay(s.priority))
       case Finesse if priorityToBeat > Rank.honorPriority =>
-        choosePlays(deal, strain, hand, WinIt, currentWinner)
+        redirect(WinIt)
       case WinIt if isPartnerWinning =>
-        chooseFollowSuitPlays(createPlay, Duck, priorityToBeat)
+        sortFollowSuitPlays(createPlay, Duck, priorityToBeat)
       case _ =>
-        chooseFollowSuitPlays(createPlay, strategy, priorityToBeat)
+        sortFollowSuitPlays(createPlay, strategy, priorityToBeat)
     }
   }
 
@@ -321,36 +323,37 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
   }
 
   /**
-    * Selects and sorts follow-suit plays based on a given strategy and priority threshold.
+    * Sorts potential follow-suit plays based on how well they align with the given strategy and their ability to beat the specified priority.
     *
-    * The method generates possible card plays using the provided `createPlay` function and ranks them
-    * according to how well they align with the `strategy`. The ranking is determined by a scoring
-    * function that evaluates the plays relative to the specified `priorityToBeat`.
+    * This method generates possible card plays using the provided `createPlay` function, ranks them according to the specified
+    * strategy, and returns the plays in order of their suitability to the strategy as determined by a heuristic scoring function.
     *
-    * CONSIDER Merge this with the following method
-    *
-    * @param createPlay     a function that produces a `CardPlay` instance from a given priority value.
-    * @param strategy       the strategy guiding the play selection and ranking.
-    * @param priorityToBeat the priority threshold used to evaluate and rank the plays.
-    * @return a sequence of chosen `CardPlay` objects, sorted by their suitability to the strategy.
+    * @param createPlay     a function that creates a `CardPlay` instance from a given priority value.
+    * @param strategy       the `Strategy` guiding the evaluation and sorting of plays.
+    * @param priorityToBeat the priority value that the play needs to beat or consider during the sorting process.
+    * @return a sequence of `CardPlay` objects, ordered by their alignment with the strategy and their effectiveness in relation to the priority to beat.
     */
-  private def chooseFollowSuitPlays(createPlay: Int => CardPlay, strategy: Strategy, priorityToBeat: Int): Seq[CardPlay] = {
-    // XXX this function is used to sort the possible plays according to which fits the given strategy best (smallest resulting Int)
-    def sortFunction(play: CardPlay): Int = Holding.applyFollowSuitStrategy(strategy, priorityToBeat, play.priority)
+  private def sortFollowSuitPlays(createPlay: Int => CardPlay, strategy: Strategy, priorityToBeat: Int): Seq[CardPlay] = {
+    def sortFunction(play: CardPlay): Int =
+      Holding.applyFollowSuitStrategy(strategy, priorityToBeat, play.priority)
 
     (for (s <- sequences) yield createPlay(s.priority)).sortBy(sortFunction)
   }
 
   /**
-    * Chooses and sorts the possible plays for the lead suit in a trick, based on a given strategy.
+    * Sorts potential card plays based on how well they align with the given strategy.
     *
-    * @param createPlay a function that generates a `CardPlay` from a given priority value.
-    * @param strategy   the strategy to evaluate and prioritize the plays.
-    * @return a sequence of `CardPlay` objects sorted by the specified strategy.
+    * This method generates possible card plays using the provided `createPlay` function,
+    * ranks them according to the specified strategy, and returns the plays in order
+    * of their suitability to the strategy as determined by a heuristic scoring function.
+    *
+    * @param createPlay a function that creates a `CardPlay` instance from a given priority value.
+    * @param strategy   the `Strategy` guiding the evaluation and sorting of plays.
+    * @return a sequence of `CardPlay` objects, ordered by their alignment with the strategy.
     */
-  private def chooseLeadSuitPlays(createPlay: Int => CardPlay, strategy: Strategy): Seq[CardPlay] = {
-    // XXX this function is used to sort the possible plays according to which fits the given strategy best (smallest resulting Int)
-    def sortFunction(play: CardPlay): Int = Holding.applyLeadSuitStrategy(strategy, play, sequence(play.priority))
+  private def sortLeadSuitPlays(createPlay: Int => CardPlay, strategy: Strategy): Seq[CardPlay] = {
+    def sortFunction(play: CardPlay): Int =
+      Holding.applyLeadSuitStrategy(strategy, play, sequence(play.priority))
 
     (for (s <- sequences) yield createPlay(s.priority)).sortBy(sortFunction)
   }
