@@ -48,23 +48,22 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
   def play(cardPlay: CardPlay): Whist = Whist(deal.play(cardPlay), openingLeader, strain)
 
   /**
-    * Solve this Whist game as a double-dummy problem using alpha-beta search.
+    * Analyzes the potential outcome of a double-dummy play scenario based on the given parameters.
     *
-    * NS (or EW, depending on `directionNS`) attempts to reach `tricks` tricks.
-    * Uses `WhistState.isGoal` for early termination when the goal is achieved or
-    * shown to be impossible (`goalImpossible` pruning).
-    *
-    * @param tricks      the number of tricks required by the protagonists.
-    * @param directionNS if true, NS are the protagonists; otherwise EW.
-    * @param depth       the alpha-beta search depth in plies (default: full game = 52).
-    * @return `Some(true)` if the protagonists can achieve their goal,
-    *         `Some(false)` if they cannot,
-    *         `None` if no move was available (terminal position on entry).
+    * @param tricks        The number of tricks needed by the protagonists to succeed.
+    * @param directionNS   A boolean indicating whether the protagonists are North-South (true) or East-West (false).
+    * @param depth         The depth of the search tree for the analysis. Defaults to the minimum of the cards in the deal or the maximum cards per deal.
+    * @param reuseDeeper   A boolean indicating whether deeper search results can be reused during the analysis. Defaults to true.
+    * @param depthTranches A boolean to determine if the depth of the search should use a tranches mechanism. Defaults to false.
+    * @return An Option containing a boolean. Returns `Some(true)` if the analysis determines a winning outcome for the protagonists,
+    *         `Some(false)` if losing, or `None` if no result is found.
     */
   def analyzeDoubleDummy(
                           tricks: Int,
                           directionNS: Boolean,
-                          depth: Int = math.min(Deal.CardsPerDeal, deal.nCards)
+                          depth: Int = math.min(Deal.CardsPerDeal, deal.nCards),
+                          reuseDeeper: Boolean = false,
+                          depthTranches: Boolean = true
                         ): Option[Boolean] =
     val stateTC = WhistState(tricks, directionNS)
     val gameTC = WhistGame(this)
@@ -76,9 +75,10 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     val player = AlphaBetaPlayer[State, State, CardPlay, Int](
       me = if directionNS then 0 else 1,
       depth = depth,
-      keyFn = Some(_.evaluateKey)
+      keyFn = Some(_.evaluateKey),
+      reuseDeeper = reuseDeeper,
+      depthTranches = depthTranches
     )
-
     val initialState = State(this)
     logger.info(s"analyzeDoubleDummy: neededTricks=$tricks, directionNS=$directionNS, depth=$depth, branching=${initialState.enumeratePlays.size}")
     val t0 = System.currentTimeMillis()
