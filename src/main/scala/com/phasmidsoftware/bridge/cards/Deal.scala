@@ -22,7 +22,7 @@ import scala.language.postfixOps
   * @param title    the title of this Deal.
   * @param holdings the holdings of the four Hands of this Deal.
   */
-case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]])(adjusted: Boolean = false) extends Outputable[Unit]
+case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends Outputable[Unit]
   with Quittable[Deal] with Playable[Deal] with Evaluatable with Validatable {
 
   /**
@@ -44,13 +44,6 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]])(adjusted:
   def quit: Deal = _quit
 
   /**
-    * Determines whether this deal has been adjusted.
-    *
-    * @return true if the deal has been adjusted; false otherwise.
-    */
-  def isAdjusted: Boolean = adjusted
-
-  /**
     * Asserts that the deal has been adjusted and that the adjustment invariant holds.
     * This method verifies the internal consistency of the deal after an adjustment
     * by asserting that either the deal is not adjusted, or it satisfies the adjustment invariant.
@@ -58,7 +51,7 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]])(adjusted:
     * @return Unit (no value is returned, but an assertion error is thrown if the invariant is violated)
     */
   def assertAdjusted(): Unit =
-    assert(!adjusted || checkAdjustmentInvariant, "adjustment invariant violated")
+    assert(checkAdjustmentInvariant, "adjustment invariant violated")
 
   /**
     * Apply adjustments based on cooperation from partner.
@@ -66,7 +59,10 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]])(adjusted:
     * @return an eagerly promoted X.
     */
   lazy val adjustForPartnerships: Deal =
-    _cooperate._quit._reprioritize.makeAdjusted
+    println(s"Adjusting deal for partnerships: $title")
+    val result = _cooperate._quit._reprioritize
+    result.assertAdjusted()
+    result
 
   /**
     * Play a card from this Deal.
@@ -148,8 +144,6 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]])(adjusted:
   lazy val countSequences: Int =
     (for ((_, m) <- holdings; (_, h) <- m; q = h.sequences.length) yield q).sum
 
-  private lazy val makeAdjusted: Deal = new Deal(title, holdings)(adjusted = true)
-
   private def checkAdjustmentInvariant: Boolean =
     (0 until Deal.HandsPerDeal by 2).forall { k =>
       Suit.suits.forall { suit =>
@@ -228,7 +222,7 @@ object Deal {
     */
   val CardsPerTrick: Int = 4
 
-  def apply(title: String, holdings: Map[Int, Map[Suit, Holding]]): Deal = new Deal(title, holdings)()
+  def apply(title: String, holdings: Map[Int, Map[Suit, Holding]]): Deal = new Deal(title, holdings)
 
   /**
     * Create a new Deal from a title and four Hands.
@@ -267,14 +261,11 @@ object Deal {
     * @return a new Deal.
     */
   def fromCards(title: String, cs: Seq[Card], adjust: Boolean = true): Deal = {
-    val deal = new Deal(title, (for ((cs, index) <- cs.grouped(CardsPerHand).zipWithIndex) yield index -> Hand.createHoldings(cs)).toMap)()
+    val deal = new Deal(title, (for ((cs, index) <- cs.grouped(CardsPerHand).zipWithIndex) yield index -> Hand.createHoldings(cs)).toMap)
     if (adjust)
       deal.adjustForPartnerships
-    else {
-      if (!deal.isAdjusted)
-        logger.warn(s"Deal.fromCards: adjustForPartnerships=false for partial deal: $title")
+    else
       deal
-    }
   }
 
   /**

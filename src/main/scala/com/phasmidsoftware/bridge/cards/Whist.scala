@@ -71,7 +71,7 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     given com.phasmidsoftware.gambit.game.State[State, State] = stateTC
     given com.phasmidsoftware.gambit.game.Game[State, CardPlay, Int] = gameTC
 
-    assert(deal.isAdjusted, "Deal must be adjusted before double-dummy analysis")
+    deal.assertAdjusted()
 
     val player = AlphaBetaPlayer[State, State, CardPlay, Int](
       me = if directionNS then 0 else 1,

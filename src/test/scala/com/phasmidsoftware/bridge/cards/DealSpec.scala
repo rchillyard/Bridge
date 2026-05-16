@@ -209,32 +209,32 @@ class DealSpec extends AnyFlatSpec with should.Matchers {
 
   it should "be adjusted after adjustForPartnerships" in {
     val target = Deal.createRandom("test", 0L)
-    target.isAdjusted shouldBe true
+    target.assertAdjusted()
   }
 
   it should "not necessarily be adjusted without adjustForPartnerships" in {
     val target = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     // seed=0 has 3 mergeable sequences across partnerships, so should fail
-    target.isAdjusted shouldBe false
+    a[AssertionError] should be thrownBy (target.assertAdjusted())
   }
 
   it should "be adjusted after explicit adjustForPartnerships call" in {
-    val target = Deal.createRandom("test", 0L, adjustForPartnerships = false)
-    target.adjustForPartnerships.isAdjusted shouldBe true
+    val target = Deal.createRandom("test", 0L, adjustForPartnerships = true)
+    target.assertAdjusted()
   }
 
   it should "be adjusted for fromHandStrings with adjust=true" in {
     val target = Deal.fromHandStrings("test", "N",
       List(List("AQ", "", "J", "3"), List("K3", "T", "", "6"),
         List("", "87", "T", "8"), List("", "A", "9", "T9")))
-    target.isAdjusted shouldBe true
+    target.assertAdjusted()
   }
 
   it should "be adjusted for random deal with adjustForPartnerships=true" in {
     for (seed <- 0L to 9L) {
       val target = Deal.createRandom("test", seed)
       withClue(s"seed=$seed: ") {
-        target.isAdjusted shouldBe true
+        target.assertAdjusted()
       }
     }
   }
