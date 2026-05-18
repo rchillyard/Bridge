@@ -33,3 +33,12 @@ libraryDependencies ++= Seq(
   "org.scalatest"              %% "scalatest"                % scalaTestVersion % Test,
   "ch.qos.logback"              % "logback-classic"          % "1.5.9"          % Runtime
 )
+
+lazy val IT = config("it") extend Test
+
+lazy val root = project.in(file("."))
+  .configs(IT)
+  .settings(
+    inConfig(IT)(Defaults.testSettings),
+    IT / scalaSource := baseDirectory.value / "src" / "it" / "scala"
+  )

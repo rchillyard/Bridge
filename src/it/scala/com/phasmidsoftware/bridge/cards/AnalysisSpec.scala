@@ -7,7 +7,8 @@ package com.phasmidsoftware.bridge.cards
 import com.phasmidsoftware.bridge.pbn.{DealValue, Game, PBN, PBNParser}
 import org.scalatest.concurrent.TimeLimitedTests
 import org.scalatest.time.{Seconds, Span}
-import org.scalatest.{AnyFlatSpec, should.Matchers}
+import org.scalatest.flatspec
+import org.scalatest.matchers.should
 
 import scala.io.Source
 

@@ -81,7 +81,7 @@ class StateSpec extends AnyFlatSpec with should.Matchers {
 
   it should "fitness" in {
     val target = State(whist)
-    target.fitness shouldBe 4.0 +- 0.00001
+    target.fitness shouldBe -2.2 +- 0.1
   }
 
   it should "toString" in {
@@ -92,7 +92,7 @@ class StateSpec extends AnyFlatSpec with should.Matchers {
   it should "neatOutput" in {
     val target = State.create(whist, trick0 :+ play0, tricks0)
     target.neatOutput shouldBe
-      "State: Trick History: \"T1 0 {S5}\" 0:0 4.0 Deal test (51) List(S9 HQ9432 D64 CT652," +
+      "State: Trick History: \"T1 0 {S5}\" 0:0 -2.2 Deal test (51) List(S9 HQ9432 D64 CT652," +
         " SK742 HA7 DT93 CAQJ7, SAJT86 HKT8 DK82 CK3, SQ3 HJ65 DAQJ75 C984)"
   }
 
@@ -105,8 +105,8 @@ class StateSpec extends AnyFlatSpec with should.Matchers {
     val target = State.create(whist, trick0 :+ play0, tricks0)
     val writer = MockWriter()
     target.output(Output(writer)).close()
-    writer.spilled shouldBe 13
-    writer.spillway shouldBe "T1 N:S5 (4.0)"
+    writer.spilled shouldBe 14
+    writer.spillway shouldBe "T1 N:S5 (-2.2)"
   }
 
   //  it should "enumerateFollows" in {
@@ -150,7 +150,7 @@ class StateSpec extends AnyFlatSpec with should.Matchers {
     val target = state5alternatives.head
     // NOTE the trick history had SK in T2 1 first position previously. Now, it is CA.
     target.neatOutput shouldBe
-      """State: Trick History: "T1 0 {HQ, HA, H8, H5}, T2 1 {CA}" 0:1 4.8 Deal test (47) List(S95 H9432 D64 CT652, SK742 H7 DT93 CQJ7, SAJT86 HKT DK82 CK3, SQ3 HJ6 DAQJ75 C984)""".stripMargin
+      """State: Trick History: "T1 0 {HQ, HA, H8, H5}, T2 1 {CA}" 0:1 0.6 Deal test (47) List(S95 H9432 D64 CT652, SK742 H7 DT93 CQJ7, SAJT86 HKT DK82 CK3, SQ3 HJ6 DAQJ75 C984)""".stripMargin
   }
 
   // In StateSpec:

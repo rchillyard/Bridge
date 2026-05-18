@@ -77,8 +77,9 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     *
     * @return a number that corresponds to the trick-taking ability of the N/S hands.
     */
-  def evaluate: Double = _evaluate
-
+  lazy val evaluate: Double = evaluateNS - evaluateEW
+  lazy val evaluateNS: Double = hands.head.evaluate + hands(2).evaluate
+  lazy val evaluateEW: Double = hands(1).evaluate + hands(3).evaluate
   /**
     * Method to check this Deal.
     *
@@ -188,8 +189,8 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
   private def outputHand(name: String, hand: Hand): Output =
     (Output(s"$name:\t") :+ hand.neatOutput).insertBreak
 
-  private lazy val _evaluate =
-    hands.sliding(1, 2).flatten.map(_.evaluate).sum
+  //  private lazy val _evaluate =
+  //    hands.sliding(1, 2).flatten.map(_.evaluate).sum
 
   private lazy val allCards: Boolean =
     hands.flatMap(_.cards).distinct.size == Deal.CardsPerDeal

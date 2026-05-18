@@ -4,7 +4,6 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.bridge.cards.State.count
 import com.phasmidsoftware.flog.Loggable
 import com.phasmidsoftware.gambit.util.{Output, Outputable}
 
@@ -139,7 +138,8 @@ object State:
     * @return the fitness as a Double.
     */
   def heuristicFitness(s: State): Double =
-    s.tricks.ns + s.deal.evaluate
+    //    (s.tricks.ns - s.tricks.ew) + s.deal.evaluate
+    s.deal.evaluate
 
   /**
     * Method to create an initial state based on a deal.

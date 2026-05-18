@@ -94,10 +94,12 @@ class DealSpec extends AnyFlatSpec with should.Matchers {
 
   it should "evaluate" in {
     val target = Deal.createRandom("test", 0L, adjustForPartnerships = false)
-    val Seq(n, _, s, _): Seq[Hand] = target.hands
+    val Seq(n, e, s, w): Seq[Hand] = target.hands
     n.evaluate shouldBe 0.44 +- 0.02
     s.evaluate shouldBe 3.41 +- 0.02
-    target.evaluate shouldBe (0.44 + 3.41) +- 0.03
+    e.evaluate shouldBe 3.72 +- 0.02
+    w.evaluate shouldBe 2.55 +- 0.02
+    target.evaluate shouldBe (0.44 + 3.41 - 3.72 - 2.55) +- 0.03
   }
 
   it should "validate good deal" in {
