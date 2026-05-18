@@ -206,4 +206,44 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
     state50.whist.deal.nCards shouldBe 11
     state50.trick.index shouldBe 2
   }
+
+  // In TrickSpec:
+
+  behavior of "Trick.sufficientMovesRemaining"
+
+  it should "return true when enough moves remain for NS goal" in {
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
+    val trick = Trick.empty
+    val tricks = Tricks(0, 0)
+    // 52 moves remaining, need 9 tricks = 36 moves
+    trick.sufficientMovesRemaining(52, directionNS = true, 9, tricks) shouldBe true
+  }
+
+  it should "return false when not enough moves remain for NS goal" in {
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
+    val trick = Trick.empty
+    // NS has 0 tricks, needs 9, only 8 moves remaining = 2 tricks max
+    trick.sufficientMovesRemaining(8, directionNS = true, 9, Tricks(0, 0)) shouldBe false
+  }
+
+  it should "return true when NS already has enough tricks" in {
+    val trick = Trick.empty
+    // NS already has 9 tricks, needs 9
+    trick.sufficientMovesRemaining(0, directionNS = true, 9, Tricks(9, 0)) shouldBe true
+  }
+
+  it should "return false when EW has already defeated NS goal" in {
+    val trick = Trick.empty
+    // NS needs 9, EW has 5 = 13-9+1, goal impossible
+    trick.sufficientMovesRemaining(16, directionNS = true, 9, Tricks(0, 5)) shouldBe false
+  }
+
+  it should "return true when declaring side can win with cards in current trick" in {
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
+    // NS needs 1 more trick, 0 full tricks remain but NS is winning current trick
+    // South (hand 2) has SA (priority 0) — NS side
+    val play1 = CardPlay(deal, None, 2, Spades, 0) // SA - NS winning
+    val trick = Trick.empty :+ play1
+    trick.sufficientMovesRemaining(3, directionNS = true, 1, Tricks(0, 0)) shouldBe true
+  }
 }

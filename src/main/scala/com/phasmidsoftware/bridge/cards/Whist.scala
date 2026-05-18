@@ -76,11 +76,14 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
       me = if directionNS then 0 else 1,
       depth = depth,
       keyFn = Some(_.evaluateKey),
+      depthTranches = depthTranches,
       reuseDeeper = reuseDeeper,
-      depthTranches = depthTranches
+      maxTableSize = Whist.MAX_STATES
     )
     val initialState = State(this)
     logger.info(s"analyzeDoubleDummy: neededTricks=$tricks, directionNS=$directionNS, depth=$depth, branching=${initialState.enumeratePlays.size}")
+    if (depthTranches)
+      logger.info(s"analyzeDoubleDummy: with depthTranches and reuseDeeper=$reuseDeeper}")
     val t0 = System.currentTimeMillis()
     val result = player.chooseMove(initialState, new Random(0L)).map { cardPlay =>
       val bestSuccessor = gameTC.applyMove(initialState, cardPlay, openingLeader)
@@ -111,4 +114,4 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
 
 
 object Whist:
-  val MAX_STATES = 1000000
+  val MAX_STATES = 800000

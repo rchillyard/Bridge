@@ -153,4 +153,39 @@ class StateSpec extends AnyFlatSpec with should.Matchers {
       """State: Trick History: "T1 0 {HQ, HA, H8, H5}, T2 1 {CA}" 0:1 4.8 Deal test (47) List(S95 H9432 D64 CT652, SK742 H7 DT93 CQJ7, SAJT86 HKT DK82 CK3, SQ3 HJ6 DAQJ75 C984)""".stripMargin
   }
 
+  // In StateSpec:
+
+  behavior of "State.evaluateKey"
+
+  it should "return the same key for the same position" in {
+    val deal = Deal.createRandom("test", 0L)
+    val whist = Whist(deal, 0)
+    val s = State(whist)
+    s.evaluateKey shouldBe s.evaluateKey
+  }
+
+  it should "return different keys for different positions" in {
+    val deal0 = Deal.createRandom("test", 0L)
+    val deal1 = Deal.createRandom("test", 1L)
+    val s0 = State(Whist(deal0, 0))
+    val s1 = State(Whist(deal1, 0))
+    s0.evaluateKey should not be s1.evaluateKey
+  }
+
+  it should "return the same key after playing equivalent cards" in {
+    val deal = Deal.createRandom("test", 0L)
+    val whist = Whist(deal, 0)
+    val s0 = State(whist)
+    // Two successor states from the same position should have different keys
+    val successors = s0.enumeratePlays
+    successors.size should be > 1
+    successors.head.evaluateKey should not be successors.last.evaluateKey
+  }
+
+  it should "return a key that fits in four Longs" in {
+    val deal = Deal.createRandom("test", 0L)
+    val s = State(Whist(deal, 0))
+    val key = s.evaluateKey
+    key shouldBe a[(Long, Long, Long, Long)]
+  }
 }

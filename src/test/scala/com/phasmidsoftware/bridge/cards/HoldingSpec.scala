@@ -286,5 +286,31 @@ class HoldingSpec extends AnyFlatSpec with should.Matchers {
     plays.head shouldBe CardPlay(deal, None, 1, Hearts, 0)
     plays.last shouldBe CardPlay(deal, None, 1, Hearts, 7)
   }
+  // In HoldingSpec:
 
+  behavior of "Holding.isAdjustedWith"
+
+  it should "return true for two unrelated holdings" in {
+    val h1 = Holding(Spades, Ace, King)
+    val h2 = Holding(Spades, Nine, Eight)
+    h1.isAdjustedWith(h2) shouldBe true
+  }
+
+  it should "return false when partner card is adjacent to two separate sequences" in {
+    // h1 has AK and JT (two separate sequences), h2 has Q which bridges them
+    val h1 = Holding(List(Sequence(0, List(Card("SA"), Card("SK"))),
+      Sequence(3, List(Card("SJ"), Card("ST")))), Spades)
+    val h2 = Holding(List(Sequence(2, List(Card("SQ")))), Spades)
+    h1.isAdjustedWith(h2) shouldBe false
+  }
+
+  it should "return true after adjustment" in {
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = true)
+    Suit.suits.foreach { suit =>
+      val northHolding = deal.north.holdings.getOrElse(suit, Holding(suit))
+      val southHolding = deal.south.holdings.getOrElse(suit, Holding(suit))
+      northHolding.isAdjustedWith(southHolding) shouldBe true
+      southHolding.isAdjustedWith(northHolding) shouldBe true
+    }
+  }
 }

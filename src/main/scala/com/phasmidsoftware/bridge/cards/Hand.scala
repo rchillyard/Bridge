@@ -149,7 +149,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     * @return a new eagerly promoted Hand.
     */
   def promote(suit: Suit, priority: Int): Hand =
-    Hand(index, holdings + (suit -> holdings(suit).promote(priority)))
+    Hand(index, holdings + (suit -> holdings.getOrElse(suit, Holding(suit)).promote(priority)))
 
   /**
     * @return an eagerly promoted Hand.

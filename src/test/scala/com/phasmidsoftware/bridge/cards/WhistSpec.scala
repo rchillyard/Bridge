@@ -4,8 +4,12 @@
 
 package com.phasmidsoftware.bridge.cards
 
+import com.phasmidsoftware.bridge.pbn.{DealValue, PBN, PBNParser}
 import org.scalatest.flatspec
 import org.scalatest.matchers.should
+
+import scala.io.Source
+import scala.util.Try
 
 //noinspection ScalaStyle
 class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
@@ -81,6 +85,19 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
   it should "evaluate" in {
     val target = Hand.from(0, "SAT32", "CQT98", "D43", "HKJT")
     target.evaluate shouldBe 2.7529296875 +- 0.02
+  }
+  // In WhistSpec (Hand section):
+
+  it should "promote void suit without exception" in {
+    val map: Map[Suit, Holding] = Map(
+      Spades -> Holding.parseHolding("SKQ3"),
+      Hearts -> Holding.parseHolding("H7654"),
+      Clubs -> Holding.parseHolding("C842")
+      // Note: no Diamonds — hand is void in diamonds
+    )
+    val target = Hand(0, map)
+    // Should not throw even though Diamonds is not in holdings
+    noException should be thrownBy target.promote(Diamonds, 0)
   }
 
   behavior of "State"
@@ -188,6 +205,18 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val whist = Whist(target, 3)
     whist.analyzeDoubleDummy(9, directionNS = true) shouldBe Some(true)
   }
+  it should "analyzeDoubleDummy3" in {
+    pending
+    val target = Deal.createRandom("test", 3L)
+    val whist = Whist(target, 3)
+    whist.analyzeDoubleDummy(9, directionNS = true) shouldBe Some(true)
+  }
+  it should "analyzeDoubleDummy4" in {
+    pending
+    val target = Deal.createRandom("test", 4L)
+    val whist = Whist(target, 3)
+    whist.analyzeDoubleDummy(9, directionNS = true) shouldBe Some(true)
+  }
 
   it should "analyzeDoubleDummy for suit" in {
     val target = Deal.createRandom("test", 2L)
@@ -287,5 +316,15 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val initialState = State(whist)
     val tricks = target.nCards / Deal.CardsPerTrick
     whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(true)
+  }
+
+  behavior of "PBN files"
+  it should "analyze example5" in {
+    pending
+    val py: Try[PBN] = PBNParser.parsePBN(Source.fromResource("com/phasmidsoftware/bridge/director/example5.pbn"))
+    val deal = py.get.head("Deal").value.asInstanceOf[DealValue].deal
+    val whist = Whist(deal, 1, Some(Spades))
+    val z: Option[Boolean] = whist.analyzeDoubleDummy(11, true)
+    z shouldBe Some(true)
   }
 }
