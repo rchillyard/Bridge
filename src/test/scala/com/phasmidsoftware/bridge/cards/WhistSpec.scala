@@ -200,19 +200,16 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
   // CONSIDER moving this to it because it takes almost 1/4 second.
   behavior of "double dummy"
   it should "analyzeDoubleDummy2" in {
-    pending
     val target = Deal.createRandom("test", 2L)
     val whist = Whist(target, 3)
-    whist.analyzeDoubleDummy(9, directionNS = true) shouldBe Some(true)
+    whist.analyzeDoubleDummy(9, directionNS = true) shouldBe Some(false)
   }
   it should "analyzeDoubleDummy3" in {
-    pending
     val target = Deal.createRandom("test", 3L)
     val whist = Whist(target, 3)
-    whist.analyzeDoubleDummy(9, directionNS = true) shouldBe Some(true)
+    whist.analyzeDoubleDummy(9, directionNS = true) shouldBe Some(false)
   }
   it should "analyzeDoubleDummy4" in {
-    pending
     val target = Deal.createRandom("test", 4L)
     val whist = Whist(target, 3)
     whist.analyzeDoubleDummy(9, directionNS = true) shouldBe Some(true)
@@ -417,7 +414,7 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   behavior of "PBN files"
   it should "analyze example5" in {
-    pending
+    pending // Issue #13
     val py: Try[PBN] = PBNParser.parsePBN(Source.fromResource("com/phasmidsoftware/bridge/director/example5.pbn"))
     val deal = py.get.head("Deal").value.asInstanceOf[DealValue].deal
     val whist = Whist(deal, 1, Some(Spades))

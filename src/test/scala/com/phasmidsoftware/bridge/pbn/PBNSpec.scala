@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.pbn
 
-import com.phasmidsoftware.bridge.cards.{Deal, Whist}
+import com.phasmidsoftware.bridge.cards.{Deal, Spades, Whist}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
 
@@ -51,10 +51,10 @@ class PBNSpec extends AnyFlatSpec with should.Matchers {
     deal should matchPattern { case Deal(_, _) => }
   }
   it should "analyze deal" in {
-    pending // improve performance for this deal
+    pending // Issue #13
     val deal = py.get.head("Deal").value.asInstanceOf[DealValue].deal
     //noinspection ScalaStyle
-    Whist(deal, 1).analyzeDoubleDummy(8, directionNS = true) shouldBe Some(true)
+    Whist(deal, 1, Some(Spades)).analyzeDoubleDummy(8, directionNS = true) shouldBe Some(true)
   }
 
   behavior of "DetailedValue"
