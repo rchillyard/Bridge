@@ -116,7 +116,14 @@ class WhistState(neededTricks: Int, directionNS: Boolean) extends GState[State, 
     * NOTE: This is an approximation for the two-partnership case.
     * A fully correct implementation would track the actual hand index.
     */
-  private def isNSToMove(s: State): Boolean = s.cardsPlayed % 2 == 1
+  private def isNSToMove(s: State): Boolean =
+    s.trick.leader.forall { leader =>
+      val lastSeat =
+        if s.trick.size == 0
+        then leader
+        else (leader + s.trick.size - 1) % 4
+      lastSeat % 2 == 0
+    }
 
 object WhistState:
   /**
@@ -126,5 +133,5 @@ object WhistState:
     * @param directionNS  true if NS are the protagonists.
     * @return a `GState[State, State]` instance for use as a `given`.
     */
-  def apply(neededTricks: Int, directionNS: Boolean): GState[State, State] =
+  def apply(neededTricks: Int, directionNS: Boolean): WhistState =
     new WhistState(neededTricks, directionNS)

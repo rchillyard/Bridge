@@ -32,7 +32,8 @@ case class Trick(index: Int, plays: Seq[CardPlay], maybePrior: Option[Trick]) ex
 
   lazy val maybeSuit: Option[Suit] = plays.headOption.map(_.suit)
 
-  lazy val leader: Option[Int] = plays.headOption.map(_.hand)
+  lazy val leader: Option[Int] =
+    plays.headOption.map(_.hand).orElse(maybePrior.flatMap(_.winner).map(_.play.hand))
 
   /**
     * @return the index of the hand next to play in this trick.
@@ -73,6 +74,33 @@ case class Trick(index: Int, plays: Seq[CardPlay], maybePrior: Option[Trick]) ex
     if (isComplete || index == 0) Trick(index + 1, Seq(play), if (index == 0) None else Some(this))
     else if (next contains play.hand) Trick(index, plays :+ play, maybePrior)
     else throw CardException(s"play $play cannot be added to this trick: $this ")
+
+  /**
+    * Determine if any subsequent player can beat the current winner of this trick.
+    * Considers both beating in the led suit and ruffing with trumps.
+    *
+    * @param deal   the current state of the deal.
+    * @param strain the optional trump suit.
+    * @return true if any remaining player can beat the current winner.
+    */
+  def canSubsequentPlayWin(deal: Deal, strain: Option[Suit]): Boolean =
+    winner match
+      case None => false
+      case Some(w) =>
+        val ledSuit = maybeSuit.get
+        val remainingHands = (size until Deal.CardsPerTrick)
+          .map(i => (leader.get + i) % Deal.HandsPerDeal)
+        remainingHands.exists { handIndex =>
+          val holdings = deal.hands(handIndex).holdings
+          val canBeatInSuit = holdings.get(ledSuit)
+            .exists(_.sequences.exists(_.priority < w.play.priority))
+          val canRuff = strain.exists(trump =>
+            trump != ledSuit &&
+              holdings.get(ledSuit).forall(_.isVoid) &&
+              holdings.get(trump).exists(!_.isVoid)
+          )
+          canBeatInSuit || canRuff
+        }
 
   /**
     * @return true if the first card in this trick is an honor.

@@ -1,6 +1,7 @@
 package com.phasmidsoftware.bridge.gambit
 
 import com.phasmidsoftware.bridge.cards.*
+import org.scalatest.PrivateMethodTester.{PrivateMethod, anyRefToInvoker}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
 
@@ -263,4 +264,76 @@ class WhistGameSpec extends AnyFlatSpec with should.Matchers:
   it should "give zero-sum result" in {
     val result = game0.winner(game0.start, current = 0)
     result.values.sum shouldBe 0
+  }
+
+  behavior of "WhistState.isNSToMove"
+
+  private val isNSToMove = PrivateMethod[Boolean](Symbol("isNSToMove"))
+
+  def invokeIsNSToMove(ws: WhistState, s: State): Boolean =
+    ws invokePrivate isNSToMove(s)
+
+  private val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
+  private val whist = Whist(deal, 0, None)
+
+  private def cardPlay(deal: Deal, seat: Int): CardPlay =
+    val hand = deal.hands(seat)
+    val holding = hand.holdings.head._2
+    val card = holding.cards.head
+    CardPlay(deal, None, seat, holding.suit, card.priority)
+
+  private def makeTrick(leader: Int, seats: List[Int]): Trick =
+    val empty = Trick(leader, Nil, None)
+    seats.foldLeft(empty)((t, seat) => t :+ cardPlay(deal, seat))
+
+  private def makeTrick(seats: List[Int]): Trick =
+    seats.foldLeft(Trick(0, Nil, None))((t, seat) => t :+ cardPlay(deal, seat))
+
+  // Empty trick, no prior — forall on None => true
+  it should "return true when trick and prior are both empty" in {
+    val ws = WhistState(3, directionNS = true)
+    val s = State(whist, Trick(0, Nil, None), Tricks(0, 0))
+    invokeIsNSToMove(ws, s) shouldBe true
+  }
+
+  // Mid-trick: leader=0, size=1 — lastSeat=(0+0)%4=0 => NS
+  it should "return true when North has just led (seat 0, size=1)" in {
+    val ws = WhistState(3, directionNS = true)
+    val s = State(whist, makeTrick(0, List(0)), Tricks(0, 0))
+    invokeIsNSToMove(ws, s) shouldBe true
+  }
+
+  // Mid-trick: leader=0, size=2 — lastSeat=(0+1)%4=1 => EW
+  it should "return false when East has just played (seat 1, size=2)" in {
+    val ws = WhistState(3, directionNS = true)
+    val s = State(whist, makeTrick(0, List(0, 1)), Tricks(0, 0))
+    invokeIsNSToMove(ws, s) shouldBe false
+  }
+
+  // Mid-trick: leader=0, size=3 — lastSeat=(0+2)%4=2 => NS
+  it should "return true when South has just played (seat 2, size=3)" in {
+    val ws = WhistState(3, directionNS = true)
+    val s = State(whist, makeTrick(0, List(0, 1, 2)), Tricks(0, 0))
+    invokeIsNSToMove(ws, s) shouldBe true
+  }
+
+  // Mid-trick: leader=0, size=4 — lastSeat=(0+3)%4=3 => EW
+  it should "return false when West has just played (seat 3, size=4)" in {
+    val ws = WhistState(3, directionNS = true)
+    val s = State(whist, makeTrick(0, List(0, 1, 2, 3)), Tricks(0, 0))
+    invokeIsNSToMove(ws, s) shouldBe false
+  }
+
+  it should "return true when South won the prior trick and leads next (size=0)" in {
+    val ws = WhistState(3, directionNS = true)
+    val prior = makeTrick(List(2)) // only South plays — trivially the winner
+    val s = State(whist, Trick(0, Nil, Some(prior)), Tricks(1, 0))
+    invokeIsNSToMove(ws, s) shouldBe true
+  }
+
+  it should "return false when East won the prior trick and leads next (size=0)" in {
+    val ws = WhistState(3, directionNS = true)
+    val prior = makeTrick(List(1)) // only East plays — trivially the winner
+    val s = State(whist, Trick(0, Nil, Some(prior)), Tricks(0, 1))
+    invokeIsNSToMove(ws, s) shouldBe false
   }

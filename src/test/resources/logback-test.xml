@@ -39,6 +39,6 @@
     </root>
 
     <logger name="com.phasmidsoftware.bridge.gambit.WhistState" level="INFO"/>
-<!--    <logger name="com.phasmidsoftware.gambit.game.AlphaBetaPlayer" level="INFO"/>-->
+    <logger name="com.phasmidsoftware.gambit.game.AlphaBetaPlayer" level="INFO"/>
 
 </configuration>

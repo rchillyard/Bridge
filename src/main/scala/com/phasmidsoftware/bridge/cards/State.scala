@@ -138,8 +138,19 @@ object State:
     * @return the fitness as a Double.
     */
   def heuristicFitness(s: State): Double =
-    //    (s.tricks.ns - s.tricks.ew) + s.deal.evaluate
-    s.deal.evaluate
+    val trickBonus = s.trick.winner match
+      case None => 0.0
+      case Some(w) =>
+        val sign = if w.isDeclaringSide(true) then 1.0 else -1.0
+        val canBeBeaten = s.trick.canSubsequentPlayWin(s.deal, s.whist.strain)
+        val magnitude = s.trick.size match
+          case 3 => if canBeBeaten then 0.5 else 1.0
+          case 2 => if canBeBeaten then 0.25 else 0.75
+          case 1 => if canBeBeaten then 0.1 else 0.5
+          case _ => 0.0
+        logger.debug(s"trickBonus: size=${s.trick.size}, winner=${s.trick.winner}, canBeBeaten=$canBeBeaten, magnitude=$magnitude")
+        sign * magnitude
+    s.deal.evaluate + trickBonus
 
   /**
     * Method to create an initial state based on a deal.
@@ -177,6 +188,9 @@ object State:
         State(whist.play(trick.plays.last), trick, tricks)
     else
       throw CardException(s"cannot create a new State based on an empty trick")
+
+
+  private val logger = org.slf4j.LoggerFactory.getLogger(getClass)
 
   given StateOrdering: Ordering[State] with
     /**

@@ -246,4 +246,94 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val trick = Trick.empty :+ play1
     trick.sufficientMovesRemaining(3, directionNS = true, 1, Tricks(0, 0)) shouldBe true
   }
+
+  behavior of "Trick.canSubsequentPlayWin"
+
+  it should "return false for an empty trick" in {
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
+    Trick.empty.canSubsequentPlayWin(deal, None) shouldBe false
+  }
+
+  it should "return false when no subsequent player can beat" in {
+    // North leads SA (priority 0) — no one can beat the Ace
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
+    // South has SA (hand 2, priority 0)
+    val play1 = CardPlay(deal, None, 2, Spades, 0) // SA
+    val trick = Trick.empty :+ play1
+    trick.canSubsequentPlayWin(deal, None) shouldBe false
+  }
+
+  it should "return true when a subsequent player can beat in suit" in {
+    // North leads S9 (priority 5) — East has SK (priority 1) which beats it
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
+    val play1 = CardPlay(deal, None, 0, Spades, 5) // S9
+    val trick = Trick.empty :+ play1
+    trick.canSubsequentPlayWin(deal, None) shouldBe true
+  }
+
+  it should "return true when a subsequent player can ruff" in {
+    // North leads a spade, East is void in spades and has clubs (trumps)
+    val deal = Deal.fromHandStrings("test", "N",
+      List(
+        List("AQ", "", "J", "3"), // North: SA, SQ, DJ, C3
+        List("", "T", "8", "J6"), // East: HT, D8, CJ6 (void in spades, has clubs)
+        List("", "87", "Q", "8"), // South: H87, DQ, C8
+        List("", "A", "9", "T9") // West: HA, D9, CT9
+      ))
+    val whist = Whist(deal, 0, Some(Clubs))
+    val play1 = CardPlay(deal, Some(Clubs), 0, Spades, 0) // SA
+    val trick = Trick.empty :+ play1
+    // East is void in spades and has clubs (trumps) — can ruff
+    trick.canSubsequentPlayWin(deal, Some(Clubs)) shouldBe true
+  }
+
+  it should "return false when last player is void in suit and has no trumps" in {
+    val deal = Deal.fromHandStrings("test", "N",
+      List(
+        List("A", "", "", ""), // North: SA
+        List("", "T", "", ""), // East: HT (void in spades, void in clubs)
+        List("", "", "Q", ""), // South: DQ
+        List("", "", "T", "") // West: DT
+      ))
+    val play1 = CardPlay(deal, Some(Clubs), 0, Spades, 0) // SA
+    val play2 = CardPlay(deal, Some(Clubs), 1, Hearts, 4) // HT - East discards
+    val play3 = CardPlay(deal, Some(Clubs), 2, Diamonds, 2) // DQ - South discards
+    val trick = Trick.empty :+ play1 :+ play2 :+ play3
+    // Only West remains, has CT but led suit is Spades
+    // Wait - West has CT which IS clubs (trumps) so can ruff!
+    trick.canSubsequentPlayWin(deal, Some(Clubs)) shouldBe false
+  }
+  it should "return false when no subsequent player can beat the Ace in notrump" in {
+    val deal = Deal.fromHandStrings("test", "N",
+      List(
+        List("A", "", "", ""), // North: SA
+        List("3", "", "", ""), // East: S3
+        List("2", "", "", ""), // South: S2
+        List("4", "", "", "") // West: S4
+      ))
+    val play1 = CardPlay(deal, None, 0, Spades, 0) // SA
+    val trick = Trick.empty :+ play1
+    trick.canSubsequentPlayWin(deal, None) shouldBe false
+  }
+
+  it should "return false when trick is complete" in {
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
+    val play1 = CardPlay(deal, None, 0, Spades, 5) // S9
+    val play2 = CardPlay(deal, None, 1, Spades, 1) // SK
+    val play3 = CardPlay(deal, None, 2, Spades, 0) // SA
+    val play4 = CardPlay(deal, None, 3, Spades, 2) // SQ
+    val trick = Trick.empty :+ play1 :+ play2 :+ play3 :+ play4
+    trick.isComplete shouldBe true
+    trick.canSubsequentPlayWin(deal, None) shouldBe false
+  }
+
+  it should "return true when third hand can beat second hand's card" in {
+    // North leads S9, East plays S7 (doesn't beat), South has SA
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
+    val play1 = CardPlay(deal, None, 0, Spades, 5) // S9 - North leads
+    val play2 = CardPlay(deal, None, 1, Spades, 7) // S7 - East plays low
+    val trick = Trick.empty :+ play1 :+ play2
+    // South (hand 2) has SA — can beat
+    trick.canSubsequentPlayWin(deal, None) shouldBe true
+  }
 }

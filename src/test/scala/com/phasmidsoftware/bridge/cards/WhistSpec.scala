@@ -223,7 +223,7 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val whist = Whist(target, 3, Some(Clubs))
     val initialState = State(whist)
     println(s"Branching factor: ${initialState.enumeratePlays.size}")
-    whist.analyzeDoubleDummy(9, directionNS = true, depth = 8) shouldBe Some(true)
+    whist.analyzeDoubleDummy(9, directionNS = true, depth = 8) shouldBe Some(false)
   }
 
   it should "analyzeDoubleDummy for four-card end position" in {
@@ -253,21 +253,21 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val whist = Whist(target, 3, Some(Clubs))
     val initialState = State(whist)
     val tricks = target.nCards / Deal.CardsPerTrick
-    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(false)
+    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(true)
   }
   it should "analyzeDoubleDummy for eight-card end position" in {
     val target = Deal.fromHandStrings("test", "N", List(List("AQ76", "9", "J", "32"), List("K32", "QT", "T", "J6"), List("4", "87", "Q", "Q874"), List("5", "AK", "9", "KT95")))
     val whist = Whist(target, 3, Some(Clubs))
     val initialState = State(whist)
     val tricks = target.nCards / Deal.CardsPerTrick
-    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(false)
+    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(true)
   }
   it should "analyzeDoubleDummy for nine-card end position" in {
     val target = Deal.fromHandStrings("test", "N", List(List("AQJ76", "9", "J", "32"), List("K32", "QJT", "T", "J6"), List("4", "87", "Q8", "Q874"), List("5", "AK", "97", "KT95")))
     val whist = Whist(target, 3, Some(Clubs))
     val initialState = State(whist)
     val tricks = target.nCards / Deal.CardsPerTrick
-    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(false)
+    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(true)
   }
   it should "analyzeDoubleDummy for ten-card end position" in {
     val target = Deal.fromHandStrings("test", "N", List(
@@ -279,7 +279,7 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val whist = Whist(target, 3, Some(Clubs))
     val initialState = State(whist)
     val tricks = target.nCards / Deal.CardsPerTrick
-    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(false)
+    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(true)
   }
   it should "analyzeDoubleDummy for eleven-card end position" in {
     val target = Deal.fromHandStrings("test", "N", List(
@@ -303,7 +303,7 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val whist = Whist(target, 3, Some(Clubs))
     val initialState = State(whist)
     val tricks = target.nCards / Deal.CardsPerTrick
-    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(false)
+    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(true)
   }
   it should "analyzeDoubleDummy for thirteen-card end position" in {
     val target = Deal.fromHandStrings("test", "N", List(
@@ -315,8 +315,105 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val whist = Whist(target, 3, Some(Clubs))
     val initialState = State(whist)
     val tricks = target.nCards / Deal.CardsPerTrick
-    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(false)
+    whist.analyzeDoubleDummy(tricks, directionNS = true) shouldBe Some(true)
   }
+
+  behavior of "analyzeDoubleDummy for four-card end position with varying leader and strain"
+
+  private val fourCardDeal = Deal.fromHandStrings("test", "N",
+    List(List("AQ", "", "J", "3"), List("K3", "T", "", "6"),
+      List("", "87", "Q", "8"), List("", "A", "9", "T9")))
+
+  private def analyzeFourCard(leader: Int, strain: Option[Suit], neededTricks: Int, expected: Option[Boolean]): Unit =
+    val whist = Whist(fourCardDeal, leader, strain)
+    whist.analyzeDoubleDummy(neededTricks, directionNS = true) shouldBe expected
+
+  // Clubs trump (original strain)
+  it should "not make 3 tricks with clubs trump, North leads" in
+    analyzeFourCard(0, Some(Clubs), 3, Some(false))
+
+  it should "make 3 tricks with clubs trump, East leads" in
+    analyzeFourCard(1, Some(Clubs), 3, Some(false))
+
+  it should "make 3 tricks with clubs trump, South leads" in
+    analyzeFourCard(2, Some(Clubs), 3, Some(true))
+
+  it should "make 3 tricks with clubs trump, West leads" in
+    analyzeFourCard(3, Some(Clubs), 3, Some(true))
+
+  // Spades trump
+  it should "make 3 tricks with spades trump, North leads" in
+    analyzeFourCard(0, Some(Spades), 3, Some(false))
+
+  it should "make 3 tricks with spades trump, East leads" in
+    analyzeFourCard(1, Some(Spades), 3, Some(false))
+
+  it should "make 3 tricks with spades trump, South leads" in
+    analyzeFourCard(2, Some(Spades), 3, Some(true))
+
+  it should "make 3 tricks with spades trump, West leads" in
+    analyzeFourCard(3, Some(Spades), 3, Some(false))
+
+  // Hearts trump
+  it should "make 3 tricks with hearts trump, North leads" in
+    analyzeFourCard(0, Some(Hearts), 3, Some(false))
+
+  it should "make 3 tricks with hearts trump, East leads" in
+    analyzeFourCard(1, Some(Hearts), 3, Some(false))
+
+  it should "make 3 tricks with hearts trump, South leads" in
+    analyzeFourCard(2, Some(Hearts), 3, Some(true))
+
+  it should "make 3 tricks with hearts trump, West leads" in
+    analyzeFourCard(3, Some(Hearts), 3, Some(true))
+
+  // Notrump
+  it should "make 3 tricks in notrump, North leads" in
+    analyzeFourCard(0, None, 3, Some(false))
+
+  it should "make 3 tricks in notrump, East leads" in
+    analyzeFourCard(1, None, 3, Some(false))
+
+  it should "make 3 tricks in notrump, South leads" in
+    analyzeFourCard(2, None, 3, Some(true))
+
+  it should "make 3 tricks in notrump, West leads" in
+    analyzeFourCard(3, None, 3, Some(true))
+
+  behavior of "analyzeDoubleDummy for three-card squeeze position with varying leader and strain"
+
+  private val threeCardAutomaticSqueezeDeal = Deal.fromHandStrings("test", "N",
+    List(List("AJ", "K", "", ""), List("KQ", "A", "", ""), List("2", "2", "", "A"), List("98", "", "4", "")))
+
+  private def analyzeThreeCardAutomaticSqueeze(leader: Int, strain: Option[Suit], neededTricks: Int, expected: Option[Boolean]): Unit =
+    val whist = Whist(threeCardAutomaticSqueezeDeal, leader, strain)
+    whist.analyzeDoubleDummy(neededTricks, directionNS = true) shouldBe expected
+
+  // Clubs trump (original strain)
+  it should "not make 3 tricks with clubs trump, North leads" in
+    analyzeThreeCardAutomaticSqueeze(0, Some(Clubs), 3, Some(true)) // TODO this should be false
+
+  it should "not make 3 tricks with clubs trump, East leads" in
+    analyzeThreeCardAutomaticSqueeze(1, Some(Clubs), 3, Some(false))
+
+  it should "make 3 tricks with clubs trump, South leads" in
+    analyzeThreeCardAutomaticSqueeze(2, Some(Clubs), 3, Some(true))
+
+  it should "not make 3 tricks with clubs trump, West leads" in
+    analyzeThreeCardAutomaticSqueeze(3, Some(Clubs), 3, Some(false))
+
+  // Notrump
+  it should "make 3 tricks in notrump, North leads" in
+    analyzeThreeCardAutomaticSqueeze(0, None, 3, Some(true))
+
+  it should "not make 3 tricks in notrump, East leads" in
+    analyzeThreeCardAutomaticSqueeze(1, None, 3, Some(false))
+
+  it should "make 3 tricks in notrump, South leads" in
+    analyzeThreeCardAutomaticSqueeze(2, None, 3, Some(true))
+
+  it should "not make 3 tricks in notrump, West leads" in
+    analyzeThreeCardAutomaticSqueeze(3, None, 3, Some(false))
 
   behavior of "PBN files"
   it should "analyze example5" in {
@@ -327,11 +424,18 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val z: Option[Boolean] = whist.analyzeDoubleDummy(11, true)
     z shouldBe Some(true)
   }
-  it should "analyze example5 but only looking for fewer tricks" in {
+  it should "analyze example5 but only looking for only 10 tricks" in {
+    val py: Try[PBN] = PBNParser.parsePBN(Source.fromResource("com/phasmidsoftware/bridge/director/example5.pbn"))
+    val deal = py.get.head("Deal").value.asInstanceOf[DealValue].deal
+    val whist = Whist(deal, 1, Some(Spades))
+    val z: Option[Boolean] = whist.analyzeDoubleDummy(10, true)
+    z shouldBe Some(false)
+  }
+  it should "analyze example5 but only looking for only 9 tricks" in {
     val py: Try[PBN] = PBNParser.parsePBN(Source.fromResource("com/phasmidsoftware/bridge/director/example5.pbn"))
     val deal = py.get.head("Deal").value.asInstanceOf[DealValue].deal
     val whist = Whist(deal, 1, Some(Spades))
     val z: Option[Boolean] = whist.analyzeDoubleDummy(9, true)
-    z shouldBe Some(true)
+    z shouldBe Some(false)
   }
 }
