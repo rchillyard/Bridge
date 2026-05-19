@@ -352,7 +352,7 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
     analyzeFourCard(2, Some(Spades), 3, Some(true))
 
   it should "make 3 tricks with spades trump, West leads" in
-    analyzeFourCard(3, Some(Spades), 3, Some(false))
+    analyzeFourCard(3, Some(Spades), 3, Some(true))
 
   // Hearts trump
   it should "make 3 tricks with hearts trump, North leads" in
@@ -391,29 +391,29 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   // Clubs trump (original strain)
   it should "not make 3 tricks with clubs trump, North leads" in
-    analyzeThreeCardAutomaticSqueeze(0, Some(Clubs), 3, Some(true)) // TODO this should be false
+    analyzeThreeCardAutomaticSqueeze(0, Some(Clubs), 3, Some(false))
 
-  it should "not make 3 tricks with clubs trump, East leads" in
-    analyzeThreeCardAutomaticSqueeze(1, Some(Clubs), 3, Some(false))
+  it should "make 3 tricks with clubs trump, East leads" in
+    analyzeThreeCardAutomaticSqueeze(1, Some(Clubs), 3, Some(true))
 
-  it should "make 3 tricks with clubs trump, South leads" in
-    analyzeThreeCardAutomaticSqueeze(2, Some(Clubs), 3, Some(true))
+  it should "not make 3 tricks with clubs trump, South leads" in
+    analyzeThreeCardAutomaticSqueeze(2, Some(Clubs), 3, Some(false))
 
-  it should "not make 3 tricks with clubs trump, West leads" in
-    analyzeThreeCardAutomaticSqueeze(3, Some(Clubs), 3, Some(false))
+  it should "make 3 tricks with clubs trump, West leads" in
+    analyzeThreeCardAutomaticSqueeze(3, Some(Clubs), 3, Some(true))
 
   // Notrump
-  it should "make 3 tricks in notrump, North leads" in
-    analyzeThreeCardAutomaticSqueeze(0, None, 3, Some(true))
+  it should "not make 3 tricks in notrump, North leads" in
+    analyzeThreeCardAutomaticSqueeze(0, None, 3, Some(false))
 
-  it should "not make 3 tricks in notrump, East leads" in
-    analyzeThreeCardAutomaticSqueeze(1, None, 3, Some(false))
+  it should "make 3 tricks in notrump, East leads" in
+    analyzeThreeCardAutomaticSqueeze(1, None, 3, Some(true))
 
-  it should "make 3 tricks in notrump, South leads" in
-    analyzeThreeCardAutomaticSqueeze(2, None, 3, Some(true))
+  it should "not make 3 tricks in notrump, South leads" in
+    analyzeThreeCardAutomaticSqueeze(2, None, 3, Some(false))
 
-  it should "not make 3 tricks in notrump, West leads" in
-    analyzeThreeCardAutomaticSqueeze(3, None, 3, Some(false))
+  it should "make 3 tricks in notrump, West leads" in
+    analyzeThreeCardAutomaticSqueeze(3, None, 3, Some(true))
 
   behavior of "PBN files"
   it should "analyze example5" in {

@@ -1,6 +1,6 @@
 package com.phasmidsoftware.bridge.gambit
 
-import com.phasmidsoftware.bridge.cards.{Deal, State}
+import com.phasmidsoftware.bridge.cards.State
 import com.phasmidsoftware.gambit.game.{Move, Transition, State as GState}
 
 /**
@@ -53,19 +53,19 @@ class WhistState(neededTricks: Int, directionNS: Boolean) extends GState[State, 
     * search explores branches that can never achieve the goal, making the
     * search intractable on a full 52-card deal.
     */
-  def isGoal(s: State): Option[Boolean] = {
-    //    println(s"neededTricks=$neededTricks, directionNS=$directionNS")
-    val result = s.tricks.decide(neededTricks, directionNS) match
-      case Some(x) =>
-        Some(x)
+  def isGoal(s: State): Option[Boolean] =
+    val movesRemaining = s.whist.deal.nCards - s.cardsPlayed
+    val decided = s.tricks.decide(neededTricks, directionNS)
+    val sufficient = s.trick.sufficientMovesRemaining(movesRemaining, directionNS, neededTricks, s.tricks)
+    val result = decided match
+      case Some(x) => Some(x)
       case None =>
-        val movesRemaining = Deal.CardsPerDeal - s.cardsPlayed
-        if !s.trick.sufficientMovesRemaining(movesRemaining, directionNS, neededTricks, s.tricks)
-        then Some(false)
+        if !sufficient then Some(false)
         else None
-    result.foreach(r => logger.debug(s"isGoal=$r at tricks=${s.tricks}, cardsPlayed=${s.cardsPlayed}"))
+    result.foreach {
+      r => logger.debug(s"isGoal=$r at tricks=${s.tricks}, cardsPlayed=${s.cardsPlayed}, movesRemaining=$movesRemaining, decided=$decided, sufficient=$sufficient")
+    }
     result
-  }
 
   /**
     * Heuristic from the perspective of the player who just moved.
