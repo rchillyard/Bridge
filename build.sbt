@@ -2,7 +2,7 @@ organization := "com.phasmidsoftware"
 
 name := "Bridge"
 
-version := "1.1.0"
+version := "1.1.1"
 
 scalaVersion := "3.7.4"
 
