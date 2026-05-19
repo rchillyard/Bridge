@@ -6,9 +6,9 @@ package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.pbn.{DealValue, Game, PBN, PBNParser}
 import org.scalatest.concurrent.TimeLimitedTests
-import org.scalatest.time.{Seconds, Span}
 import org.scalatest.flatspec
 import org.scalatest.matchers.should
+import org.scalatest.time.{Seconds, Span}
 
 import scala.io.Source
 import scala.util.Try
@@ -77,7 +77,7 @@ class WhistPBNSpec extends flatspec.AnyFlatSpec with should.Matchers with TimeLi
           val leader = Hand.next(declarer)
           val strain = z match {
             case "NT" => None
-            case x if x.length > 0 => Some(Suit.apply(x.head))
+            case x if x.nonEmpty => Some(Suit.apply(x.head))
             case _ => throw CardException(s"cannot parse the contract detail: $contract")
           }
           val tricks = n.toInt

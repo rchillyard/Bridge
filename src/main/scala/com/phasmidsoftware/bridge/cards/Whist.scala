@@ -72,7 +72,7 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
 
     deal.assertAdjusted()
 
-    val player = AlphaBetaPlayer[State, State, CardPlay, Int](
+    val player = new AlphaBetaPlayer[State, State, CardPlay, Int, (Long, Long, Long, Long)](
       me = if directionNS then 0 else 1,
       depth = depth,
       keyFn = Some(_.evaluateKey),
