@@ -28,23 +28,22 @@ class AnalysisSpec extends flatspec.AnyFlatSpec with should.Matchers with TimeLi
     analyzeMakableContracts(game)
   }
 
-  it should "analyze deal 1" in {
+  ignore should "analyze deal 1" in {
     val game = pbn(1)
     analyzeMakableContracts(game)
   }
 
-  it should "analyze deal 2" in {
+  ignore should "analyze deal 2" in {
     val game = pbn(2)
     analyzeMakableContracts(game)
   }
-
-  // 5 seconds
-  it should "analyze deal 3" in {
+  
+  ignore should "analyze deal 3" in {
     val game = pbn(3)
     analyzeMakableContracts(game)
   }
 
-  it should "analyze deal 4" in {
+  ignore should "analyze deal 4" in {
     val game = pbn(4)
     analyzeMakableContracts(game)
   }

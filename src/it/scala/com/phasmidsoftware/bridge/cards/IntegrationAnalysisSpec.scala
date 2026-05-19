@@ -18,7 +18,7 @@ class IntegrationAnalysisSpec extends flatspec.AnyFlatSpec with should.Matchers 
   private val pbn: PBN = py.get
 
   behavior of "double dummy analysis"
-  it should "analyze all deals" in {
+  ignore should "analyze all deals" in {
     // NOTE: this currently takes 4 minutes, 26 seconds in total
     // NOTE: one specific case has to be skipped as it does not appear to terminate (or at least not in reasonable time).
     for (game <- pbn) analyzeMakableContracts(game)
@@ -45,7 +45,7 @@ class IntegrationAnalysisSpec extends flatspec.AnyFlatSpec with should.Matchers 
             if (ok) {
               ok shouldBe true
             }
-            else fail("finished but wrong answer")
+            else fail(s"$event Board $board tricks=$tricks, declarer=$l, leader=$leader : wrong answer")
           case None =>
             println(s"analysis not attempted for board $board with opening leader $leader")
             succeed

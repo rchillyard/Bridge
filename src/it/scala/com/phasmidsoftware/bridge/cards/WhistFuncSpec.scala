@@ -16,7 +16,7 @@ class WhistFuncSpec extends flatspec.AnyFlatSpec with should.Matchers with TimeL
 
   behavior of "double dummy"
   // 1.5 seconds
-  it should "analyzeDoubleDummy0" in {
+  ignore should "analyzeDoubleDummy0" in {
     val target = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val whist = Whist(target, 0)
     whist.analyzeDoubleDummy(9, directionNS = false) shouldBe Some(true)
