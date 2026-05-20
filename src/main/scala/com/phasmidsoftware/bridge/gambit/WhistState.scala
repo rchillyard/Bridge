@@ -40,6 +40,9 @@ class WhistState(neededTricks: Int, directionNS: Boolean) extends GState[State, 
     */
   def isWin(s: State): Boolean = isGoal(s).contains(true)
 
+  // in WhistState
+  var maxNSTricks: Int = 0
+
   /**
     * Goal detection, incorporating early termination:
     *
@@ -54,7 +57,8 @@ class WhistState(neededTricks: Int, directionNS: Boolean) extends GState[State, 
     * search intractable on a full 52-card deal.
     */
   def isGoal(s: State): Option[Boolean] =
-    val movesRemaining = s.whist.deal.nCards - s.cardsPlayed
+    if s.tricks.ns > maxNSTricks then maxNSTricks = s.tricks.ns
+    val movesRemaining = s.whist.deal.nCards
     val decided = s.tricks.decide(neededTricks, directionNS)
     val sufficient = s.trick.sufficientMovesRemaining(movesRemaining, directionNS, neededTricks, s.tricks)
     val result = decided match
