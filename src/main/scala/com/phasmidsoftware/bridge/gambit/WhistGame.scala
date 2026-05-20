@@ -46,6 +46,12 @@ class WhistGame(whist: Whist) extends Game[State, CardPlay, Int]:
     */
   def nextPlayer(s: State, current: Int): Int = Hand.next(current)
 
+  override def currentPlayer[P](s: State)(using state: GState[P, State]): Int =
+    if s.trick.isComplete then
+      s.trick.winner.map(_.play.hand).getOrElse(startingPlayer)
+    else
+      s.trick.leader.map(l => (l + s.trick.size) % 4).getOrElse(startingPlayer)
+
   /**
     * The winner determination: the player who just moved (prev) wins (+1),
     * the current player (about to move) loses (-1).
