@@ -10,6 +10,13 @@ to play perfectly with full knowledge of all four hands.
 The solver is integrated via the Whist model — a simplified bridge game without
 auction — and is accessed through `Whist.analyzeDoubleDummy`.
 
+Overarching design philosophy (where item 1 is what I naturally got wrong before):
+
+- Get the functionality right before worrying about performance or extensibility!!
+- The solver is designed to be as simple and efficient as possible, with a focus on correctness and clarity.
+- The solver is designed to be easily extensible, with a modular architecture that allows for easy addition of new features and optimizations.
+- The solver is designed to be easily testable, with a comprehensive suite of unit tests and integration tests that cover all aspects of the solver's behavior.
+
 ---
 
 ## Architecture
