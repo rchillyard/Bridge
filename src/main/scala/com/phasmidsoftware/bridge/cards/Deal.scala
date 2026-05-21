@@ -70,7 +70,8 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     * @param cardPlay the card play.
     * @return a new Playable.
     */
-  def play(cardPlay: CardPlay): Deal = Deal(title, hands map (_.play(cardPlay)))
+  def play(cardPlay: CardPlay): Deal =
+    Deal(title, hands map (_.play(cardPlay)))
 
   /**
     * Evaluate the N and S hands heuristically.

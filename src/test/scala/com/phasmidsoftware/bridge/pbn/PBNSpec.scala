@@ -50,8 +50,8 @@ class PBNSpec extends AnyFlatSpec with should.Matchers {
     val deal = py.get.head("Deal").value.asInstanceOf[DealValue].deal
     deal should matchPattern { case Deal(_, _) => }
   }
-  it should "analyze deal" in {
-    pending // Issue #13: Incorrect result.
+  it should "analyze Lexington deal 1" in {
+    pending // Issue #14 TRansposition Table fix
     val deal = py.get.head("Deal").value.asInstanceOf[DealValue].deal
     //noinspection ScalaStyle
     Whist(deal, 1, Some(Spades)).analyzeDoubleDummy(8, directionNS = true) shouldBe Some(true)

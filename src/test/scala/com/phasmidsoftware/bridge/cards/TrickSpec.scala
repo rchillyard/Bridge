@@ -46,7 +46,8 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val target = state50.trick.history
     //    println(target)
     target.size shouldBe 2
-    target.head shouldBe state4alternatives.head.trick
+    target.head shouldBe state40.trick // completed trick 1
+    target.last shouldBe state50.trick // current trick
   }
 
   it should "append" in {

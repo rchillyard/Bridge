@@ -211,7 +211,8 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
   private lazy val _evaluate = holdings.values.map(_.evaluate).sum
 
   // NOTE: only used for testing
-  private lazy val _quit = Hand(index, for ((k, v) <- holdings) yield k -> v.quit)
+  private lazy val _quit =
+    Hand(index, for ((k, v) <- holdings) yield k -> v.quit)
 
   private lazy val _longestSuit = holdings.values.maxBy(_.length)
 }

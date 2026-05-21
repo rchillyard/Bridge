@@ -45,7 +45,8 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     * @param cardPlay the card play.
     * @return a new Whist.
     */
-  def play(cardPlay: CardPlay): Whist = Whist(deal.play(cardPlay), openingLeader, strain)
+  def play(cardPlay: CardPlay): Whist =
+    Whist(deal.play(cardPlay), openingLeader, strain)
 
   /**
     * Analyzes the potential outcome of a double-dummy play scenario based on the given parameters.
@@ -65,30 +66,31 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
                           reuseDeeper: Boolean = false,
                           depthTranches: Boolean = true
                         ): Option[Boolean] =
-    val stateTC = WhistState(tricks, directionNS)
-    val gameTC = WhistGame(this)
+    given gameTC: WhistGame = new WhistGame(this) // needs to be a named given so WhistState can find it
+
+    given stateTC: WhistState = new WhistState(tricks, directionNS)
     given com.phasmidsoftware.gambit.game.State[State, State] = stateTC
     given com.phasmidsoftware.gambit.game.Game[State, CardPlay, Int] = gameTC
 
     deal.assertAdjusted()
 
-    val player = new AlphaBetaPlayer[State, State, CardPlay, Int, (Long, Long, Long, Long)](
+    val player = AlphaBetaPlayer[State, State, CardPlay, Int](
       me = if directionNS then 0 else 1,
-      depth = depth,
-      keyFn = Some(_.evaluateKey),
-      depthTranches = depthTranches,
-      reuseDeeper = reuseDeeper,
-      maxTableSize = Whist.MAX_STATES
+      depth = depth
+      //      keyFn = None, // Some(s => s.evaluateKey),
+      //      depthTranches = depthTranches,
+      //      reuseDeeper = reuseDeeper,
+      //      maxTableSize = Whist.MAX_STATES
     )
     val initialState = State(this)
     logger.info(s"analyzeDoubleDummy: neededTricks=$tricks, directionNS=$directionNS, depth=$depth, branching=${initialState.enumeratePlays.size}")
     if (depthTranches)
       logger.info(s"analyzeDoubleDummy: with depthTranches and reuseDeeper=$reuseDeeper}")
     val t0 = System.currentTimeMillis()
-    val result = player.chooseMove(initialState, new Random(0L)).map { cardPlay =>
-      val bestSuccessor = gameTC.applyMove(initialState, cardPlay, openingLeader)
-      stateTC.heuristic(bestSuccessor) > 0
+    val result = player.chooseMoveWithScore(initialState, new Random(0L)).map { (_, score) =>
+      score > 0
     }
+    logger.info(s"analyzeDoubleDummy: maxNSTricks=${stateTC.maxNSTricks}")
     logger.info(s"analyzeDoubleDummy: result=$result, elapsed=${System.currentTimeMillis() - t0}ms, tableSize=${player.tableSize}")
     result
 
@@ -100,7 +102,8 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     *
     * @return an eagerly promoted Whist game.
     */
-  def quit: Whist = Whist(deal.quit, openingLeader, strain)
+  def quit: Whist =
+    Whist(deal.quit, openingLeader, strain)
 
   /**
     * Create an initial state for this Whist game.

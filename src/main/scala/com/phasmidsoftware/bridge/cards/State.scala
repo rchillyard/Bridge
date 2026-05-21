@@ -116,8 +116,27 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
   def output(output: Output, xo: Option[Unit] = None): Output =
     trick.output(output, Some(deal)) :+ s" ($fitness)"
 
+  /**
+    * Retrieves the most recent card play in the current trick, or from the prior trick if available.
+    *
+    * This method attempts to find the last play in the current trick. If the current trick
+    * has no recorded plays, it will look at the prior trick (if it exists) to determine
+    * the last play.
+    *
+    * @return an Option containing the last CardPlay if it exists, or None if no plays are available
+    *         in the current or prior trick.
+    */
+  def lastPlay: Option[CardPlay] =
+    trick.plays.lastOption
+      .orElse(trick.maybePrior.flatMap(_.plays.lastOption))
+
   private lazy val _enumeratePlays =
-    whist.makeStates(tricks, trick.enumerateSubsequentPlays(whist))
+    if trick.isComplete then
+      val leader = trick.winner.map(_.play.hand).getOrElse(whist.openingLeader)
+      whist.makeStates(tricks, trick.enumerateSubsequentPlays(whist.deal, leader, whist.strain))
+    else
+      whist.makeStates(tricks, trick.enumerateSubsequentPlays(whist))
+
   private lazy val _validate: Boolean =
     trick.plays.forall(_.validate)
   private lazy val _isConsistent =
@@ -188,7 +207,6 @@ object State:
         State(whist.play(trick.plays.last), trick, tricks)
     else
       throw CardException(s"cannot create a new State based on an empty trick")
-
 
   private val logger = org.slf4j.LoggerFactory.getLogger(getClass)
 
