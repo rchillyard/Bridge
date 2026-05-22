@@ -44,10 +44,10 @@ class PredicateSpec extends AnyFlatSpec with should.Matchers {
   }
 
   it should "get andThen right" in {
-    (isOdd andThen isPositive)(1) shouldBe true
-    (isOdd andThen isPositive)(-1) shouldBe false
-    (isOdd andThen isPositive)(2) shouldBe false
-    (isOdd andThen isPositive)(-2) shouldBe false
+    (isOdd `andThen` isPositive)(1) shouldBe true
+    (isOdd `andThen` isPositive)(-1) shouldBe false
+    (isOdd `andThen` isPositive)(2) shouldBe false
+    (isOdd `andThen` isPositive)(-2) shouldBe false
   }
 
   it should "get `orElse` right" in {
@@ -58,10 +58,10 @@ class PredicateSpec extends AnyFlatSpec with should.Matchers {
   }
 
   it should "get implies right" in {
-    (isOdd implies isPositive)(1) shouldBe true
-    (isOdd implies isPositive)(-1) shouldBe false
-    (isOdd implies isPositive)(2) shouldBe true
-    (isOdd implies isPositive)(-2) shouldBe true
+    (isOdd `implies` isPositive)(1) shouldBe true
+    (isOdd `implies` isPositive)(-1) shouldBe false
+    (isOdd `implies` isPositive)(2) shouldBe true
+    (isOdd `implies` isPositive)(-2) shouldBe true
   }
 
   behavior of "BooleanIntPredicate"

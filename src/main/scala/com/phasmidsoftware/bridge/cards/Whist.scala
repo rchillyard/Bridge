@@ -5,9 +5,10 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.gambit.{WhistGame, WhistState}
-import com.phasmidsoftware.gambit.game.AlphaBetaPlayer
+import com.phasmidsoftware.bridge.pbn.{PBN, PBNParser}
+import com.phasmidsoftware.gambit.game.{AlphaBetaPlayer, FlatTTCache, TTCache}
 
-import scala.util.Random
+import scala.util.{Random, Success}
 
 /**
   * This class represents a game of Whist.
@@ -54,38 +55,31 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     * @param tricks        The number of tricks needed by the protagonists to succeed.
     * @param directionNS   A boolean indicating whether the protagonists are North-South (true) or East-West (false).
     * @param depth         The depth of the search tree for the analysis. Defaults to the minimum of the cards in the deal or the maximum cards per deal.
-    * @param reuseDeeper   A boolean indicating whether deeper search results can be reused during the analysis. Defaults to true.
-    * @param depthTranches A boolean to determine if the depth of the search should use a tranches mechanism. Defaults to false.
     * @return An Option containing a boolean. Returns `Some(true)` if the analysis determines a winning outcome for the protagonists,
     *         `Some(false)` if losing, or `None` if no result is found.
     */
   def analyzeDoubleDummy(
                           tricks: Int,
                           directionNS: Boolean,
-                          depth: Int = math.min(Deal.CardsPerDeal, deal.nCards),
-                          reuseDeeper: Boolean = false,
-                          depthTranches: Boolean = true
+                          depth: Int = math.min(Deal.CardsPerDeal, deal.nCards)
                         ): Option[Boolean] =
+
     given gameTC: WhistGame = new WhistGame(this) // needs to be a named given so WhistState can find it
 
     given stateTC: WhistState = new WhistState(tricks, directionNS)
     given com.phasmidsoftware.gambit.game.State[State, State] = stateTC
     given com.phasmidsoftware.gambit.game.Game[State, CardPlay, Int] = gameTC
 
-    deal.assertAdjusted()
+    given TTCache[CacheKey] = FlatTTCache()
 
-    val player = AlphaBetaPlayer[State, State, CardPlay, Int](
+    deal.assertAdjusted()
+    val player = new AlphaBetaPlayer[State, State, CardPlay, Int, CacheKey](
       me = if directionNS then 0 else 1,
-      depth = depth
-      //      keyFn = None, // Some(s => s.evaluateKey),
-      //      depthTranches = depthTranches,
-      //      reuseDeeper = reuseDeeper,
-      //      maxTableSize = Whist.MAX_STATES
+      depth = depth,
+      keyFn = Some(s => s.evaluateKey)
     )
     val initialState = State(this)
     logger.info(s"analyzeDoubleDummy: neededTricks=$tricks, directionNS=$directionNS, depth=$depth, branching=${initialState.enumeratePlays.size}")
-    if (depthTranches)
-      logger.info(s"analyzeDoubleDummy: with depthTranches and reuseDeeper=$reuseDeeper}")
     val t0 = System.currentTimeMillis()
     val result = player.chooseMoveWithScore(initialState, new Random(0L)).map { (_, score) =>
       score > 0
@@ -118,3 +112,26 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
 
 object Whist:
   val MAX_STATES = 800000
+
+@main def myApp(args: String*): Unit = {
+  import scala.io.{Codec, Source}
+  assert(args.nonEmpty, "At least one argument required")
+  val filename = args(0)
+  val maybeBoard = args.lift(1).flatMap(_.toIntOption)
+
+  given Codec = Codec.UTF8
+
+  PBNParser.parsePBN(Source.fromFile(filename)) match {
+    case Success(PBN(games)) =>
+      (for (x <- maybeBoard; g <- games.lift(x)) yield g) match {
+        case Some(g) =>
+          g.analyzeMakableContracts()
+        case None =>
+          System.err.println(s"No game to parse PBN file: $filename ($maybeBoard)")
+          return
+      }
+    case _ =>
+      System.err.println(s"Failed to parse PBN file: $filename")
+      return
+  }
+}

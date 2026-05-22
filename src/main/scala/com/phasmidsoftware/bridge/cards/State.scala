@@ -40,7 +40,7 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
     * @return a tuple of four Long values, each representing the bitwise encoding
     *         of the card sequences held in one of the four hands in the deal.
     */
-  def evaluateKey: (Long, Long, Long, Long) =
+  def evaluateKey: CacheKey =
     def handBits(hand: Hand): Long =
       hand.holdings.foldLeft(0L) { case (acc, (suit, holding)) =>
         holding.sequences.foldLeft(acc) { (a, seq) =>

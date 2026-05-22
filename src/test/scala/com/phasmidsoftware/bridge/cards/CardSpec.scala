@@ -141,7 +141,7 @@ class CardSpec extends AnyFlatSpec with should.Matchers {
   }
 
   it should "implement compare" in {
-    implicitly[Ordered[Card]](Card(Spades, "A")).compare(Card(Spades, "K")) shouldBe 1
+    implicitly[Ordered[Card]](using Card(Spades, "A")).compare(Card(Spades, "K")) shouldBe 1
   }
 
   it should "sort in proper order" in {

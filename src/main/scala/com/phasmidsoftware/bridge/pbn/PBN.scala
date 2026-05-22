@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.pbn
 
-import com.phasmidsoftware.bridge.cards.Deal
+import com.phasmidsoftware.bridge.cards.*
 
 /**
   * This class represents the PBN (Portable Bridge Notation) for a set of games.
@@ -39,6 +39,30 @@ case class Game(tagPairs: Seq[(Name, DetailedValue)]) extends Iterable[(Name, De
   override def toString: String = s"gameChecker: ${tagPairs.toMap}"
 
   def iterator: Iterator[(Name, DetailedValue)] = tagPairs.iterator
+
+  def analyzeMakableContracts(): Unit = {
+    val deal: Deal = this ("Deal").value.asInstanceOf[DealValue].deal
+    if (deal.validate) {
+      val board = this ("Board").toInt
+      val declarerTricksR = """([NESW])\s*(NT|S|H|D|C)\s*(\d+)""".r
+      this ("OptimumResultTable").detail foreach {
+        case contract@declarerTricksR(l, z, n) =>
+          val declarer = "NESW".indexOf(l)
+          val leader = Hand.next(declarer)
+          val strain = z match {
+            case "NT" => None
+            case x if x.nonEmpty =>
+              Some(Suit.apply(x.head))
+            case _ =>
+              throw CardException(s"cannot parse the contract detail: $contract")
+          }
+          val tricks = n.toInt
+          println(s"analyzeDoubleDummy: board=$board tricks=$tricks, strain=${strain.getOrElse("NT")} declarer=$l, leader=$leader")
+          val result = Whist(deal, leader, strain).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0)
+          println(s"analyzeDoubleDummy: board=$board result=$result")
+      }
+    }
+  }
 
   private val mapper: (Name, DetailedValue) => (String, DetailedValue) = (n, v) => n.toString -> v
 }

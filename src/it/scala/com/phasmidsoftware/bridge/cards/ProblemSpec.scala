@@ -53,7 +53,7 @@ class ProblemSpec extends AnyFlatSpec with should.Matchers {
           case _ => false -> false
         }
         println(s"analyzeDoubleDummy: tricks=$tricks, declarer=$l, leader=$leader, mode=$mode, reuseDeeper=$reuse, depthTranches=$depthT")
-        Whist(deal, leader).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0, reuseDeeper = reuse, depthTranches = depthT) shouldBe Some(true)
+        Whist(deal, leader).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0) shouldBe Some(true)
     }
   }
 }

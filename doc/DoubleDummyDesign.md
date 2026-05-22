@@ -52,9 +52,7 @@ K  = (Long,Long,Long,Long)  (transposition table key, currently unused)
 def analyzeDoubleDummy(
   tricks: Int,
   directionNS: Boolean,
-  depth: Int = ...,
-  reuseDeeper: Boolean = false,
-  depthTranches: Boolean = true
+  depth: Int = ...
 ): Option[Boolean]
 ```
 
@@ -184,26 +182,33 @@ maximizing and minimizing within a trick.
 
 ## Transposition Table
 
-The transposition table is currently **disabled** (`keyFn = None`).
+The transposition table is **enabled** via `FlatTTCache` with key type
+`CacheKey = (Long, Long, Long, Long)` — the four hands encoded as bitfields
+of card sequences (using sequence priority rather than raw rank for ~3x
+performance improvement).
 
-The naive transposition table (storing a `Double` per board position) produces
-incorrect results because a value cached under one set of alpha-beta bounds may
-be reused in a context with incompatible bounds, poisoning the search. This was
-observed in practice: the correct winning line for NS was found but suppressed
-because a cached `-MaxValue` from a suboptimal line was returned for the same
-board position reached via a different path.
+```scala
+given TTCache[CacheKey] = FlatTTCache()
+val player = new AlphaBetaPlayer[State, State, CardPlay, Int, CacheKey](
+  me = if directionNS then 0 else 1,
+  depth = depth,
+  keyFn = Some(s => s.evaluateKey)
+)
+```
 
-**Issue #14** tracks the correct fix: store TT flags (exact / lower bound /
-upper bound) with each cached entry, and only reuse entries whose flag is
-compatible with the current alpha-beta window (`alpha`, `beta`):
+Each entry stores a `TTFlag` (Exact / LowerBound / UpperBound). Currently
+**only `Exact` entries are returned on probe** — LowerBound/UpperBound entries
+are stored but not reused because doing so requires propagating tightened bounds
+back to `cachedEvaluate`, which is deferred (Issue #14 partial).
 
-- `EXACT` — value is exact; reuse freely
-- `LOWERBOUND` — value ≥ actual; only reuse if `value > alpha`
-- `UPPERBOUND` — value ≤ actual; only reuse if `value < beta`
+In practice the `Exact`-only hit rate for bridge is low — most positions are
+reached via paths with different alpha-beta windows, producing LowerBound or
+UpperBound entries. The ~10,000-entry table on a 12-card ending gives negligible
+speedup over `keyFn = None`. Full bound propagation is the primary remaining
+performance lever from the TT side.
 
-The transposition table key is `(Long, Long, Long, Long)` — the four hands
-encoded as bitfields of card sequences (using sequence priority rather than
-raw rank for ~3x performance improvement).
+The previous `depthTranches` and `reuseDeeper` parameters have been removed;
+the choice of caching strategy is now encoded in the `given TTCache[K]` instance.
 
 ---
 
@@ -225,24 +230,37 @@ def sufficientMovesRemaining(moves: Int, directionNS: Boolean,
 
 ## Known Limitations and Open Issues
 
-### Issue #14 — Transposition Table Flags
+### Issue #14 — Transposition Table Flags (partial)
 
-The transposition table is disabled pending implementation of exact/lower/upper
-bound flags. Re-enabling it correctly will significantly improve performance for
-large deals (the full Lexington hand currently takes ~10s without caching).
+`TTFlag` (Exact/LowerBound/UpperBound), `TTEntry`, and the `TTCache[K]`
+typeclass are implemented. `FlatTTCache` is wired into `analyzeDoubleDummy`.
+Only `Exact` entries are currently reused on probe; full `LowerBound`/
+`UpperBound` bound propagation is deferred.
+
+In practice the Exact-only hit rate is too low to significantly accelerate
+the large deals. Full bound propagation requires changing `probe` to return
+`Option[TTEntry]` and handling window tightening in `cachedEvaluate`.
 
 ### Performance
 
-Without the transposition table, performance degrades exponentially with deal
-size. The `depthTranches` mode (separate cache per depth) was benchmarked at
-~25% faster than flat for bridge when caching was enabled.
+Performance degrades exponentially with deal size. The 12-card ending takes
+~1.5s with or without caching (Exact-only hit rate too low to help). The full
+Lexington hand is currently intractable (>5 minutes).
+
+Suit-level grouping (treating equivalent cards as one move) is already
+implemented and is the primary branching-factor reduction. The remaining
+performance levers are:
+
+1. Full TT bound propagation (Issue #14)
+2. Profiling the 12-card ending to identify JVM-specific bottlenecks
 
 ### Full Deal Analysis
 
-The 52-card full deal analysis is the ultimate goal. Performance depends heavily
-on the transposition table and the `sufficientMovesRemaining` pruning. The
-`maxTableSize` parameter caps the transposition table at 800,000 entries to
-avoid OOM.
+The 52-card full deal analysis is the ultimate goal. Performance depends on
+the transposition table (full bound propagation) and `sufficientMovesRemaining`
+pruning working together. The reference DDS implementation achieves this in
+optimised C++; a JVM Scala implementation will be slower but should be
+tractable with correct TT flag reuse.
 
 ---
 

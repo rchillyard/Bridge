@@ -2,7 +2,7 @@ organization := "com.phasmidsoftware"
 
 name := "Bridge"
 
-version := "1.1.1"
+version := "1.1.2"
 
 scalaVersion := "3.7.4"
 
@@ -19,7 +19,7 @@ resolvers += Resolver.mavenLocal
 
 lazy val versionFlog   = "1.0.13"
 lazy val versionNumber = "1.10.5"
-lazy val versionGambit = "1.2.0-SNAPSHOT"
+lazy val versionGambit = "1.2.1-SNAPSHOT"
 
 libraryDependencies ++= Seq(
   "com.phasmidsoftware"        %% "flog"                     % versionFlog,
