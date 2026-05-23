@@ -40,12 +40,12 @@ case class Game(tagPairs: Seq[(Name, DetailedValue)]) extends Iterable[(Name, De
 
   def iterator: Iterator[(Name, DetailedValue)] = tagPairs.iterator
 
-  def analyzeMakableContracts(): Unit = {
+  def analyzeMakableContracts(max: Int = 0): Unit = {
     val deal: Deal = this ("Deal").value.asInstanceOf[DealValue].deal
     if (deal.validate) {
       val board = this ("Board").toInt
       val declarerTricksR = """([NESW])\s*(NT|S|H|D|C)\s*(\d+)""".r
-      this ("OptimumResultTable").detail foreach {
+      val cases = this ("OptimumResultTable").detail map {
         case contract@declarerTricksR(l, z, n) =>
           val declarer = "NESW".indexOf(l)
           val leader = Hand.next(declarer)
@@ -58,6 +58,11 @@ case class Game(tagPairs: Seq[(Name, DetailedValue)]) extends Iterable[(Name, De
           }
           val tricks = n.toInt
           println(s"analyzeDoubleDummy: board=$board tricks=$tricks, strain=${strain.getOrElse("NT")} declarer=$l, leader=$leader")
+          (deal, leader, strain, tricks, declarer)
+      }
+      val work = if max > 0 then cases.take(max) else cases
+      work foreach {
+        case (deal, leader, strain, tricks, declarer) =>
           val result = Whist(deal, leader, strain).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0)
           println(s"analyzeDoubleDummy: board=$board result=$result")
       }

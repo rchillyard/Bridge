@@ -5,7 +5,7 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.flog.Loggable
-import com.phasmidsoftware.gambit.util.{Output, Outputable}
+import com.phasmidsoftware.gambit.util.{LazyLogger, Output, Outputable}
 
 import scala.language.postfixOps
 
@@ -96,7 +96,8 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
     * The heuristic fitness of this State: tricks taken by NS plus NS trick-taking potential.
     * Rounded to the nearest 0.1.
     */
-  lazy val fitness: Double = math.rint(State.heuristicFitness(this) * 10) / 10
+  lazy val fitness: Double =
+    math.rint(State.heuristicFitness(this) * 10) / 10
 
   /**
     * Method to yield neat output for a State.
@@ -162,14 +163,16 @@ object State:
       case Some(w) =>
         val sign = if w.isDeclaringSide(true) then 1.0 else -1.0
         val canBeBeaten = s.trick.canSubsequentPlayWin(s.deal, s.whist.strain)
-        val magnitude = s.trick.size match
+        val magnitude: Double = s.trick.size match
           case 3 => if canBeBeaten then 0.5 else 1.0
           case 2 => if canBeBeaten then 0.25 else 0.75
           case 1 => if canBeBeaten then 0.1 else 0.5
           case _ => 0.0
-        logger.debug(s"trickBonus: size=${s.trick.size}, winner=${s.trick.winner}, canBeBeaten=$canBeBeaten, magnitude=$magnitude")
+        logger.debug(s"heuristicFitness.trickBonus: size=${s.trick.size}, winner=${s.trick.winner}, canBeBeaten=$canBeBeaten, magnitude=$magnitude")
         sign * magnitude
-    s.deal.evaluate + trickBonus
+    val value = s.deal.evaluate
+    logger.debug(s"heuristicFitness.value: $value")
+    value + trickBonus
 
   /**
     * Method to create an initial state based on a deal.
@@ -208,7 +211,7 @@ object State:
     else
       throw CardException(s"cannot create a new State based on an empty trick")
 
-  private val logger = org.slf4j.LoggerFactory.getLogger(getClass)
+  private val logger = LazyLogger(getClass)
 
   given StateOrdering: Ordering[State] with
     /**

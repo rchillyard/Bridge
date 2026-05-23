@@ -2,6 +2,7 @@ package com.phasmidsoftware.bridge.gambit
 
 import com.phasmidsoftware.bridge.cards.*
 import com.phasmidsoftware.gambit.game.{Game, State as GState}
+import com.phasmidsoftware.gambit.util.{LazyLogger, Output, Outputable, Shuffle}
 
 /**
   * The Gambit `Game[State, CardPlay, Int]` typeclass instance for Whist card play.
@@ -85,4 +86,4 @@ object WhistGame:
     */
   //  def apply(whist: Whist): WhistGame = new WhistGame(whist)
 
-  private val logger = org.slf4j.LoggerFactory.getLogger(getClass)
+  private val logger = LazyLogger(getClass)

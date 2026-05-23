@@ -6,7 +6,7 @@ package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.cards.Rank.ranks
 import com.phasmidsoftware.bridge.cards.Suit.suits
-import com.phasmidsoftware.gambit.util.{Output, Outputable, Shuffle}
+import com.phasmidsoftware.gambit.util.{LazyLogger, Output, Outputable, Shuffle}
 
 import java.io.Writer
 import scala.language.postfixOps
@@ -309,5 +309,5 @@ object Deal {
     writer.flush()
   }
 
-  private val logger = org.slf4j.LoggerFactory.getLogger(getClass)
+  private val logger = LazyLogger(getClass)
 }

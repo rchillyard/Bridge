@@ -1,7 +1,9 @@
 package com.phasmidsoftware.bridge.gambit
 
 import com.phasmidsoftware.bridge.cards.State
+import com.phasmidsoftware.bridge.gambit.WhistState.logger
 import com.phasmidsoftware.gambit.game.{Move, Transition, State as GState}
+import com.phasmidsoftware.gambit.util.LazyLogger
 
 /**
   * Factory for the Gambit `State[State, State]` typeclass instance for Whist card play.
@@ -151,4 +153,5 @@ class WhistState(neededTricks: Int, directionNS: Boolean)(using game: WhistGame)
 
   def render(s: State): String = s.neatOutput
 
-  private val logger = org.slf4j.LoggerFactory.getLogger(getClass)
+object WhistState:
+  private val logger = LazyLogger(getClass)

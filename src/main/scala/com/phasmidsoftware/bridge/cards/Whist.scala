@@ -4,9 +4,11 @@
 
 package com.phasmidsoftware.bridge.cards
 
+import com.phasmidsoftware.bridge.cards.Whist.{logger, runPlayer}
 import com.phasmidsoftware.bridge.gambit.{WhistGame, WhistState}
 import com.phasmidsoftware.bridge.pbn.{PBN, PBNParser}
 import com.phasmidsoftware.gambit.game.{AlphaBetaPlayer, FlatTTCache, TTCache}
+import com.phasmidsoftware.gambit.util.{LazyLogger, Output, Outputable, Shuffle}
 
 import scala.util.{Random, Success}
 
@@ -81,8 +83,8 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     val initialState = State(this)
     logger.info(s"analyzeDoubleDummy: neededTricks=$tricks, directionNS=$directionNS, depth=$depth, branching=${initialState.enumeratePlays.size}")
     val t0 = System.currentTimeMillis()
-    val result = player.chooseMoveWithScore(initialState, new Random(0L)).map { (_, score) =>
-      score > 0
+    val result = runPlayer(player, initialState, new Random(0L), depth).map {
+      (_, score) => score > 0
     }
     logger.info(s"analyzeDoubleDummy: maxNSTricks=${stateTC.maxNSTricks}")
     logger.info(s"analyzeDoubleDummy: result=$result, elapsed=${System.currentTimeMillis() - t0}ms, tableSize=${player.tableSize}")
@@ -107,11 +109,26 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
 
   private lazy val sStrain: String = strain.map(_.toString).getOrElse("NT")
 
-  private val logger = org.slf4j.LoggerFactory.getLogger(getClass)
-
 
 object Whist:
+
+  import scala.concurrent.ExecutionContext.Implicits.global
+  import scala.concurrent.duration.*
+  import scala.concurrent.{Await, Future, TimeoutException}
+  import scala.util.{Failure, Try}
+
+  private def runPlayer(player: AlphaBetaPlayer[State, State, CardPlay, Int, (Long, Long, Long, Long)], initialState: State, random: Random, depth: Int): Option[(CardPlay, Double)] = {
+    val future: Future[Option[(CardPlay, Double)]] = Future(player.chooseMoveWithScore(initialState, random))
+    Try(Await.result(future, 10.seconds)).recoverWith {
+      case _: TimeoutException =>
+        logger.warn(s"analyzeDoubleDummy: timed out after 10s, depth=$depth")
+        Failure(new TimeoutException(s"analyzeDoubleDummy timed out"))
+    }.toOption.flatten
+  }
+
+
   val MAX_STATES = 800000
+  private val logger = LazyLogger(getClass)
 
 @main def myApp(args: String*): Unit = {
   import scala.io.{Codec, Source}
@@ -125,10 +142,9 @@ object Whist:
     case Success(PBN(games)) =>
       (for (x <- maybeBoard; g <- games.lift(x)) yield g) match {
         case Some(g) =>
-          g.analyzeMakableContracts()
+          g.analyzeMakableContracts(5) // NOTE this restricts the number contracts analyzed to 5
         case None =>
           System.err.println(s"No game to parse PBN file: $filename ($maybeBoard)")
-          return
       }
     case _ =>
       System.err.println(s"Failed to parse PBN file: $filename")
