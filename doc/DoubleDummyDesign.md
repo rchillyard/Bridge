@@ -50,9 +50,9 @@ K  = (Long,Long,Long,Long)  (transposition table key, currently unused)
 
 ```scala
 def analyzeDoubleDummy(
-  tricks: Int,
-  directionNS: Boolean,
-  depth: Int = ...
+                        tricks: Int,
+                        directionNS: Boolean,
+                        depth: Int = ...
 ): Option[Boolean]
 ```
 
@@ -60,7 +60,7 @@ def analyzeDoubleDummy(
 - `directionNS` — `true` if NS are the protagonists (declarer side)
 - Returns `Some(true)` if the protagonists can guarantee `tricks` tricks
   against best defence, `Some(false)` if they cannot, `None` if no move
-  is available
+  is available or the node limit was hit before any top-level move completed
 
 Construction order in `analyzeDoubleDummy` is important: `gameTC` must be
 declared as a named `given` before `stateTC` so that `WhistState` can find
@@ -248,11 +248,26 @@ Performance degrades exponentially with deal size. The 12-card ending takes
 Lexington hand is currently intractable (>5 minutes).
 
 Suit-level grouping (treating equivalent cards as one move) is already
-implemented and is the primary branching-factor reduction. The remaining
-performance levers are:
+implemented and is the primary branching-factor reduction.
+
+A node limit (`MAX_NODES = 1,000,000`) is applied via `withMaxNodes` to prevent
+OOM when analyzing multiple contracts in sequence. When the limit is hit,
+`getBestSoFar` returns the best top-level move fully evaluated before the cutoff,
+so a partial result is returned rather than `None`. This is logged as a warning.
+
+The remaining performance levers are:
 
 1. Full TT bound propagation (Issue #14)
-2. Profiling the 12-card ending to identify JVM-specific bottlenecks
+2. Aspiration search — narrow the alpha-beta window to `[neededTricks-ε, neededTricks+ε]`
+3. Profiling the 12-card ending to identify JVM-specific bottlenecks
+
+### OOM / Node Limit
+
+Analyzing all contracts for a deal (up to 20 strain × leader combinations) with
+no node limit causes OOM by the fifth contract due to `Future` threads from timed-
+out searches accumulating in the background. The `Future`/`Await` timeout
+mechanism has been replaced with a node-count limit, eliminating background
+threads entirely. `MAX_NODES = 1,000,000` is tunable in `Whist`.
 
 ### Full Deal Analysis
 

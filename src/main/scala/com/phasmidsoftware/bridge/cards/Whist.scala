@@ -7,8 +7,8 @@ package com.phasmidsoftware.bridge.cards
 import com.phasmidsoftware.bridge.cards.Whist.{logger, runPlayer}
 import com.phasmidsoftware.bridge.gambit.{WhistGame, WhistState}
 import com.phasmidsoftware.bridge.pbn.{PBN, PBNParser}
-import com.phasmidsoftware.gambit.game.{AlphaBetaPlayer, FlatTTCache, TTCache}
-import com.phasmidsoftware.gambit.util.{LazyLogger, Output, Outputable, Shuffle}
+import com.phasmidsoftware.gambit.game.{AlphaBetaPlayer, FlatTTCache, NodeLimitException, TTCache}
+import com.phasmidsoftware.gambit.util.LazyLogger
 
 import scala.util.{Random, Success}
 
@@ -79,7 +79,7 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
       me = if directionNS then 0 else 1,
       depth = depth,
       keyFn = Some(s => s.evaluateKey)
-    )
+    ).withMaxNodes(Whist.MAX_NODES)
     val initialState = State(this)
     logger.info(s"analyzeDoubleDummy: neededTricks=$tricks, directionNS=$directionNS, depth=$depth, branching=${initialState.enumeratePlays.size}")
     val t0 = System.currentTimeMillis()
@@ -112,22 +112,17 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
 
 object Whist:
 
-  import scala.concurrent.ExecutionContext.Implicits.global
-  import scala.concurrent.duration.*
-  import scala.concurrent.{Await, Future, TimeoutException}
-  import scala.util.{Failure, Try}
+  import scala.util.Try
 
-  private def runPlayer(player: AlphaBetaPlayer[State, State, CardPlay, Int, (Long, Long, Long, Long)], initialState: State, random: Random, depth: Int): Option[(CardPlay, Double)] = {
-    val future: Future[Option[(CardPlay, Double)]] = Future(player.chooseMoveWithScore(initialState, random))
-    Try(Await.result(future, 10.seconds)).recoverWith {
-      case _: TimeoutException =>
-        logger.warn(s"analyzeDoubleDummy: timed out after 10s, depth=$depth")
-        Failure(new TimeoutException(s"analyzeDoubleDummy timed out"))
+  private def runPlayer(player: AlphaBetaPlayer[State, State, CardPlay, Int, CacheKey], initialState: State, random: Random, depth: Int): Option[(CardPlay, Double)] =
+    Try(player.chooseMoveWithScore(initialState, random)).recover {
+      case e: NodeLimitException =>
+        logger.warn(s"analyzeDoubleDummy: node limit reached (${e.nodes} nodes), depth=$depth, returning bestSoFar=${player.getBestSoFar}")
+        player.getBestSoFar
     }.toOption.flatten
-  }
 
-
-  val MAX_STATES = 800000
+  val MAX_STATES = 800_000
+  private val MAX_NODES: Int = 1_000_000
   private val logger = LazyLogger(getClass)
 
 @main def myApp(args: String*): Unit = {
@@ -142,7 +137,7 @@ object Whist:
     case Success(PBN(games)) =>
       (for (x <- maybeBoard; g <- games.lift(x)) yield g) match {
         case Some(g) =>
-          g.analyzeMakableContracts(5) // NOTE this restricts the number contracts analyzed to 5
+          g.analyzeMakableContracts()
         case None =>
           System.err.println(s"No game to parse PBN file: $filename ($maybeBoard)")
       }
