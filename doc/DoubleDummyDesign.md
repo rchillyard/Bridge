@@ -53,14 +53,31 @@ def analyzeDoubleDummy(
                         tricks: Int,
                         directionNS: Boolean,
                         depth: Int = ...
-): Option[Boolean]
+): DDResult
 ```
 
 - `tricks` — the number of tricks the protagonists need to make
 - `directionNS` — `true` if NS are the protagonists (declarer side)
-- Returns `Some(true)` if the protagonists can guarantee `tricks` tricks
-  against best defence, `Some(false)` if they cannot, `None` if no move
-  is available or the node limit was hit before any top-level move completed
+- Returns a `DDResult`:
+  - `DDResult.Exact(makes)` — full search completed; result is definitive
+  - `DDResult.Partial(makes)` — node limit hit, but one side found a witness line
+  - `DDResult.Inconclusive` — node limit hit before either side found a witness
+
+### DDResult
+
+```scala
+enum DDResult:
+  case Exact(makes: Boolean)
+  case Partial(makes: Boolean)
+  case Inconclusive
+```
+
+`Exact` and `Partial` both carry a `makes: Boolean`. `Partial` is a qualified
+best-effort: the search confirmed one side has a winning line, but the opposing
+side's best response was not fully explored. `Inconclusive` means no single
+top-level move completed within the node budget — no reliable conclusion can
+be drawn. Callers should distinguish all three cases; `analyzeMakableContracts`
+logs each result type distinctly.
 
 Construction order in `analyzeDoubleDummy` is important: `gameTC` must be
 declared as a named `given` before `stateTC` so that `WhistState` can find
@@ -191,9 +208,10 @@ performance improvement).
 given TTCache[CacheKey] = FlatTTCache()
 val player = new AlphaBetaPlayer[State, State, CardPlay, Int, CacheKey](
   me = if directionNS then 0 else 1,
-  depth = depth,
-  keyFn = Some(s => s.evaluateKey)
-)
+  depth = depth
+).withMaxNodes(Whist.MAX_NODES)
+ .withKeyFn(s => s.evaluateKey)
+ .withAspirationWindow(AlphaBetaWindow(-0.5, 0.5))
 ```
 
 Each entry stores a `TTFlag` (Exact / LowerBound / UpperBound). Currently
@@ -209,6 +227,34 @@ performance lever from the TT side.
 
 The previous `depthTranches` and `reuseDeeper` parameters have been removed;
 the choice of caching strategy is now encoded in the `given TTCache[K]` instance.
+
+---
+
+## Aspiration Search
+
+`analyzeDoubleDummy` asks a binary yes/no question: can the protagonists make
+exactly `tricks` tricks? The terminal heuristic returns `+Double.MaxValue` for a
+protagonist win and `-Double.MaxValue` for a loss, and the caller tests
+`score > 0`.
+
+Rather than searching from `[-∞, +∞]`, `withAspirationWindow(-0.5, 0.5)` is
+applied to the player. The initial root window is now `(-0.5, 0.5)`:
+
+- A fail-high (score ≥ 0.5) means the protagonists can make the contract —
+  the search prunes the moment it confirms a win, without proving the exact margin.
+- A fail-low (score ≤ -0.5) means they cannot — the search prunes the moment
+  it confirms a loss.
+
+Both sides fail fast. In practice this eliminates the majority of nodes that
+plain alpha-beta would visit to establish the exact score, since the solver only
+needs to cross zero rather than propagate the full `±Double.MaxValue` signal
+back to the root.
+
+The window values `(-0.5, 0.5)` are chosen to straddle zero with minimal
+clearance. Because all terminal scores are either `+Double.MaxValue` or
+`-Double.MaxValue` (never a fractional value), any score in `(-0.5, 0.5)` is
+impossible at a terminal node — there is no risk of the window accidentally
+cutting off a valid result.
 
 ---
 
@@ -245,37 +291,86 @@ the large deals. Full bound propagation requires changing `probe` to return
 
 Performance degrades exponentially with deal size. The 12-card ending takes
 ~1.5s with or without caching (Exact-only hit rate too low to help). The full
-Lexington hand is currently intractable (>5 minutes).
+52-card deal is currently intractable within the node budget.
 
 Suit-level grouping (treating equivalent cards as one move) is already
 implemented and is the primary branching-factor reduction.
 
-A node limit (`MAX_NODES = 1,000,000`) is applied via `withMaxNodes` to prevent
+A node limit (`MAX_NODES = 2,500,000`) is applied via `withMaxNodes` to prevent
 OOM when analyzing multiple contracts in sequence. When the limit is hit,
-`getBestSoFar` returns the best top-level move fully evaluated before the cutoff,
-so a partial result is returned rather than `None`. This is logged as a warning.
+`runPlayer` returns a `DDResult` based on `bestSoFar` and `worstSoFar`:
+
+- If `bestSoFar` score > 0 → `DDResult.Partial(true)`
+- If `worstSoFar` score ≤ 0 → `DDResult.Partial(false)`
+- Otherwise → `DDResult.Inconclusive`
+
+In practice, for full 52-card deals even 2.5M nodes is insufficient to complete
+a single top-level move (branching factor ~8, depth 52), so all results are
+currently `Inconclusive`. The heap profile shows ~250KB per 100K nodes with 8GB
+heap; GC fires and recovers well but allocation is fundamentally tied to the
+immutable `State`/`Deal` copy chain (see Memory below).
 
 The remaining performance levers are:
 
-1. Full TT bound propagation (Issue #14)
-2. Aspiration search — narrow the alpha-beta window to `[neededTricks-ε, neededTricks+ε]`
-3. Profiling the 12-card ending to identify JVM-specific bottlenecks
+1. **Iterative deepening** — search to depth 4, 8, 12, … so every depth
+   completes all top-level moves, ensuring `bestSoFar`/`worstSoFar` are always
+   populated and providing move ordering for deeper iterations
+2. **Full TT bound propagation** (Issue #14)
+3. **`Holding.promote` short-circuit** — return `this` when no sequence has
+   priority ≥ the played priority (non-void but unaffected case)
+
+### Memory
+
+Profiling reveals ~250KB per 100K nodes (≈25 bytes/node average). The heap
+grows almost monotonically — objects on the recursive call stack are retained
+for the full depth of the search, preventing GC from collecting them.
+
+The root cause is the immutable copy chain: every `State.create` call produces
+a new `Whist` → `Deal` → 4×`Hand` → `Holding`/`Sequence` object graph. At
+depth 52, all 52 levels of this chain are simultaneously live on the stack.
+
+**`Hand.promote` short-circuit** (implemented): `Hand.promote` now returns
+`this` when the hand is void in the led suit, avoiding a new `Hand` and `Map`
+allocation for that case. Since hands become increasingly void as the game
+progresses, savings grow with search depth — exactly where pressure is worst.
+This produced measurable speedup on the 11- and 12-card end-position tests.
+
+The next structural fix would be play/unplay (mutable `Deal` with undo on
+backtrack), which would eliminate the copy chain entirely but requires
+significant refactoring of `Deal`, `Hand`, and `Holding`.
 
 ### OOM / Node Limit
 
 Analyzing all contracts for a deal (up to 20 strain × leader combinations) with
-no node limit causes OOM by the fifth contract due to `Future` threads from timed-
-out searches accumulating in the background. The `Future`/`Await` timeout
-mechanism has been replaced with a node-count limit, eliminating background
-threads entirely. `MAX_NODES = 1,000,000` is tunable in `Whist`.
+no node limit causes OOM. The node-count limit (`MAX_NODES = 2,500,000`,
+tunable in `Whist`) prevents this by throwing `NodeLimitException` and
+returning the best partial result found. The JVM heap should be configured to
+at least 8GB via `.jvmopts` in the project root:
+
+```
+-Xms512m
+-Xmx8g
+```
+
+Note: `javaOptions` in `build.sbt` requires `fork := true` and `runMain` (not
+bare `run`) to take effect. The `.jvmopts` file is more reliable for the sbt
+launcher JVM.
 
 ### Full Deal Analysis
 
-The 52-card full deal analysis is the ultimate goal. Performance depends on
-the transposition table (full bound propagation) and `sufficientMovesRemaining`
-pruning working together. The reference DDS implementation achieves this in
-optimised C++; a JVM Scala implementation will be slower but should be
-tractable with correct TT flag reuse.
+The 52-card full deal analysis is the ultimate goal. The current bottleneck is
+that no single top-level move completes within the 2.5M node budget — the search
+tree at depth 52 with branching factor ~8 is simply too large even with aspiration
+search and `sufficientMovesRemaining` pruning.
+
+The primary planned fix is **iterative deepening**: by searching to increasing
+depths (4, 8, 12, …), every depth completes all top-level moves within budget,
+`bestSoFar`/`worstSoFar` are always populated, and move ordering from shallower
+iterations dramatically improves pruning at deeper ones.
+
+The reference DDS implementation achieves full deal analysis in optimised C++;
+a JVM Scala implementation will be slower but should be tractable with iterative
+deepening and correct TT flag reuse.
 
 ---
 
@@ -294,13 +389,16 @@ At notrump (or a club contract), South leads A♣. North pitches K♥. East is s
 - If East pitches Q♠: North's J♠ becomes good → NS makes 3
 - If East pitches A♥: South's 2♥ becomes good → NS makes 3
 
-Expected results: `Some(true)` only when South leads notrump or clubs (`neededTricks=3`).
-All other leaders and all trump strains return `Some(false)`.
+Expected results: `DDResult.Exact(true)` only when South leads notrump or clubs
+(`neededTricks=3`). All other leaders and all trump strains return
+`DDResult.Exact(false)`.
 
 ### PBN Tests
 
 Five deals from PBN (Portable Bridge Notation) files are tested against known
 double-dummy results. These are larger deals requiring the full solver depth.
+All are currently `pending` as they require iterative deepening to complete
+within the node budget.
 
 ---
 

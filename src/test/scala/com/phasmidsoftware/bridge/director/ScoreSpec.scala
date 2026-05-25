@@ -163,14 +163,14 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val writer = MockWriter(10240)
     for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20240924.txt", Output(writer))) o.close()
     println(writer.spillway)
-    writer.spillway.substring(0, 200) shouldBe "Newton Sep 24th 2024  d971b658\nSection A\nResults for direction N/S\nRank\tPair\tMPs\tPercent\tNames\n1=\t8\t33.50\t69.79%\tAmy Avergun & Penny Scharfman\n1=\t9\t33.50\t69.79%\tMarsha & Robert Greenstein\n3 \t3\t33.00\t6"
+    writer.spillway.substring(0, 200) shouldBe "Newton Sep 24th 2024  fb609b5c\nSection A\nResults for direction N/S\nRank\tPair\tMPs\tPercent\tNames\n1=\t8\t33.50\t69.79%\tAmy Avergun & Penny Scharfman\n1=\t9\t33.50\t69.79%\tMarsha & Robert Greenstein\n3 \t3\t33.00\t6"
   }
 
   it should "output with unplayed boards" in {
     val writer = MockWriter(10240)
     for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20241001a.txt", Output(writer))) o.close()
     writer.spillway.substring(0, 2026) shouldBe
-      """Newton Oct 1st 2024  8c157e2f
+      """Newton Oct 1st 2024  4503509b
         |Section A
         |Results for direction N/S
         |Rank	Pair	MPs	Percent	Names
@@ -231,7 +231,7 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
     val writer = MockWriter(10240)
     for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20241001.txt", Output(writer))) o.close()
     writer.spillway.substring(0, 2000) shouldBe
-      """Newton Oct 1st 2024  1587e8cb
+      """Newton Oct 1st 2024  f110e305
         |Section A
         |Results for direction N/S
         |Rank	Pair	MPs	Percent	Names

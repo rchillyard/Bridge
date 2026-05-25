@@ -7,10 +7,24 @@ package com.phasmidsoftware.bridge.cards
 import com.phasmidsoftware.bridge.cards.Whist.{logger, runPlayer}
 import com.phasmidsoftware.bridge.gambit.{WhistGame, WhistState}
 import com.phasmidsoftware.bridge.pbn.{PBN, PBNParser}
-import com.phasmidsoftware.gambit.game.{AlphaBetaPlayer, FlatTTCache, NodeLimitException, TTCache}
+import com.phasmidsoftware.gambit.game.{AlphaBetaPlayer, AlphaBetaWindow, FlatTTCache, NodeLimitException, TTCache}
 import com.phasmidsoftware.gambit.util.LazyLogger
 
 import scala.util.{Random, Success}
+
+/**
+  * The result of a double-dummy analysis.
+  *
+  * - [[DDResult.Exact]]       — full search completed; result is definitive.
+  * - [[DDResult.Partial]]     — node limit hit, but one side found a witness line;
+  *   result is a qualified best-effort.
+  * - [[DDResult.Inconclusive]] — node limit hit before either side found a witness;
+  *   no reliable conclusion can be drawn.
+  */
+enum DDResult:
+  case Exact(makes: Boolean)
+  case Partial(makes: Boolean)
+  case Inconclusive
 
 /**
   * This class represents a game of Whist.
@@ -54,17 +68,19 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
   /**
     * Analyzes the potential outcome of a double-dummy play scenario based on the given parameters.
     *
-    * @param tricks        The number of tricks needed by the protagonists to succeed.
-    * @param directionNS   A boolean indicating whether the protagonists are North-South (true) or East-West (false).
-    * @param depth         The depth of the search tree for the analysis. Defaults to the minimum of the cards in the deal or the maximum cards per deal.
-    * @return An Option containing a boolean. Returns `Some(true)` if the analysis determines a winning outcome for the protagonists,
-    *         `Some(false)` if losing, or `None` if no result is found.
+    * @param tricks      The number of tricks needed by the protagonists to succeed.
+    * @param directionNS A boolean indicating whether the protagonists are North-South (true) or East-West (false).
+    * @param depth       The depth of the search tree for the analysis. Defaults to the minimum of the cards in the deal or the maximum cards per deal.
+    * @return A [[DDResult]]:
+    *         - [[DDResult.Exact]] if the full search completed.
+    *         - [[DDResult.Partial]] if the node limit was hit but one side found a witness line.
+    *         - [[DDResult.Inconclusive]] if the node limit was hit before any witness was found.
     */
   def analyzeDoubleDummy(
                           tricks: Int,
                           directionNS: Boolean,
                           depth: Int = math.min(Deal.CardsPerDeal, deal.nCards)
-                        ): Option[Boolean] =
+                        ): DDResult =
 
     given gameTC: WhistGame = new WhistGame(this) // needs to be a named given so WhistState can find it
 
@@ -77,15 +93,14 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     deal.assertAdjusted()
     val player = new AlphaBetaPlayer[State, State, CardPlay, Int, CacheKey](
       me = if directionNS then 0 else 1,
-      depth = depth,
-      keyFn = Some(s => s.evaluateKey)
+      depth = depth
     ).withMaxNodes(Whist.MAX_NODES)
+      .withKeyFn(s => s.evaluateKey)
+      .withAspirationWindow(AlphaBetaWindow(-0.5, 0.5))
     val initialState = State(this)
     logger.info(s"analyzeDoubleDummy: neededTricks=$tricks, directionNS=$directionNS, depth=$depth, branching=${initialState.enumeratePlays.size}")
     val t0 = System.currentTimeMillis()
-    val result = runPlayer(player, initialState, new Random(0L), depth).map {
-      (_, score) => score > 0
-    }
+    val result = runPlayer(player, initialState, new Random(0L), depth)
     logger.info(s"analyzeDoubleDummy: maxNSTricks=${stateTC.maxNSTricks}")
     logger.info(s"analyzeDoubleDummy: result=$result, elapsed=${System.currentTimeMillis() - t0}ms, tableSize=${player.tableSize}")
     result
@@ -114,15 +129,28 @@ object Whist:
 
   import scala.util.Try
 
-  private def runPlayer(player: AlphaBetaPlayer[State, State, CardPlay, Int, CacheKey], initialState: State, random: Random, depth: Int): Option[(CardPlay, Double)] =
-    Try(player.chooseMoveWithScore(initialState, random)).recover {
-      case e: NodeLimitException =>
-        logger.warn(s"analyzeDoubleDummy: node limit reached (${e.nodes} nodes), depth=$depth, returning bestSoFar=${player.getBestSoFar}")
-        player.getBestSoFar
-    }.toOption.flatten
+  private def runPlayer(player: AlphaBetaPlayer[State, State, CardPlay, Int, CacheKey], initialState: State, random: Random, depth: Int): DDResult =
+    Try(player.chooseMoveWithScore(initialState, random)) match
+      case scala.util.Success(Some((_, score))) =>
+        DDResult.Exact(score > 0)
+      case scala.util.Success(None) =>
+        DDResult.Inconclusive
+      case scala.util.Failure(_: NodeLimitException) =>
+        val best = player.getBestSoFar.map(_._2)
+        val worst = player.getWorstSoFar.map(_._2)
+        logger.warn(s"analyzeDoubleDummy: node limit reached, depth=$depth, bestSoFar=$best, worstSoFar=$worst")
+        (best, worst) match
+          case (Some(b), _) if b > 0 => DDResult.Partial(makes = true)
+          case (_, Some(w)) if w <= 0 => DDResult.Partial(makes = false)
+          case (Some(b), _) => DDResult.Partial(makes = false) // best is negative: protagonist failed
+          case _ => DDResult.Inconclusive
+      case scala.util.Failure(e) =>
+        logger.error(s"analyzeDoubleDummy: unexpected failure: ${e.getMessage}")
+        DDResult.Inconclusive
 
   val MAX_STATES = 800_000
-  private val MAX_NODES: Int = 1_000_000
+  private val ASPIRATION_WINDOW: AlphaBetaWindow = AlphaBetaWindow(-0.5, 0.5)
+  private val MAX_NODES: Int = 2_500_000
   private val logger = LazyLogger(getClass)
 
 @main def myApp(args: String*): Unit = {

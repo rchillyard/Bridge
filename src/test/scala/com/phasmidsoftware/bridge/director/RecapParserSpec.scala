@@ -102,7 +102,7 @@ class RecapParserSpec extends AnyFlatSpec with should.Matchers {
     r.get.number shouldBe 1
     r.get.maybeDirection shouldBe Some("N")
     r.get.players should matchPattern { case (_, _) => }
-    r.get.players._1 shouldBe Player("Erithacus Rubecula")
+    r.get.players._1 shouldBe Player("Erithacus Rubecula", -1)
   }
 
   it should "parse pair with tabs" in {
@@ -286,7 +286,7 @@ class RecapParserSpec extends AnyFlatSpec with should.Matchers {
     event.title shouldBe "Test Section 2016/04/12"
     event.sections.size shouldBe 1
     val section: Section = event.sections.head
-    section.preamble shouldBe Preamble("A", None, List(Pair(1, Some("N"), Player("Erithacus Rubecula") -> Player("Esox Lucius"))))
+    section.preamble shouldBe Preamble("A", None, List(Pair(1, Some("N"), Player("Erithacus Rubecula", -1) -> Player("Esox Lucius", -1))))
   }
 
   it should "parse single-winner event" in {
@@ -395,7 +395,7 @@ class RecapParserSpec extends AnyFlatSpec with should.Matchers {
     pairs.size shouldBe 14
     val pair = pairs.head
     pair.number shouldBe 1
-    pair.players shouldBe(Player("Sue"), Player("Jim"))
+    pair.players shouldBe(Player("Sue", -1), Player("Jim", -1))
     pair.maybeDirection shouldBe Some("N")
   }
 

@@ -4,8 +4,10 @@
 
 package com.phasmidsoftware.bridge.cards
 
+import com.phasmidsoftware.bridge.cards.DDResult
 import com.phasmidsoftware.bridge.cards.Rank.ranks
 import com.phasmidsoftware.bridge.cards.Suit.suits
+import com.phasmidsoftware.bridge.director.Player
 import com.phasmidsoftware.gambit.util.{LazyLogger, Output, Outputable, Shuffle}
 
 import java.io.Writer
@@ -87,6 +89,35 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     * @return true if this Deal is valid.
     */
   def validate: Boolean = hands.forall(_.validate) && allCards
+
+  /**
+    * Analyzes a sequence of bridge contracts using double-dummy analysis.
+    *
+    * @param board     The board number being analyzed.
+    * @param contracts A sequence of (leader, strain, tricks, declarer) tuples.
+    * @param max       Maximum number of contracts to analyze; 0 means all.
+    * @return A sequence of [[DDResult]] values, one per contract.
+    */
+  def analyzeContracts(board: Int, contracts: Seq[Contract], max: Int = 0): Seq[DDResult] = {
+    val work = if max > 0 then contracts.take(max) else contracts
+    work map analyzeContract
+  }
+
+  /**
+    * Analyzes a given bridge contract using double-dummy analysis to determine its outcome.
+    *
+    * @param contract The contract to be analyzed, consisting of attributes such as board, leader, strain, tricks, and declarer.
+    * @return A [[DDResult]], which represents the outcome of the double-dummy analysis. Possible outcomes are:
+    *         - [[DDResult.Exact]]: Full search completed, and the result is definitive.
+    *         - [[DDResult.Partial]]: Node limit hit, but a partial conclusion was reached.
+    *         - [[DDResult.Inconclusive]]: Node limit hit without any reliable conclusion.
+    */
+  def analyzeContract(contract: Contract): DDResult = {
+    println(s"analyzeContract: $contract...")
+    val result = Whist(this, contract.leader.toInt, contract.strain).analyzeDoubleDummy(contract.tricks, directionNS = contract.declarer.toInt % 2 == 0)
+    println(s"analyzeContract: contract=$contract; result=$result")
+    result
+  }
 
   /**
     * @return the number of cards remaining in this Deal.
@@ -311,3 +342,9 @@ object Deal {
 
   private val logger = LazyLogger(getClass)
 }
+
+case class Board(board: Int, deal: Deal):
+  override def toString: String = s"Board(board=$board)"
+
+case class Contract(board: Board, leader: Player, strain: Option[Suit], tricks: Int, declarer: Player):
+  override def toString: String = s"Contract(board=${board.board}, leader=$leader, strain=$strain, tricks=$tricks, declarer=$declarer)"

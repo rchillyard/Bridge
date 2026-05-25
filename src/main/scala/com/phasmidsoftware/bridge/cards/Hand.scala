@@ -42,14 +42,12 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     * @param cardPlay the card play.
     * @return a new Hand.
     */
-  def play(cardPlay: CardPlay): Hand = {
+  def play(cardPlay: CardPlay): Hand =
     val priority = cardPlay.priority
-    val result = if (cardPlay.hand == index)
-      this - (cardPlay.suit, priority)
+    if cardPlay.hand == index then
+      (this - (cardPlay.suit, priority)).promote(cardPlay.suit, priority)
     else
-      this
-    result `promote`(cardPlay.suit, priority)
-  }
+      promote(cardPlay.suit, priority) // returns `this` if void, via short-circuit
 
   /**
     * Method to determine possible discard plays.
@@ -149,7 +147,9 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     * @return a new eagerly promoted Hand.
     */
   def promote(suit: Suit, priority: Int): Hand =
-    Hand(index, holdings + (suit -> holdings.getOrElse(suit, Holding(suit)).promote(priority)))
+    holdings.get(suit) match
+      case None => this // void in suit: promotion irrelevant, return same object
+      case Some(h) => Hand(index, holdings + (suit -> h.promote(priority)))
 
   /**
     * @return an eagerly promoted Hand.

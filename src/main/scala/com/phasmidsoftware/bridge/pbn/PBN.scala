@@ -5,6 +5,7 @@
 package com.phasmidsoftware.bridge.pbn
 
 import com.phasmidsoftware.bridge.cards.*
+import com.phasmidsoftware.bridge.director.Player
 
 /**
   * This class represents the PBN (Portable Bridge Notation) for a set of games.
@@ -40,12 +41,20 @@ case class Game(tagPairs: Seq[(Name, DetailedValue)]) extends Iterable[(Name, De
 
   def iterator: Iterator[(Name, DetailedValue)] = tagPairs.iterator
 
-  def analyzeMakableContracts(max: Int = 0): Unit = {
+  /**
+    * Analyzes the makable contracts for the given bridge deal.
+    *
+    * @param max an optional integer that limits the number of contracts analyzed. 0 means no limit.
+    * @return a sequence of [[DDResult]] values, one per contract.
+    * @throws PBNException  if the deal is invalid.
+    * @throws CardException when a contract detail cannot be parsed.
+    */
+  def analyzeMakableContracts(max: Int = 0): Seq[DDResult] = {
     val deal: Deal = this ("Deal").value.asInstanceOf[DealValue].deal
     if (deal.validate) {
       val board = this ("Board").toInt
       val declarerTricksR = """([NESW])\s*(NT|S|H|D|C)\s*(\d+)""".r
-      val cases = this ("OptimumResultTable").detail map {
+      val contracts: Seq[Contract] = this ("OptimumResultTable").detail map {
         case contract@declarerTricksR(l, z, n) =>
           val declarer = "NESW".indexOf(l)
           val leader = Hand.next(declarer)
@@ -56,18 +65,20 @@ case class Game(tagPairs: Seq[(Name, DetailedValue)]) extends Iterable[(Name, De
             case _ =>
               throw CardException(s"cannot parse the contract detail: $contract")
           }
-          val tricks = n.toInt
-          println(s"analyzeDoubleDummy: board=$board tricks=$tricks, strain=${strain.getOrElse("NT")} declarer=$l, leader=$leader")
-          (deal, leader, strain, tricks, declarer)
+          Contract(Board(board, deal), Player(leader), strain, n.toInt, Player(declarer))
       }
-      val work = if max > 0 then cases.take(max) else cases
-      work foreach {
-        case (deal, leader, strain, tricks, declarer) =>
-          val result = Whist(deal, leader, strain).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0)
-          println(s"analyzeDoubleDummy: board=$board result=$result")
+      val results = deal.analyzeContracts(board, contracts, max)
+      results.foreach {
+        case DDResult.Exact(makes) => println(s"  => Exact: makes=$makes")
+        case DDResult.Partial(makes) => println(s"  => Partial (node limit): makes=$makes (qualified)")
+        case DDResult.Inconclusive => println(s"  => Inconclusive (node limit, no witness found)")
       }
+      results
     }
+    else
+      throw PBNException(s"deal is invalid: $deal")
   }
+
 
   private val mapper: (Name, DetailedValue) => (String, DetailedValue) = (n, v) => n.toString -> v
 }

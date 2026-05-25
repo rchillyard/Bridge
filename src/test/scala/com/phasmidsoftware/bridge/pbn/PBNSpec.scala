@@ -4,6 +4,7 @@
 
 package com.phasmidsoftware.bridge.pbn
 
+import com.phasmidsoftware.bridge.cards.DDResult.Exact
 import com.phasmidsoftware.bridge.cards.{Deal, Spades, Whist}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
@@ -54,7 +55,7 @@ class PBNSpec extends AnyFlatSpec with should.Matchers {
     pending // Issue #14 TRansposition Table fix
     val deal = py.get.head("Deal").value.asInstanceOf[DealValue].deal
     //noinspection ScalaStyle
-    Whist(deal, 1, Some(Spades)).analyzeDoubleDummy(8, directionNS = true) shouldBe Some(true)
+    Whist(deal, 1, Some(Spades)).analyzeDoubleDummy(8, directionNS = true) shouldBe Exact(true)
   }
 
   behavior of "DetailedValue"

@@ -42,3 +42,8 @@ lazy val root = project.in(file("."))
     inConfig(IT)(Defaults.testSettings),
     IT / scalaSource := baseDirectory.value / "src" / "it" / "scala"
   )
+
+run / javaOptions ++= Seq("-Xms512m", "-Xmx8g")
+run / fork := true
+Test / javaOptions ++= Seq("-Xms512m", "-Xmx8g")
+Test / fork := true
