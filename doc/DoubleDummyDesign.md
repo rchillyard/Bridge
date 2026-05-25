@@ -312,11 +312,9 @@ searched in the last completed iteration:
 
 The remaining performance levers are:
 
-1. **Per-iteration node budget** — reset the node counter between iterations
-   so GC can recover between depths; prevents GC thrashing at depth 32+
-2. **Full TT bound propagation** (Issue #14)
-3. **`Holding.promote` short-circuit** — return `this` when no sequence has
-   priority ≥ the played priority (non-void but unaffected case)
+1. **Full TT bound propagation** (Issue #14)
+2. **`Holding.promote` short-circuit (non-void case)** — return `this` when
+   no sequence has priority ≥ the played priority
 
 ### Memory
 
@@ -386,6 +384,36 @@ deeper search within the same memory budget.
 The reference DDS implementation achieves full deal analysis in optimised C++;
 a JVM Scala implementation will be slower but should be tractable with
 play/unplay and correct TT flag reuse.
+
+---
+
+## Main Program
+
+A standalone entry point is provided for running double-dummy analysis on PBN files:
+
+```
+com.phasmidsoftware.bridge.cards.doubleDummySolver
+```
+
+Usage (from the project root via sbt):
+
+```
+sbt "runMain com.phasmidsoftware.bridge.cards.doubleDummySolver path/to/file.pbn 0"
+```
+
+Arguments:
+- `path/to/file.pbn` — path to a PBN file (example: `src/test/resources/com/phasmidsoftware/bridge/director/example5.pbn`)
+- `0` — zero-based index of the game within the file to analyze
+
+The program calls `analyzeMakableContracts` on the selected game, which evaluates
+all contracts in the `OptimumResultTable` tag and prints a `DDResult` for each.
+With the current settings (`NODES_PER_ITERATION = 1_000_000`, `DEPTH_STEP = 4`,
+8GB heap) a full 20-contract deal takes ~360 seconds and returns `Partial(true, 5-6)`
+for all contracts when given the double-dummy optimum trick count as input.
+
+Note: the `.jvmopts` file in the project root must set `-Xmx8g` for the heap
+to be available. `runMain` (not bare `run`) is required for `fork := true` to
+take effect.
 
 ---
 
