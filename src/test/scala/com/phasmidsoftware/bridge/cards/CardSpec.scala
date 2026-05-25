@@ -4,9 +4,11 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should
 
-class CardSpec extends FlatSpec with Matchers {
+
+class CardSpec extends AnyFlatSpec with should.Matchers {
 
   behavior of "rank"
 
@@ -39,7 +41,7 @@ class CardSpec extends FlatSpec with Matchers {
   }
 
   it should "implement compare" in {
-    implicitly[Ordered[Rank]](Deuce).compare(Trey) shouldBe -1
+    implicitly[Ordered[Rank]](using Deuce).compare(Trey) shouldBe -1
   }
 
   it should "sort in order" in {
@@ -71,7 +73,7 @@ class CardSpec extends FlatSpec with Matchers {
   }
 
   it should "implement compare" in {
-    implicitly[Ordered[Suit]](Clubs).compare(Spades) shouldBe -3
+    implicitly[Ordered[Suit]](using Clubs).compare(Spades) shouldBe -3
   }
 
   it should "parse string" in {
@@ -84,7 +86,7 @@ class CardSpec extends FlatSpec with Matchers {
 
   it should "sort in order" in {
     val target: List[Suit] = List(Diamonds, Hearts, Spades, Clubs)
-    target.sorted.reverse shouldBe List(Spades, Hearts, Diamonds, Clubs)
+    target.sorted.reverse shouldBe Suit.suits
   }
 
   it should "implement priority" in {
@@ -139,7 +141,7 @@ class CardSpec extends FlatSpec with Matchers {
   }
 
   it should "implement compare" in {
-    implicitly[Ordered[Card]](Card(Spades, "A")).compare(Card(Spades, "K")) shouldBe 1
+    implicitly[Ordered[Card]](using Card(Spades, "A")).compare(Card(Spades, "K")) shouldBe 1
   }
 
   it should "sort in proper order" in {

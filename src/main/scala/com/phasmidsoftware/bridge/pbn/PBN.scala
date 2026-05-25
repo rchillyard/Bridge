@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.pbn
 
-import com.phasmidsoftware.bridge.cards.Deal
+import com.phasmidsoftware.bridge.cards.*
 
 /**
   * This class represents the PBN (Portable Bridge Notation) for a set of games.
@@ -26,6 +26,7 @@ case class PBN(games: Seq[Game]) extends Iterable[Game] with (Int => Game) {
   def sorted(implicit ev: Ordering[Game]): Seq[Game] = games.sorted
 }
 
+
 /**
   * This class represents a game in PBN form.
   *
@@ -36,9 +37,53 @@ case class Game(tagPairs: Seq[(Name, DetailedValue)]) extends Iterable[(Name, De
 
   override def apply(w: String): DetailedValue = tagPairs.toMap.apply(Name(w))
 
-  override def toString: String = s"Game: ${tagPairs.toMap}"
+  override def toString: String = s"gameChecker: ${tagPairs.toMap}"
 
   def iterator: Iterator[(Name, DetailedValue)] = tagPairs.iterator
+
+  /**
+    * Analyzes the makable contracts for the given bridge deal. This method evaluates the possible contracts
+    * that can be made based on the deal's data, including the declarer, board, strain, and number of tricks.
+    *
+    * @param max an optional integer that sets a limit on the number of contracts analyzed. Default is 0, indicating no limit.
+    * @return a sequence of optional booleans where each element indicates whether a particular contract is makable.
+    *         Returns `None` if the result for the contract cannot be determined.
+    *
+    * @throws PBNException  if the deal provided in the context is invalid or does not meet the expected constraints.
+    * @throws CardException when there is an error parsing the contract details from the provided data.
+    */
+  def analyzeMakableContracts(max: Int = 0): Seq[DDResult] = {
+    val deal: Deal = this ("Deal").value.asInstanceOf[DealValue].deal
+    if (deal.validate) {
+      val board = this ("Board").toInt
+      val declarerTricksR = """([NESW])\s*(NT|S|H|D|C)\s*(\d+)""".r
+      val cases: Seq[(Int, Option[Suit], Int, Int)] = this ("OptimumResultTable").detail map {
+        case contract@declarerTricksR(l, z, n) =>
+          val declarer = "NESW".indexOf(l)
+          val leader = Hand.next(declarer)
+          val strain = z match {
+            case "NT" => None
+            case x if x.nonEmpty =>
+              Some(Suit.apply(x.head))
+            case _ =>
+              throw CardException(s"cannot parse the contract detail: $contract")
+          }
+          val tricks = n.toInt
+          println(s"analyzeDoubleDummy: board=$board tricks=$tricks, strain=${strain.getOrElse("NT")} declarer=$l, leader=$leader")
+          (leader, strain, tricks, declarer)
+      }
+      val results = deal.analyzeContracts(board, cases, max)
+      results.foreach {
+        case DDResult.Exact(makes, t) => println(s"  => Exact($t tricks): makes=$makes")
+        case DDResult.Partial(makes, t) => println(s"  => Partial($t tricks, node limit): makes=$makes (qualified)")
+        case DDResult.Inconclusive => println(s"  => Inconclusive (node limit, no iteration completed)")
+      }
+      results
+    }
+    else
+      throw PBNException(s"deal is invalid: $deal")
+  }
+
 
   private val mapper: (Name, DetailedValue) => (String, DetailedValue) = (n, v) => n.toString -> v
 }
@@ -47,12 +92,12 @@ object Game {
 
   implicit object GameOrdering extends Ordering[Game] {
     def compare(x: Game, y: Game): Int = {
-      import DetailedValue._
+      import DetailedValue.*
       val eventName = "Event"
       val cfEvent = DetailedValueOrdering.compare(x(eventName), y(eventName))
       if (cfEvent != 0) cfEvent
       else {
-        // TODO order by date
+        // CONSIDER order by date
         val boardName = "Board"
         implicitly[Ordering[Int]].compare(x(boardName).toInt, y(boardName).toInt)
       }
@@ -64,21 +109,23 @@ object Game {
 case class DetailedValue(value: Value, detail: Seq[String]) extends Value {
   override def toInt: Int = value.toInt
 
-  override def toString: String = s""""$value"${detail.mkString(" ", ",", "")}"""
+  override def toString: String =
+    s""""$value"${detail.mkString(" ", ",", "")}"""
 }
 
 object DetailedValue {
   def trim(value: Value, detail: Seq[String]): DetailedValue = DetailedValue(value, trim(detail))
 
-  // TODO simplify this because we no longer have newlines embedded in the strings.
-  private def trim(detail: Seq[String]): Seq[String] = (detail.reverse.filter(_.nonEmpty) match {
-    case Nil => Nil
-    case h :: t =>
-      h.reverse.replaceFirst("\n", "") match {
-        case "" => t
-        case x => x.reverse :: t
-      }
-  }).reverse
+  // CONSIDER simplify this because we no longer have newlines embedded in the strings.
+  private def trim(detail: Seq[String]): Seq[String] =
+    (detail.reverse.filter(_.nonEmpty) match {
+      case Nil => Nil
+      case h :: t =>
+        h.reverse.replaceFirst("\n", "") match {
+          case "" => t
+          case x => x.reverse :: t
+        }
+    }).reverse
 
   implicit object DetailedValueOrdering extends Ordering[DetailedValue] {
     def compare(x: DetailedValue, y: DetailedValue): Int = Value.ValueOrdering.compare(x.value, y.value)
@@ -125,7 +172,7 @@ object Value {
 }
 
 case class DateValue(year: Int, month: Int, day: Int) extends Value {
-  // TODO put into yyy.mm.dd format
+  // CONSIDER put into yyy.mm.dd format
   //		def value: LocalDate =
   override def toString: String = ""
 }

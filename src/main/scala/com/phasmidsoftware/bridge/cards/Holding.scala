@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.util._
+import com.phasmidsoftware.gambit.util.{Output, Outputable}
 
 import scala.language.implicitConversions
 
@@ -18,7 +18,7 @@ import scala.language.implicitConversions
   * @param promotions a list of promotions that should be applied on quitting a trick.
   *                   CONSIDER eliminating the list of promotions if holding is void.
   */
-case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] = Nil)
+case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = Nil)
   extends Outputable[Unit] with Quittable[Holding] with Cooperative[Holding] with Reprioritizable[Holding] with Evaluatable with Removable {
 
   require(isVoid || maybeSuit.get == suit)
@@ -29,9 +29,10 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
   lazy val size: Int = sequences.size
 
   /**
-    * @return the number of cards in this Holding (i.e. the suit length)
+    * @return the number of cards in this Holding (i.e., the suit length)
     */
-  lazy val length: Int = sequences.map(_.length).sum
+  lazy val length: Int =
+    sequences.map(_.length).sum
 
   /**
     * Optionally yield a Sequence that matches the given priority.
@@ -39,12 +40,14 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     * @param priority the priority to be matched.
     * @return an Option[Sequence].
     */
-  def sequence(priority: Int): Option[Sequence] = sequences.find(s => s.priority == priority)
+  def sequence(priority: Int): Option[Sequence] =
+    sequences.find(s => s.priority == priority)
 
   /**
     * @return the all of the cards in this Holding.
     */
-  lazy val cards: List[Card] = for (s <- sequences; c <- s.cards) yield c
+  lazy val cards: Seq[Card] =
+    for (s <- sequences; c <- s.cards) yield c
 
   /**
     * @return the effective number of cards.
@@ -67,10 +70,10 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     *
     * @param deal  the deal to which these plays will belong.
     * @param hand  the index of the Hand containing this Holding.
-    * @param trick the current state of this trick (i.e. the prior plays).
+    * @param trick the current state of this trick (i.e., the prior plays).
     * @return a sequence of all possible plays, starting with the ones most suited to the appropriate strategy.
     */
-  def chooseFollowSuitPlays(deal: Deal, strain: Option[Suit], hand: Int, trick: Trick): List[CardPlay] =
+  def chooseFollowSuitPlays(deal: Deal, strain: Option[Suit], hand: Int, trick: Trick): Seq[CardPlay] =
     choosePlays(deal, strain, hand, getStrategyForFollowingSuit(trick), trick.winner)
 
   /**
@@ -81,29 +84,33 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     * @param strain        the (optional) trump suit.
     * @param strategy      the recommended strategy.
     * @param currentWinner the play currently winning the trick.
-    * @return a sequence of CardPlay objects.
+    * @return a sequence of `CardPlay` objects.
     */
-  def choosePlays(deal: Deal, strain: Option[Suit], hand: Int, strategy: Strategy, currentWinner: Option[Winner]): List[CardPlay] = {
+  def choosePlays(deal: Deal, strain: Option[Suit], hand: Int, strategy: Strategy, currentWinner: Option[Winner]): Seq[CardPlay] = {
     def createPlay(priority: Int): CardPlay = CardPlay(deal, strain, hand, suit, priority)
 
-    lazy val priorityToBeat = (currentWinner map (_.priorityToBeat(hand))).getOrElse(Rank.lowestPriority)
-    lazy val isPartnerWinning = currentWinner exists (_.partnerIsWinning(hand))
+    lazy val priorityToBeat =
+      currentWinner.map(_.priorityToBeat(hand)).getOrElse(Rank.lowestPriority)
+    lazy val isPartnerWinning =
+      currentWinner.exists(_.partnerIsWinning(hand))
+
+    def redirect(s: Strategy) = choosePlays(deal, strain, hand, s, currentWinner)
+
     strategy match {
       case StandardOpeningLead if hasHonorSequence =>
-        choosePlays(deal, strain, hand, LeadTopOfSequence, currentWinner)
-      case StandardOpeningLead => // "Fourth best" although that's not followed precisely--we just lead low
-        chooseLeadSuitPlays(createPlay, strategy)
+        redirect(LeadTopOfSequence)
+      case StandardOpeningLead =>
+        sortLeadSuitPlays(createPlay, strategy)
       case Ruff if isPartnerWinning =>
-        choosePlays(deal, strain, hand, Discard, currentWinner)
+        redirect(Discard)
       case Ruff | Discard =>
-        // NOTE: these cards will be ordered appropriately by the caller.
-        sequences.lastOption.toList map (s => createPlay(s.priority))
+        sequences.lastOption.toList.map(s => createPlay(s.priority))
       case Finesse if priorityToBeat > Rank.honorPriority =>
-        choosePlays(deal, strain, hand, WinIt, currentWinner)
+        redirect(WinIt)
       case WinIt if isPartnerWinning =>
-        chooseFollowSuitPlays(createPlay, Duck, priorityToBeat)
+        sortFollowSuitPlays(createPlay, Duck, priorityToBeat)
       case _ =>
-        chooseFollowSuitPlays(createPlay, strategy, priorityToBeat)
+        sortFollowSuitPlays(createPlay, strategy, priorityToBeat)
     }
   }
 
@@ -120,7 +127,8 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     * @param priority the priority.
     * @return a new Holding with the promotion added to the pending list.
     */
-  def promote(priority: Int): Holding = Holding(sequences, suit, promotions :+ priority)
+  def promote(priority: Int): Holding =
+    Holding(sequences, suit, promotions :+ priority)
 
   /**
     * Method to enact the pending promotions on this Holding.
@@ -137,35 +145,57 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     */
   def cooperate(holding: Holding): Holding = _cooperate(holding)
 
-
   def reprioritize: Holding = _reprioritize
 
   /**
-    * Method to remove (i.e. play) a card from this Holding.
+    * Method to remove (i.e., play) a card from this Holding.
     *
     * @param priority the sequence from which the card will be played.
     * @return a new Holding with the sequence either truncated or eliminated entirely.
     */
   //noinspection ScalaStyle
   def -(priority: Int): Holding = {
-    val sos: List[Option[Sequence]] = for (s <- sequences) yield if (s.priority == priority) s.truncate else Some(s)
+    val sos: Seq[Option[Sequence]] = for (s <- sequences) yield if (s.priority == priority) s.truncate else Some(s)
     Holding(sos.flatten, suit, promotions)
   }
 
   /**
+    * Determines if the priorities of all sequences in this Holding
+    * align with the sequences of the given partner Holding according to
+    * specific adjustment conditions.
+    *
+    * @param partner the partner Holding to compare with for adjustments.
+    * @return true if the sequences in this Holding align with the partner Holding
+    *         based on the adjustment rules; false otherwise.
+    */
+  def isAdjustedWith(partner: Holding): Boolean =
+    partner.sequences.forall { ps =>
+      ps.cards.forall { card =>
+        val adjacentSeqs = sequences.filter { ms =>
+          ms.priority + ms.length == card.priority ||
+            card.priority + 1 == ms.priority
+        }
+        adjacentSeqs.size <= 1
+      }
+    }
+
+  /**
     * @return a String primarily for debugging purposes.
     */
-  override def toString: String = s"{$suit: ${sequences.mkString(", ")}} " + (if (promotions.nonEmpty) promotions.mkString(", ") else "(clean)")
+  override def toString: String =
+    s"{$suit: ${sequences.mkString(", ")}} " + (if (promotions.nonEmpty) promotions.mkString(", ") else "(clean)")
 
   /**
     * @return a neat representation of this Sequence.
     */
-  lazy val neatOutput: String = s"$suit${Holding.ranksToString(cards map (_.rank))}"
+  lazy val neatOutput: String =
+    s"$suit${Holding.ranksToString(cards map (_.rank))}"
 
   /**
     * @return a neat representation of this Sequence (without suit symbol).
     */
-  lazy val asPBN: String = s"${Holding.ranksToString(cards map (_.rank))}"
+  lazy val asPBN: String =
+    s"${Holding.ranksToString(cards map (_.rank))}"
 
   /**
     * Output this Sequence to an Output.
@@ -174,8 +204,24 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     * @param xo     an optional value of Unit, defaulting to None.
     * @return a new instance of Output.
     */
-  def output(output: Output, xo: Option[Unit] = None): Output = output :+ suit.toString :+ Holding.ranksToString(cards map (_.rank))
+  def output(output: Output, xo: Option[Unit] = None): Output =
+    output :+ suit.toString :+ Holding.ranksToString(cards map (_.rank))
 
+  /**
+    * A private lazy value that enacts pending promotions for `Sequence` objects and creates
+    * a new `Holding` instance with the adjusted sequences.
+    * This value is computed only when accessed, following a lazy initialization strategy.
+    *
+    * Inside, the method `applyPromotions` is defined to adjust the priority of a `Sequence`
+    * based on the number of pending promotions with lower priorities than the sequence.
+    *
+    * Steps:
+    * 1. Promotes each `Sequence` in the `sequences` collection by decrementing its priority
+    *    according to the count of applicable promotions.
+    * 2. Combines these promoted `Sequence` objects into a final collection using the `merge` method.
+    * 3. Wraps the resulting collection into a new `Holding` object, while maintaining
+    *    the characteristics of the original `Holding`.
+    */
   private lazy val _quit = {
 
     def applyPromotions(sequence: Sequence): Sequence = {
@@ -183,22 +229,89 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
       Sequence(sequence.priority - promotion, sequence.cards)
     }
 
-    val ss: List[Sequence] = sequences map applyPromotions
-    Holding(ss.foldLeft[List[Sequence]](Nil)((r, s) => s.merge(r)), suit, Nil)
+    val ss: Seq[Sequence] = sequences map applyPromotions
+    Holding(ss.foldLeft[Seq[Sequence]](Nil)((r, s) => s.merge(r)), suit, Nil)
   }
 
-  private def _cooperate(holding: Holding) = Holding(sequences, suit, for (s <- holding.sequences; p = s.priority; is <- List.fill(s.length)(p)) yield is)
+  /**
+    * Adjusts the priorities of this `Holding` by considering the given holding as cooperative.
+    *
+    * TODO (Important) this method is invoked for performance optimization
+    * (it potentially reduces the number of possible plays by considering the combined sequence where appropriate).
+    * However, if this `Holding` or partner's `Holding` actually wins the trick,
+    * we must go back and consider the unadjusted priorities because the lead to the next trick
+    * depends on the actual winner.
+    *
+    * @param holding the cooperative holding that influences the priorities.
+    * @return a new `Holding` with adjusted priorities based on cooperation.
+    */
+  private def _cooperate(holding: Holding) =
+    Holding(sequences, suit, for (s <- holding.sequences; p = s.priority; is <- List.fill(s.length)(p)) yield is)
 
-  private lazy val _reprioritize: Holding = Holding(for (s <- sequences) yield s.reprioritize, suit, promotions)
+  /**
+    * A lazily initialized instance of Holding that adjusts the priorities of the sequences
+    * in this Holding by invoking the `reprioritize` function on each sequence.
+    *
+    * Each sequence in `sequences` undergoes reprioritization, and the results are used
+    * to create a new Holding with the same suit and promotions as the current one.
+    *
+    * This value is computed and cached when accessed for the first time, and the computation
+    * will not be repeated on subsequent accesses.
+    *
+    * @return a new Holding with reprioritized sequences while maintaining the same suit
+    *         and promotions of the original Holding.
+    */
+  private lazy val _reprioritize: Holding =
+    Holding(for (s <- sequences) yield s.reprioritize, suit, promotions)
 
-  private lazy val hasHonorSequence: Boolean = realSequences exists (_.isHonor)
+  /**
+    * Determines if this Holding contains at least one sequence that is classified as an honor sequence.
+    *
+    * A sequence is considered an honor sequence if it satisfies the `isHonor` property.
+    * This value is computed lazily and checks all sequences in this Holding's `realSequences` collection.
+    *
+    * @return true if at least one sequence is an honor sequence, false otherwise.
+    */
+  private lazy val hasHonorSequence: Boolean =
+    realSequences exists (_.isHonor)
 
-  private lazy val realSequences = sequences filter (_.cards.lengthCompare(1) > 0)
+  /**
+    * Filters the sequences within this holding to retain only those with more than one card.
+    *
+    * This lazy value evaluates the `sequences` collection and applies a filter to include
+    * only the sequences where the number of cards exceeds one. The filtering operation is
+    * deferred until the value is accessed.
+    */
+  private lazy val realSequences =
+    sequences filter (_.cards.lengthCompare(1) > 0)
 
-  private lazy val maybeSuit: Option[Suit] = cards.headOption map (_.suit)
+  /**
+    * Lazily retrieves the Suit of the first card in the Holding, if it exists.
+    *
+    * This method examines the `cards` collection in the current Holding and retrieves the Suit of the first card
+    * using its `suit` property. If the collection of `cards` is empty, the result will be `None`.
+    *
+    * @return an optional `Suit`, which will be `Some(suit)` if there is at least one card in the Holding, or `None` if the Holding is empty.
+    */
+  private lazy val maybeSuit: Option[Suit] =
+    cards.headOption map (_.suit)
 
+  /**
+    * Lazily evaluates a Double value based on the evaluations of a collection of sequences.
+    * The calculation is performed using iteration, where each sequence's evaluation is
+    * weighted by powers of 2 based on cumulative card counts.
+    *
+    * The evaluation involves iterating through all sequences, calculating the evaluation
+    * of each sequence, and accumulating a weighted result. The weight for each sequence
+    * increases exponentially with the number of cards encountered so far.
+    *
+    * Note: This method depends on the `sequences` collection and assumes that each sequence
+    * has an `evaluate` method and a `length` attribute.
+    *
+    * @return the evaluated Double value of the sequences with exponential weighting.
+    */
   private lazy val _evaluate: Double = {
-    // TODO Do this properly but, for now, I'm going to use iteration and var !!
+    // CONSIDER Do this properly but, for now, I'm going to use iteration and var !!
     var result = 0.0
     var cards = 0
     for (i <- sequences.indices) {
@@ -210,21 +323,57 @@ case class Holding(sequences: List[Sequence], suit: Suit, promotions: List[Int] 
     result
   }
 
-  // TODO Merge this with the following method
-  private def chooseFollowSuitPlays(createPlay: Int => CardPlay, strategy: Strategy, priorityToBeat: Int): List[CardPlay] = {
-    // XXX this function is used to sort the possible plays according to which fits the given strategy best (smallest resulting Int)
-    def sortFunction(play: CardPlay): Int = Holding.applyFollowSuitStrategy(strategy, priorityToBeat, play.priority)
+  /**
+    * Sorts potential follow-suit plays based on how well they align with the given strategy and their ability to beat the specified priority.
+    *
+    * This method generates possible card plays using the provided `createPlay` function, ranks them according to the specified
+    * strategy, and returns the plays in order of their suitability to the strategy as determined by a heuristic scoring function.
+    *
+    * @param createPlay     a function that creates a `CardPlay` instance from a given priority value.
+    * @param strategy       the `Strategy` guiding the evaluation and sorting of plays.
+    * @param priorityToBeat the priority value that the play needs to beat or consider during the sorting process.
+    * @return a sequence of `CardPlay` objects, ordered by their alignment with the strategy and their effectiveness in relation to the priority to beat.
+    */
+  private def sortFollowSuitPlays(createPlay: Int => CardPlay, strategy: Strategy, priorityToBeat: Int): Seq[CardPlay] = {
+    def sortFunction(play: CardPlay): Int =
+      Holding.applyFollowSuitStrategy(strategy, priorityToBeat, play.priority)
 
     (for (s <- sequences) yield createPlay(s.priority)).sortBy(sortFunction)
   }
 
-  private def chooseLeadSuitPlays(createPlay: Int => CardPlay, strategy: Strategy): List[CardPlay] = {
-    // XXX this function is used to sort the possible plays according to which fits the given strategy best (smallest resulting Int)
-    def sortFunction(play: CardPlay): Int = Holding.applyLeadSuitStrategy(strategy, play, sequence(play.priority))
+  /**
+    * Sorts potential card plays based on how well they align with the given strategy.
+    *
+    * This method generates possible card plays using the provided `createPlay` function,
+    * ranks them according to the specified strategy, and returns the plays in order
+    * of their suitability to the strategy as determined by a heuristic scoring function.
+    *
+    * @param createPlay a function that creates a `CardPlay` instance from a given priority value.
+    * @param strategy   the `Strategy` guiding the evaluation and sorting of plays.
+    * @return a sequence of `CardPlay` objects, ordered by their alignment with the strategy.
+    */
+  private def sortLeadSuitPlays(createPlay: Int => CardPlay, strategy: Strategy): Seq[CardPlay] = {
+    def sortFunction(play: CardPlay): Int =
+      Holding.applyLeadSuitStrategy(strategy, play, sequence(play.priority))
 
     (for (s <- sequences) yield createPlay(s.priority)).sortBy(sortFunction)
   }
 
+  /**
+    * Determines the appropriate strategy for following suit in a trick based on the current state of the trick.
+    *
+    * @param trick the current state of the trick, including the cards played so far.
+    * @return a Strategy object representing the appropriate course of action for following suit.
+    *         Possible strategies include:
+    *         - LeadTopOfSequence: If no cards have been played and there is an honor sequence.
+    *         - FourthBest: If no cards have been played and there is no honor sequence.
+    *         - Cover: If one card has been played, and it is an honor or there are real sequences.
+    *         - Duck: If one card has been played and conditions for Cover are not met.
+    *         - Finesse: If two cards have been played.
+    *         - WinIt: A speculative refinement for Finesse when the card to beat isn't an honor.
+    *         - Cover: If three cards have been played.
+    * @throws CardException if the trick contains more than three prior plays (invalid state).
+    */
   private def getStrategyForFollowingSuit(trick: Trick): Strategy = trick.size match {
     // XXX this first case should never occur.
     case 0 => if (hasHonorSequence) LeadTopOfSequence else FourthBest
@@ -248,7 +397,7 @@ object Holding {
     * @return a new Holding.
     */
   def apply(suit: Suit, ranks: Rank*): Holding = {
-    val cards = ranks map (rank => Card(suit, rank))
+    val cards = ranks map (rank => Card(suit, rank)) to List
     val cXsXm = (for ((c, i) <- cards.zipWithIndex) yield i - c.priority -> c).groupBy(_._1)
     val ss = cXsXm.values map (cXs => Sequence(cXs.map(_._2)))
     apply(ss.toList.sorted, suit, Nil)
@@ -261,7 +410,8 @@ object Holding {
     * @param ranks the Ranks.
     * @return a new Holding.
     */
-  def apply(suit: Suit, ranks: String): Holding = create(Card.parser.parseRanks(ranks).toList, suit)
+  def apply(suit: Suit, ranks: String): Holding =
+    create(Card.parser.parseRanks(ranks).toList, suit)
 
   /**
     * Implicit converter from a String to a Holding.
@@ -269,37 +419,49 @@ object Holding {
     * @param s the String made up of (abbreviated) suit and ranks.
     * @return a new Holding.
     */
-  implicit def parseHolding(s: String): Holding = create(Card.parser.parseRanks(s.tail).toList, Suit(s.head))
+  implicit def parseHolding(s: String): Holding =
+    create(Card.parser.parseRanks(s.tail).toList, Suit(s.head))
 
   /**
     * An ordering for Ranks.
     * Lower priorities precede higher priorities.
-    * TODO merge with duplicate code.
+    * CONSIDER merge with duplicate code.
     */
   implicit object RankOrdering extends Ordering[Rank] {
-    override def compare(x: Rank, y: Rank): Int = -x.priority + y.priority
+    override def compare(x: Rank, y: Rank): Int =
+      -x.priority + y.priority
   }
 
-  // CONSIDER merge the two create methods
-  def create(suit: Suit, cards: Seq[Card]): Holding = apply(suit, (cards map (_.rank)).sorted.reverse: _*)
+  /**
+    * Creates a Holding from the given suit and a sequence of cards.
+    * CONSIDER merging the two `create` methods
+    *
+    * @param suit  the suit to associate with the Holding.
+    * @param cards the sequence of cards used to construct the Holding.
+    * @return a new Holding containing the sorted ranks of the provided cards in the specified suit.
+    */
+  def create(suit: Suit, cards: Seq[Card]): Holding =
+    apply(suit, (cards map (_.rank)).sorted.reverse *)
 
-  def create(ranks: Seq[Rank], suit: Suit): Holding = apply(suit, ranks.sorted.reverse: _*)
-
-  def ranksToString(ranks: Seq[Rank]): String = if (ranks.nonEmpty) ranks.mkString("", "", "") else "-"
-
-  // NOTE not used
-  implicit object LoggableHolding extends Loggable[Holding] with Loggables {
-    def toLog(t: Holding): String = t.neatOutput
-  }
+  /**
+    * Creates a new Holding instance using a sequence of ranks and a suit.
+    * The ranks will be sorted in descending order before creating the Holding.
+    *
+    * @param ranks the sequence of ranks to include in the Holding
+    * @param suit  the suit associated with the Holding
+    * @return a new Holding instance
+    */
+  def create(ranks: Seq[Rank], suit: Suit): Holding =
+    apply(suit, ranks.sorted.reverse *)
 
   /**
     * Method to assess the given strategy in the current situation.
     * CHECK: Can include opening lead situations ??
     *
     * @param strategy      the required strategy.
-    * @param currentWinner the priority of the card play which is currently winning this trick.
+    * @param currentWinner the priority of the card play that is currently winning this trick.
     * @param priority      the priority of the card (sequence) being considered.
-    * @return a relatively low number (e.g. 0) if this matches the given strategy, otherwise a high number.
+    * @return a relatively low number (e.g., 0) if this matches the given strategy, otherwise a high number.
     */
   //	private
   def applyFollowSuitStrategy(strategy: Strategy, currentWinner: Int, priority: Int): Int = {
@@ -324,7 +486,7 @@ object Holding {
     * CHECK: Can include opening lead situations ??
     *
     * @param strategy the required strategy.
-    * @return a relatively low number (e.g. 0) if this matches the given strategy, otherwise a high number.
+    * @return a relatively low number (e.g., 0) if this matches the given strategy, otherwise a high number.
     */
   //	private
   def applyLeadSuitStrategy(strategy: Strategy, play: CardPlay, maybeSequence: Option[Sequence]): Int = {
@@ -341,4 +503,6 @@ object Holding {
       case _ => 10
     }
   }
+
+  private def ranksToString(ranks: Seq[Rank]): String = if (ranks.nonEmpty) ranks.mkString("", "", "") else "-"
 }

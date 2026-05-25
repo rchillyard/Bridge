@@ -1,0 +1,154 @@
+Newton Oct 15th 2024
+A DW
+1	N	Mary Ellen Clark & Catherine Gerson
+2	N	Joanne Hennessy & Margaret Meehan
+3	N	Rebecca Kratka & MJ Weinstein
+4	N	Kathy Curtiss & Linda Worters
+5	N	Josh Gahm & Marya Van'T Hul
+6	N	Amy Avergun & Leslie Greenberg
+7	N	Judy & David Taub
+8	N	Phantom Pair
+9	N	Jane Venti & Jane Volden
+1	E	Marsha & Rob Greenstein
+2	E	Barbara Linder & Sheila Jones
+3	E	Veets & Audrey Veitas
+4	E	Alan Gordon & Nancy Olt
+5	E	Barbara Berenson & Robin Zelle
+6	E	Kaj Wilson & Ellen Dockser
+7	E	Andrea Easton & Ron Goldstein
+8	E	Carol Leahy & Kathy Roberts
+9	E	Gerri Taylor & Sherrill Kobrick
+P 1 1
+1 -140
+2 100
+
+P 2 2
+1 -110
+2 50
+
+P 3 3
+1 90
+2 50
+
+P 4 4
+1 -110
+2 50
+
+P 5 5
+1 -140
+2 -420
+
+P 6 6
+1 -110
+2 -450
+
+P 7 7
+1 -110
+2 50
+
+P 8 8
+1 -140
+2 -400
+
+P 9 9
+1 -110
+2 -140
+
+P 1 9
+3 -100
+4 680
+
+P 2 1
+3 110
+4 650
+
+P 3 2
+3 110
+4 -100
+
+P 4 3
+3 -50
+4 650
+
+P 5 4
+3 -100
+4 620
+
+P 6 5
+3 110
+4 680
+
+P 7 6
+3 110
+4 620
+
+P 8 7
+3 DNP
+4 DNP
+
+P 9 8
+3 110
+4 620
+
+P 1 8
+5 680
+6 -100
+
+P 2 9
+5 680
+6 -50
+
+P 3 1
+5 680
+6 110
+
+P 4 2
+5 1430
+6 140
+
+P 5 3
+5 -100
+6 110
+
+P 6 4
+5 1430
+6 200
+
+P 7 5
+5 1430
+6 300
+
+P 8 6
+5 DNP
+6 DNP
+
+P 9 7
+5 680
+6 -50
+
+P 1 7
+7 -620
+
+P 2 8
+7 -620
+
+P 3 9
+7 -620
+
+P 4 1
+7 -140
+
+P 5 2
+7 -90
+
+P 6 3
+7 -140
+
+P 7 4
+7 -620
+
+P 8 5
+7 DNP
+
+P 9 6
+7 -620

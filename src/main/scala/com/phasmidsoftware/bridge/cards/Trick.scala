@@ -8,9 +8,8 @@ package com.phasmidsoftware.bridge.cards
   * Module which includes Trick and Winner
   */
 
-import com.phasmidsoftware.util.{Loggable, Loggables, Output, Outputable}
+import com.phasmidsoftware.gambit.util.{Output, Outputable}
 
-import scala.collection.immutable
 import scala.language.postfixOps
 
 /**
@@ -24,7 +23,7 @@ import scala.language.postfixOps
   * @param plays      the sequence of plays (in sequence).
   * @param maybePrior an optional previous trick
   */
-case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) extends Outputable[Deal] with Evaluatable {
+case class Trick(index: Int, plays: Seq[CardPlay], maybePrior: Option[Trick]) extends Outputable[Deal] with Evaluatable {
 
   /**
     * True if plays is non empty.
@@ -33,7 +32,8 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
 
   lazy val maybeSuit: Option[Suit] = plays.headOption.map(_.suit)
 
-  lazy val leader: Option[Int] = plays.headOption.map(_.hand)
+  lazy val leader: Option[Int] =
+    plays.headOption.map(_.hand).orElse(maybePrior.flatMap(_.winner).map(_.play.hand))
 
   /**
     * @return the index of the hand next to play in this trick.
@@ -71,9 +71,36 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     */
   //noinspection ScalaStyle
   def :+(play: CardPlay): Trick =
-    if (isComplete || index == 0) Trick(index + 1, List(play), if (index == 0) None else Some(this))
+    if (isComplete || index == 0) Trick(index + 1, Seq(play), if (index == 0) None else Some(this))
     else if (next contains play.hand) Trick(index, plays :+ play, maybePrior)
     else throw CardException(s"play $play cannot be added to this trick: $this ")
+
+  /**
+    * Determine if any subsequent player can beat the current winner of this trick.
+    * Considers both beating in the led suit and ruffing with trumps.
+    *
+    * @param deal   the current state of the deal.
+    * @param strain the optional trump suit.
+    * @return true if any remaining player can beat the current winner.
+    */
+  def canSubsequentPlayWin(deal: Deal, strain: Option[Suit]): Boolean =
+    winner match
+      case None => false
+      case Some(w) =>
+        val ledSuit = maybeSuit.get
+        val remainingHands = (size until Deal.CardsPerTrick)
+          .map(i => (leader.get + i) % Deal.HandsPerDeal)
+        remainingHands.exists { handIndex =>
+          val holdings = deal.hands(handIndex).holdings
+          val canBeatInSuit = holdings.get(ledSuit)
+            .exists(_.sequences.exists(_.priority < w.play.priority))
+          val canRuff = strain.exists(trump =>
+            trump != ledSuit &&
+              holdings.get(ledSuit).forall(_.isVoid) &&
+              holdings.get(trump).exists(!_.isVoid)
+          )
+          canBeatInSuit || canRuff
+        }
 
   /**
     * @return true if the first card in this trick is an honor.
@@ -90,10 +117,10 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     */
   def evaluate: Double = _evaluate
 
-  override def toString: String = s"T$index ${leader.map(_.toString).getOrElse("")} ${plays.map(_.asCard).mkString("{", ", ", "}")}"
-
+  override def toString: String =
+    s"T$index ${leader.map(_.toString).getOrElse("")} ${plays.mkString("{", ", ", "}")}"
   /**
-    * Refactor this
+    * Refactor this recursive method.
     */
   lazy val history: Seq[Trick] = maybePrior match {
     case None => Seq(this)
@@ -128,33 +155,15 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
   /**
     * Enumerate the possible plays to follow the current play.
     *
-    * TODO move this into Whist?
+    * CONSIDER move this into Whist?
     *
     * @param whist the current game (only needed when the opening lead is being made) ???
     * @return a sequence of Trick instances, each based on:
     *         (1) the current trick if we are following;
     *         (2) a new trick if we are leading.
     */
-  def enumerateSubsequentPlays(whist: Whist): List[Trick] = enumerateSubsequentPlays(whist.deal, whist.openingLeader, whist.strain) //.invariant(ts => ts.nonEmpty)
-
-  /**
-    * Determine if the declaring side still has a play left in this trick.
-    *
-    * @param directionNS true if NS is the declaring side.
-    * @return true if fewer than three cards have been played; or if the leader is None, or leader belongs to the opposition.
-    */
-  def declaringSideStillToPlay(directionNS: Boolean): Boolean = size < 3 || (leader match {
-    case Some(x) => !Hand.isDeclaringSide(directionNS, x)
-    case None => true
-  })
-
-  /**
-    * Determine if the declaring side still has a play left in this trick.
-    *
-    * @param directionNS true if NS is the declaring side.
-    * @return true if fewer than three cards have been played; or if the leader is None, or leader belongs to the opposition.
-    */
-  def declaringSideCanWin(directionNS: Boolean): Boolean = declaringSideStillToPlay(directionNS) || Winner.isDeclaringSideWinning(winner, directionNS)
+  def enumerateSubsequentPlays(whist: Whist): Seq[Trick] =
+    enumerateSubsequentPlays(whist.deal, whist.openingLeader, whist.strain) //.invariant(ts => ts.nonEmpty)
 
   /**
     * Determine the number of remaining moves that are required to build up sufficient tricks.
@@ -170,16 +179,35 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
   }
 
   /**
+    * Determine if the declaring side still has a play left in this trick.
+    *
+    * @param directionNS true if NS is the declaring side.
+    * @return true if fewer than three cards have been played; or if the leader is None, or leader belongs to the opposition.
+    */
+  private def declaringSideStillToPlay(directionNS: Boolean): Boolean = size < 3 || (leader match {
+    case Some(x) => !Hand.isDeclaringSide(directionNS, x)
+    case None => true
+  })
+
+  /**
+    * Determine if the declaring side still has a play left in this trick.
+    *
+    * @param directionNS true if NS is the declaring side.
+    * @return true if fewer than three cards have been played; or if the leader is None, or leader belongs to the opposition.
+    */
+  private def declaringSideCanWin(directionNS: Boolean): Boolean = declaringSideStillToPlay(directionNS) || Winner.isDeclaringSideWinning(winner, directionNS)
+
+  /**
     * NOTE: this doesn't look right
     *
-    * TODO: this entire mechanism of generating plays needs a complete re-write!
+    * CONSIDER: this entire mechanism of generating plays needs a complete re-write!
     *
-    * @param deal the deal.
+    * @param deal   the deal.
     * @param leader the opening leader.
     * @param strain the trump suit, if any.
     * @return a list of Tricks.
     */
-  private def enumerateSubsequentPlays(deal: Deal, leader: Int, strain: Option[Suit]) = // if (deal.nCards<4) List(forcedPlay(deal, leader)) else
+  def enumerateSubsequentPlays(deal: Deal, leader: Int, strain: Option[Suit]): Seq[Trick] =
     winner match {
       case Some(Winner(p, true)) =>
         enumerateLeads(deal, p.hand, strain) // XXX enumerate leads, given a complete trick with an actual winner
@@ -190,7 +218,8 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
           enumerateLeads(deal, leader, strain) // XXX: enumerate leads, starting from the null trick.
     }
 
-  private def enumerateLeads(deal: Deal, leader: Int, strain: Option[Suit]) = for (q <- chooseLeads(deal, leader, strain)) yield Trick(index + 1, List(q), Some(this))
+  private def enumerateLeads(deal: Deal, leader: Int, strain: Option[Suit]) =
+    for (q <- chooseLeads(deal, leader, strain)) yield Trick(index + 1, Seq(q), Some(this))
 
   private def leadStrategy(s: Suit, h: Holding, strain: Option[Suit]): Strategy = h.nCards match {
     case 0 => Invalid
@@ -198,14 +227,14 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     case _ => StandardOpeningLead
   }
 
-  // TODO make private
-  def chooseLeads(deal: Deal, leader: Int, strain: Option[Suit]): List[CardPlay] = {
-    val z: immutable.List[(CardPlay, Int)] = for {(s, h) <- deal.hands(leader).holdings.toList
-                                                  strategy = leadStrategy(s, h, strain)
-                                                  p <- h.choosePlays(deal, strain, leader, strategy, None)}
-      yield p -> h.nCards
-    // TODO incorporate this into the code
-    val y: Seq[(Suit, List[(CardPlay, Int)])] = z.groupBy { case (p, _) => p.suit }.toSeq
+  // CONSIDER make private
+  def chooseLeads(deal: Deal, leader: Int, strain: Option[Suit]): Seq[CardPlay] = {
+    val z: Seq[(CardPlay, Int)] = for {(s, h) <- deal.hands(leader).holdings.toList
+                                       strategy = leadStrategy(s, h, strain)
+                                       p <- h.choosePlays(deal, strain, leader, strategy, None)}
+    yield p -> h.nCards
+    // CONSIDER incorporate this into the code
+    val _: Seq[(Suit, Seq[(CardPlay, Int)])] = z.groupBy { case (p, _) => p.suit }.toList
     val (q, _) = z.sortWith((x, _) => x._1.isStiff(x._2)).sortBy(x => -x._2).unzip
     q
   }
@@ -217,7 +246,8 @@ case class Trick(index: Int, plays: List[CardPlay], maybePrior: Option[Trick]) e
     *
     * @return the total number of cards played.
     */
-  lazy val cardsPlayed: Int = Math.max((index - 1) * Deal.CardsPerTrick + size, 0)
+  lazy val cardsPlayed: Int =
+    Math.max((index - 1) * Deal.CardsPerTrick + size, 0)
 
   def output(output: Output, xo: Option[Deal] = None): Output =
     (output :+ s"T$index ") :+ (if (plays.nonEmpty) plays.last.output(output.copy, xo) else output.copy :+ "")
@@ -233,11 +263,6 @@ object Trick {
     * Create an empty (non-) trick
     */
   val empty: Trick = apply(0, Nil, None)
-
-  implicit object LoggableTrick extends Loggable[Trick] with Loggables {
-    def toLog(t: Trick): String = s"T${t.index} ${t.plays.mkString("{", ", ", "}")}"
-  }
-
 }
 
 /**
@@ -251,7 +276,7 @@ case class Winner(play: CardPlay, complete: Boolean) {
 
   def priorityToBeat(hand: Int): Int = if (sameSide(hand)) Rank.lowestPriority else play.priority
 
-  // TODO this looks a bit suspicious, but it is indeed used to prioritize plays!
+  // CONSIDER this looks a bit suspicious, but it is indeed used to prioritize plays!
   def partnerIsWinning(hand: Int): Boolean = play.isHonor && sameSide(hand)
 
   // NOTE: the following logical looking alternative doesn't work well.

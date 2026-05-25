@@ -4,8 +4,6 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.util.{Loggable, Loggables}
-
 import scala.language.implicitConversions
 
 /**
@@ -22,6 +20,8 @@ import scala.language.implicitConversions
   */
 case class Card(suit: Suit, rank: Rank) {
   lazy val priority: Int = rank.priority
+
+  lazy val cardIndex: Int = suit.priority * 13 + rank.priority
 
   override def toString: String = s"$suit$rank" // XXX Bridge order (not Poker)
 }
@@ -61,18 +61,13 @@ object Card {
     */
   implicit object CardOrdering extends Ordering[Card] {
     override def compare(x: Card, y: Card): Int = {
-      import Rank._
-      import Suit._
+      import Rank.*
+      import Suit.*
       val cf = SuitOrdering.compare(x.suit, y.suit)
       if (cf != 0) cf
       else RankOrdering.compare(x.rank, y.rank)
     }
   }
-
-  implicit object LoggableCard extends Loggable[Card] with Loggables {
-    def toLog(t: Card): String = t.toString
-  }
-
 
   private[cards] def bool2Int(b: Boolean): Int = if (b) 1 else 0
 
@@ -85,11 +80,10 @@ object Card {
 sealed trait Priority {
   /**
     * The priority of this object.
-    * For Rank, Ace: 0, King: 1, Deuce: 2.
-    * TODO check the following:
+    * For Rank, Ace: 0, King: 1, Deuce: 12.
     * For Suit, Spades: 0, Clubs: 3.
     *
-    * @return
+    * @return a priority value (smaller is higher).
     */
   def priority: Int
 }
@@ -114,6 +108,8 @@ sealed trait Suit {
     * True if this Suit is Hearts or Diamonds.
     */
   val isRed: Boolean
+
+  def priority: Int
 }
 
 /**
@@ -127,6 +123,8 @@ object Suit {
     * @return the Rank.
     */
   implicit def convertStringToSuit(s: String): Suit = apply(s.head)
+
+  val suits: Seq[Suit] = Seq(Spades, Hearts, Diamonds, Clubs)
 
   /**
     * Explicitly convert a Char into a Suit.
@@ -144,15 +142,13 @@ object Suit {
 
   /**
     * Define an ordering for Suits.
+    *
+    * CONSIDER merge with RankOrdering.
     */
   implicit object SuitOrdering extends Ordering[Suit] {
-    override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
+    override def compare(x: Suit, y: Suit): Int =
+      -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
   }
-
-  implicit object LoggableSuit extends Loggable[Suit] with Loggables {
-    def toLog(t: Suit): String = t.toString
-  }
-
 }
 
 /**
@@ -165,9 +161,9 @@ abstract class BaseSuit(val isRound: Boolean, val isRed: Boolean) extends Suit w
   /**
     * @return the priority of this Suit
     */
-  def priority: Int = _priority
+  lazy val priority: Int = _priority
 
-  override def toString: String = List("S", "H", "D", "C")(priority)
+  override def toString: String = Seq("S", "H", "D", "C")(priority)
 
   private lazy val _priority = Card.bool2Int(isRound) + 2 * Card.bool2Int(isRound ^ isRed)
 }
@@ -207,8 +203,11 @@ object Rank {
     * Defines an ordering of Ranks
     */
   implicit object RankOrdering extends Ordering[Rank] {
-    override def compare(x: Rank, y: Rank): Int = -x.priority + y.priority
+    override def compare(x: Rank, y: Rank): Int =
+      -x.priority + y.priority
   }
+
+  val ranks: Seq[BaseRank] = Seq(Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)
 
   /**
     * Method to create a Rank from an honor String (A, K, Q, J, or T)
@@ -256,11 +255,6 @@ object Rank {
     */
   val lowestPriority: Int = 14
 
-  implicit object LoggableSuit extends Loggable[Suit] with Loggables {
-    def toLog(t: Suit): String = t.toString
-  }
-
-
   private val spotR = """(\d\d?)""".r
   private val honorR = """([AKQJT])""".r
 }
@@ -273,13 +267,13 @@ object Rank {
   */
 abstract class BaseRank(val priority: Int, val isHonor: Boolean) extends Rank with Priority {
 
-  override def toString: String = if (isHonor) List("A", "K", "Q", "J", "T")(priority) else (Rank.lowestPriority - priority).toString
+  override def toString: String = if (isHonor) Seq("A", "K", "Q", "J", "T")(priority) else (Rank.lowestPriority - priority).toString
 
   private def canEqual(other: Any): Boolean = other.isInstanceOf[BaseRank]
 
   override def equals(other: Any): Boolean = other match {
     case that: BaseRank =>
-      (that canEqual this) &&
+      (that `canEqual` this) &&
         priority == that.priority
     case _ => false
   }
@@ -348,7 +342,7 @@ private class RankParser extends JavaTokenParsers {
     }
   }
 
-  def holding: Parser[List[Rank]] = rep(rank) ^^ (_ map Rank.apply)
+  def holding: Parser[Seq[Rank]] = rep(rank) ^^ (_ map Rank.apply)
 
   def rank: Parser[String] = """[2-9]""".r | """[AKQJT]""".r | "10" | failure("invalid rank")
 }

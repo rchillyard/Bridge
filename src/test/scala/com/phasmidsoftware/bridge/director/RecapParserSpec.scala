@@ -4,8 +4,9 @@
 
 package com.phasmidsoftware.bridge.director
 
-import com.phasmid.laScala.values.Rational
-import org.scalatest.{FlatSpec, Matchers}
+import com.phasmidsoftware.number.core.inner.Rational
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should
 
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
@@ -13,7 +14,7 @@ import scala.util.{Failure, Success, Try}
 /**
   * @author scalaprof
   */
-class RecapParserSpec extends FlatSpec with Matchers {
+class RecapParserSpec extends AnyFlatSpec with should.Matchers {
   behavior of "endOfLine"
   it should "parse" in {
     val parser = new RecapParser
@@ -32,6 +33,12 @@ class RecapParserSpec extends FlatSpec with Matchers {
   it should "parse" in {
     val parser = new RecapParser
     val r = parser.parseAll(parser.travelers, "T 1\n1 1 130\n2 2 150\n\nT 2\n1 1 130\n2 2 150\n\n")
+    r should matchPattern { case parser.Success(_, _) => }
+    r.get.size shouldBe 2
+  }
+  it should "parse with commas" in {
+    val parser = new RecapParser(",")
+    val r = parser.parseAll(parser.travelers, "T,1\n1,1,130\n2,2,150\n\nT,2\n1,1,130\n2,2,150\n\n")
     r should matchPattern { case parser.Success(_, _) => }
     r.get.size shouldBe 2
   }
@@ -87,6 +94,7 @@ class RecapParserSpec extends FlatSpec with Matchers {
   }
 
   behavior of "pair"
+
   it should "parse" in {
     val parser = new RecapParser
     val r = parser.parseAll(parser.pair, "1 N Erithacus Rubecula & Esox Lucius")
@@ -94,10 +102,23 @@ class RecapParserSpec extends FlatSpec with Matchers {
     r.get.number shouldBe 1
     r.get.maybeDirection shouldBe Some("N")
     r.get.players should matchPattern { case (_, _) => }
-    r.get.players._1 shouldBe Player("Erithacus Rubecula")
+    r.get.players._1 shouldBe Player("Erithacus Rubecula", -1)
+  }
+
+  it should "parse pair with tabs" in {
+    val parser = new RecapParser
+    val r: parser.ParseResult[Pair] = parser.parseAll(parser.pair, """1 Kathy & Thornton \n""")
+    r should matchPattern { case parser.Success(_, _) => }
+  }
+
+  it should "parse pair with commas" in {
+    val parser = new RecapParser(",")
+    val r: parser.ParseResult[Pair] = parser.parseAll(parser.pair, """1,Kathy & Thornton \n""")
+    r should matchPattern { case parser.Success(_, _) => }
   }
 
   behavior of "preamble"
+
   it should "parse without modifier" in {
     val parser = new RecapParser
     val r = parser.parseAll(parser.preamble, "A\n1 N Erithacus Rubecula & Esox Lucius\n")
@@ -116,6 +137,26 @@ class RecapParserSpec extends FlatSpec with Matchers {
     preamble.identifier shouldBe "A"
     preamble.maybeModifier shouldBe Some("SW")
     preamble.pairs.size shouldBe 1
+  }
+
+  it should "parse double-winner preamble with tabs" in {
+    val parser = new RecapParser
+    val r: parser.ParseResult[Preamble] = parser.parseAll(parser.preamble,
+      """A DW
+        |1  N Michele & Jean
+        |2   N Kathryn & Terry
+        |3  N Kathy & Thornton
+        |3   E Dave & Bill
+        |2  E Homer & Chuck
+        |1   E Glen & Janis
+        |23 N Ray & Shelly
+        |21  N Teunis & John
+        |22 N Linda & Chris
+        |22  E Barbara & Cynthia
+        |21  E Kim & Clay
+        |23 E Jennifer & Karolyn
+        |""".stripMargin)
+    r should matchPattern { case parser.Success(_, _) => }
   }
 
   behavior of "result"
@@ -163,7 +204,19 @@ class RecapParserSpec extends FlatSpec with Matchers {
     pickup.ew shouldBe 17
     pickup.boards.size shouldBe 2
   }
+
+  it should "parse double-winner pickup with tabs" in {
+    val parser = new RecapParser
+    val r: parser.ParseResult[Pickup] = parser.parseAll(parser.pickup,
+      """P 1 1
+        |1 450
+        |2 50
+        |""".stripMargin)
+    r should matchPattern { case parser.Success(_, _) => }
+  }
+
   behavior of "traveler"
+
   it should "parse" in {
     val parser = new RecapParser
     val r = parser.parseAll(parser.traveler, "T 1\n1 1 130\n2 2 150\n\n")
@@ -179,7 +232,7 @@ class RecapParserSpec extends FlatSpec with Matchers {
     val t = r.get
     val firstEntry = t.ps.head
     val mps = firstEntry.matchpoints(t)
-    mps shouldBe Some(Rational.zero[Int])
+    mps shouldBe Some(Rational.zero)
   }
   it should "calculate mps" in {
     val traveler = "   T 1\n    1 1 420\n    2 2 420\n    3 4 420\n    4 3 140\n    5 5 170\n    6 6 -50\n    7 6 420\n\n"
@@ -190,6 +243,19 @@ class RecapParserSpec extends FlatSpec with Matchers {
     val firstEntry = t.ps.head
     val mps = firstEntry.matchpoints(t)
     mps shouldBe Some(Rational(3, 4))
+  }
+  it should "parse double-winner traveler with tabs" in {
+    val parser = new RecapParser
+    val r: parser.ParseResult[Traveler] = parser.parseAll(parser.traveler,
+      """T  1
+        |1  1 450
+        |2  3 -50
+        |3  2 -50
+        |21 21 -50
+        |22  23 980
+        |23  22 510
+        |""".stripMargin)
+    r should matchPattern { case parser.Success(_, _) => }
   }
 
   behavior of "section"
@@ -204,7 +270,7 @@ class RecapParserSpec extends FlatSpec with Matchers {
 
   it should "parse with tabs" in {
     val parser = new RecapParser
-    val r = parser.parseAll(parser.section, "A\n1 N Erithacus Rubecula & Esox Lucius\nT\t1\n1 1\t130\n2 2\t150\n\nT 2\n1 1\t130\n2 2\t150\n\n")
+    val r = parser.parseAll(parser.section, "A\n1 N Erithacus Rubecula & Esox Lucius\nT 1\n1 1  130\n2 2  150\n\nT 2\n1 1 130\n2 2  150\n\n")
     r should matchPattern { case parser.Success(_, _) => }
     r.get.preamble.identifier shouldBe "A"
     r.get.preamble.pairs.size shouldBe 1
@@ -220,7 +286,7 @@ class RecapParserSpec extends FlatSpec with Matchers {
     event.title shouldBe "Test Section 2016/04/12"
     event.sections.size shouldBe 1
     val section: Section = event.sections.head
-    section.preamble shouldBe Preamble("A", None, Seq(Pair(1, Some("N"), Player("Erithacus Rubecula") -> Player("Esox Lucius"))))
+    section.preamble shouldBe Preamble("A", None, List(Pair(1, Some("N"), Player("Erithacus Rubecula", -1) -> Player("Esox Lucius", -1))))
   }
 
   it should "parse single-winner event" in {
@@ -237,7 +303,71 @@ class RecapParserSpec extends FlatSpec with Matchers {
 
   it should "parse double-winner event with tabs" in {
     val parser = new RecapParser
-    val r: parser.ParseResult[Event] = parser.parseAll(parser.event, "Lexington: Apr 4th 2017\nA DW\n1\tN Michele & Jean\n2   N Kathryn & Terry\n3\tN Kathy & Thornton\n3   E Dave & Bill\n2\tE Homer & Chuck\n1   E Glen & Janis\n23\tN Ray & Shelly\n21  N Teunis & John\n22\tN Linda & Chris\n22  E Barbara & Cynthia\n21\tE Kim & Clay\n23 E Jennifer & Karolyn\nT 1\n1\t1 450\n2\t3 -50\n3\t2 -50\n21\t21 -50\n22\t23 980\n23\t22 510\n\nT 2\n1\t1 50\n2\t3  50\n3\t2  50\n21\t21 50\n22\t23 -420\n23\t22 50\n\nT 3\n1\t3 400\n2\t2 150\n3\t1 120\n21\t23 -50\n22\t22 -50\n23\t21 -100\n\nT 4\n1\t3 200\n2\t2 200\n3\t1  -110\n21\t23 -110\n22\t22 300\n23\t21 100\n\nT 5\n1\t2 -300\n2\t1 -200\n3\t3 -500\n21\t22 -50\n22\t21 -300\n23\t23 110\n\nT 6\n1\t2 -680\n2\t1 -1430\n3\t3 -650\n21\t22 -1460\n22\t21 -1430\n23\t23 -650\n\n")
+    val r: parser.ParseResult[Event] = parser.parseAll(parser.event,
+      """Lexington: Apr 4th 2017
+        |A DW
+        |1  N Michele & Jean
+        |2   N Kathryn & Terry
+        |3  N Kathy & Thornton
+        |3   E Dave & Bill
+        |2  E Homer & Chuck
+        |1   E Glen & Janis
+        |23 N Ray & Shelly
+        |21  N Teunis & John
+        |22 N Linda & Chris
+        |22  E Barbara & Cynthia
+        |21  E Kim & Clay
+        |23 E Jennifer & Karolyn
+        |T 1
+        |1 1 450
+        |2  3 -50
+        |3  2 -50
+        |21 21 -50
+        |22  23 980
+        |23  22 510
+        |
+        |T 2
+        |1  1 50
+        |2 3  50
+        |3  2  50
+        |21 21 50
+        |22 23 -420
+        |23 22 50
+        |
+        |T 3
+        |1 3 400
+        |2  2 150
+        |3  1 120
+        |21 23 -50
+        |22  22 -50
+        |23  21 -100
+        |
+        |T 4
+        |1 3 200
+        |2  2 200
+        |3  1  -110
+        |21 23 -110
+        |22 22 300
+        |23  21 100
+        |
+        |T 5
+        |1  2 -300
+        |2 1 -200
+        |3 3 -500
+        |21  22 -50
+        |22  21 -300
+        |23 23 110
+        |
+        |T 6
+        |1  2 -680
+        |2 1 -1430
+        |3  3 -650
+        |21  22 -1460
+        |22  21 -1430
+        |23  23 -650
+        |
+        |""".stripMargin
+    )
     r should matchPattern { case parser.Success(_, _) => }
     val event: Event = r.get
     event.title shouldBe "Lexington: Apr 4th 2017"
@@ -265,8 +395,41 @@ class RecapParserSpec extends FlatSpec with Matchers {
     pairs.size shouldBe 14
     val pair = pairs.head
     pair.number shouldBe 1
-    pair.players shouldBe(Player("Sue"), Player("Jim"))
+    pair.players shouldBe(Player("Sue", -1), Player("Jim", -1))
     pair.maybeDirection shouldBe Some("N")
   }
+
+  it should "read Newton20241105bad as a resource" in {
+    val resource = "Newton/Newton20241105bad.txt"
+    val ey: Try[Event] = Option(getClass.getResourceAsStream(resource)) match {
+      case Some(s) => RecapParser.readEvent(Source.fromInputStream(s))
+      case None => Failure(new Exception(s"doScoreResource: cannot open resource: $resource"))
+    }
+    ey should matchPattern { case Success(Event(_, _)) => }
+    val event = ey.get
+    val sections = event.sections
+    sections.size shouldBe 1
+    val a = sections.head
+    val preamble = a.preamble
+    preamble should matchPattern { case Preamble("A", Some("DW"), _) => }
+    val pairs = preamble.pairs
+    pairs.size shouldBe 5
+  }
+
+  it should "handle Windows-style newlines and commas for delimiter" in {
+    val filename = "/Users/rhillyard/IdeaProjects/Bridge/src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton Scoring 20241119.txt"
+    val ey = RecapParser.readEvent(Source.fromFile(filename), ",")
+    ey should matchPattern { case Success(Event(_, _)) => }
+    val event = ey.get
+    val sections = event.sections
+    sections.size shouldBe 1
+    val a = sections.head
+    val preamble = a.preamble
+    preamble should matchPattern { case Preamble("A", Some("DW"), _) => }
+    val pairs = preamble.pairs
+    pairs.size shouldBe 18
+  }
+
+  // com/phasmidsoftware/bridge/director/Newton/Newton20241105bad.txt
 }
 

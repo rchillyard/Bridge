@@ -1,0 +1,127 @@
+Newton November 19th 2024
+A DW
+1,N,Julie Foster & Maxine Goldberg
+2,N,Rick & Lisa Martin
+3,N,Mary Ellen Clark & Catherine Gerson
+4,N,Carol Leahy & Kathy Roberts
+5,N,Cheryl Sober & Judy Taub
+6,N,Josh Gahm & Marya Van'T Hul
+7,N,Amy Avergun & Leslie Greenberg
+8,N,Tweedledum & Tweedledee
+9,N,Carolyn Drapkin & Art Fine
+1,E,Susan Stearns & Chris Battat
+2,E,Jane Venti & Jane Volden
+3,E,Ree Harrington & Alan Gordon
+4,E,Margaret Meehan & Sheri Iskenderian
+5,E,Gerri Taylor & Sherrill Kobrick
+6,E,Robin Zelle & Barbara Berenson
+7,E,Mary Coonan & Miriam Mandell
+8,E,Nancy & Susan
+9,E,Missy Mahoney & Sue Doisneau
+P,1,1
+1,450
+2,-400
+
+P,2,2
+1,-50
+2,50
+
+P,3,3
+1,-50
+2,50
+
+P,4,4
+1,170
+2,-400
+
+P,5,5
+1,420
+2,-430
+
+P,6,6
+1,-50
+2,-420
+
+P,7,7
+1,-50
+2,-430
+
+P,8,8
+1,DNP
+2,DNP
+
+P,9,9
+1,480
+2,-400
+
+P,1,9
+3,-50
+4,-120
+
+P,2,1
+3,-100
+4,-180
+
+P,3,2
+3,90
+4,110
+
+P,4,3
+3,-150
+4,400
+
+P,5,4
+3,90
+4,100
+
+P,6,5
+3,-50
+4,100
+
+P,7,6
+3,90
+4,200
+
+P,8,7
+3,120
+4,DNP
+
+P,9,8
+3,DNP
+4,DNP
+
+P,1,6
+5,-150
+6,420
+
+P,2,7
+5,-140
+6,420
+
+P,3,1
+5,50
+6,420
+
+P,4,2
+5,-100
+6,420
+
+P,5,3
+5,50
+6,420
+
+P,6,4
+5,50
+6,420
+
+P,7,5
+5,-110
+6,170
+
+P,9,8
+5,50
+6,450
+
+P,8,7
+5,DNP
+6,DNP

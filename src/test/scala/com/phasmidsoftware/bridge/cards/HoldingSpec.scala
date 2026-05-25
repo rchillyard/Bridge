@@ -4,30 +4,31 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should
 
 //noinspection ScalaStyle
-class HoldingSpec extends FlatSpec with Matchers {
+class HoldingSpec extends AnyFlatSpec with should.Matchers {
 
   behavior of "Sequence"
 
-  private val SAK = Sequence(Seq(Card("SA"), Card("SK")))
-  private val SJT = Sequence(Seq(Card("SJ"), Card("ST")))
+  private val SAK = Sequence(List(Card("SA"), Card("SK")))
+  private val SJT = Sequence(List(Card("SJ"), Card("ST")))
 
-  it should "apply(Int,Seq[Card])" in {
+  it should "apply(Int,List[Card])" in {
     val target = Sequence(0, List(Card("SA"), Card("SK")))
     target.priority shouldBe 0
     target.length shouldBe 2
   }
 
-  it should "apply(Seq[Card])" in {
+  it should "apply(List[Card])" in {
     val target = SAK
     target.priority shouldBe 0
     target.length shouldBe 2
   }
 
   it should "promote deuce" in {
-    val target = Sequence(Seq(Card("H2")))
+    val target = Sequence(List(Card("H2")))
     target.priority shouldBe 12
     target.length shouldBe 1
     val promoted = target.promote
@@ -36,27 +37,27 @@ class HoldingSpec extends FlatSpec with Matchers {
   }
 
   it should "promote ace" in {
-    val target = Sequence(Seq(Card("SA")))
+    val target = Sequence(List(Card("SA")))
     target.priority shouldBe 0
     target.length shouldBe 1
     an[CardException] should be thrownBy target.promote
   }
 
   it should "A++K" in {
-    val target1 = Sequence(Seq(Card("SA")))
-    val target2 = Sequence(Seq(Card("SK")))
+    val target1 = Sequence(List(Card("SA")))
+    val target2 = Sequence(List(Card("SK")))
     target1 ++ target2 shouldBe Sequence(0, List(Card("SA"), Card("SK")))
   }
 
   it should "A++Q" in {
-    val target1 = Sequence(Seq(Card("SA")))
-    val target2 = Sequence(Seq(Card("SQ")))
+    val target1 = Sequence(List(Card("SA")))
+    val target2 = Sequence(List(Card("SQ")))
     an[CardException] should be thrownBy target1 ++ target2
   }
 
   it should "A++Q (promoted)" in {
-    val target1 = Sequence(Seq(Card("SA")))
-    val target2 = Sequence(Seq(Card("SQ")))
+    val target1 = Sequence(List(Card("SA")))
+    val target2 = Sequence(List(Card("SQ")))
     target1 ++ target2.promote shouldBe Sequence(0, List(Card("SA"), Card("SQ")))
   }
 
@@ -74,7 +75,7 @@ class HoldingSpec extends FlatSpec with Matchers {
   }
 
   it should "create" in {
-    val holding = Holding.create(Seq(Ace, King, Ten, Nine, Seven, Five, Four), Spades)
+    val holding = Holding.create(List(Ace, King, Ten, Nine, Seven, Five, Four), Spades)
     holding.sequences.size shouldBe 4
     holding.sequences.head shouldBe Sequence(0, List(Card("SA"), Card("SK")))
   }
@@ -82,12 +83,12 @@ class HoldingSpec extends FlatSpec with Matchers {
   it should "form string" in {
     Holding(Spades, "2", "A").toString shouldBe "{S: A[0], 2[12]} (clean)"
     Holding(Spades).toString shouldBe "{S: } (clean)"
-    import Rank._
-    Holding.create(Seq[Rank]("2", "A"), Spades).toString shouldBe "{S: A[0], 2[12]} (clean)"
+    import Rank.*
+    Holding.create(List[Rank]("2", "A"), Spades).toString shouldBe "{S: A[0], 2[12]} (clean)"
   }
 
   it should "promote (1)" in {
-    val target = Holding(List(SAK, Sequence(Seq(Card("S3"), Card("S2")))), Spades)
+    val target = Holding(List(SAK, Sequence(List(Card("S3"), Card("S2")))), Spades)
     val promoted = target.promote(5).quit
     promoted.size shouldBe 2
     promoted.cards.size shouldBe 4
@@ -103,7 +104,7 @@ class HoldingSpec extends FlatSpec with Matchers {
   }
 
   it should "promote (3)" in {
-    val target = Holding(List(SJT, Sequence(Seq(Card("S3"), Card("S2")))), Spades)
+    val target = Holding(List(SJT, Sequence(List(Card("S3"), Card("S2")))), Spades)
     val promoted = target.promote(2).quit
     promoted.size shouldBe 2
     promoted.sequences.head shouldBe Sequence(2, List(Card("SJ"), Card("ST")))
@@ -114,14 +115,14 @@ class HoldingSpec extends FlatSpec with Matchers {
     val target = Holding(List(SAK, SJT), Spades)
     val promoted = target.promote(2)
     promoted.promotions.size shouldBe 1
-    promoted.promotions shouldBe Seq(2)
+    promoted.promotions shouldBe List(2)
     val quitted = promoted.quit
     quitted.size shouldBe 1
     quitted.sequences.head shouldBe Sequence(0, List(Card("SA"), Card("SK"), Card("SJ"), Card("ST")))
   }
 
   it should "-" in {
-    val target = Holding(List(SJT, Sequence(Seq(Card("S3"), Card("S2")))), Spades)
+    val target = Holding(List(SJT, Sequence(List(Card("S3"), Card("S2")))), Spades)
     val played1 = (target - 11).promote(11).quit
     played1.size shouldBe 2
     played1.sequences.head shouldBe Sequence(3, List(Card("SJ"), Card("ST")))
@@ -130,12 +131,12 @@ class HoldingSpec extends FlatSpec with Matchers {
 
 
   it should "evaluate" in {
-    Holding(List(SAK, Sequence(Seq(Card("S3"), Card("S2")))), Spades).evaluate shouldBe 2.0 +- 0.005
+    Holding(List(SAK, Sequence(List(Card("S3"), Card("S2")))), Spades).evaluate shouldBe 2.0 +- 0.005
     Holding(List(SAK, SJT), Spades).evaluate shouldBe 3.0 +- 0.1
   }
 
   it should "apply fourth best lead strategy" in {
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val holding: Holding = deal.hands.head.longestSuit
     val suit = holding.suit
     suit shouldBe Hearts
@@ -148,7 +149,7 @@ class HoldingSpec extends FlatSpec with Matchers {
   }
 
   it should "apply win it strategy" in {
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val holding: Holding = deal.hands.head.longestSuit
     val leads: Seq[CardPlay] = holding.choosePlays(deal, None, 0, FourthBest, None)
     leads.size shouldBe 3
@@ -167,7 +168,7 @@ class HoldingSpec extends FlatSpec with Matchers {
   //    val deal = Deal("test", 0L)
   //    val holding: Holding = deal.hands.head.longestSuit
   //    val suit = holding.suit
-  //    val leads: Seq[CardPlay] = holding.choosePlays(deal, 0, FourthBest, None)
+  //    val leads: List[CardPlay] = holding.choosePlays(deal, 0, FourthBest, None)
   //    leads.size shouldBe 3
   //    val lead: CardPlay = leads.head
   //    val trick0 = Trick(1, List(lead), None)
@@ -269,7 +270,7 @@ class HoldingSpec extends FlatSpec with Matchers {
   }
 
   it should "choose Play" in {
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val hand1 = deal.hands(1)
     val holding: Holding = deal.hands.head.longestSuit
     holding.suit shouldBe Hearts
@@ -285,5 +286,31 @@ class HoldingSpec extends FlatSpec with Matchers {
     plays.head shouldBe CardPlay(deal, None, 1, Hearts, 0)
     plays.last shouldBe CardPlay(deal, None, 1, Hearts, 7)
   }
+  // In HoldingSpec:
 
+  behavior of "Holding.isAdjustedWith"
+
+  it should "return true for two unrelated holdings" in {
+    val h1 = Holding(Spades, Ace, King)
+    val h2 = Holding(Spades, Nine, Eight)
+    h1.isAdjustedWith(h2) shouldBe true
+  }
+
+  it should "return false when partner card is adjacent to two separate sequences" in {
+    // h1 has AK and JT (two separate sequences), h2 has Q which bridges them
+    val h1 = Holding(List(Sequence(0, List(Card("SA"), Card("SK"))),
+      Sequence(3, List(Card("SJ"), Card("ST")))), Spades)
+    val h2 = Holding(List(Sequence(2, List(Card("SQ")))), Spades)
+    h1.isAdjustedWith(h2) shouldBe false
+  }
+
+  it should "return true after adjustment" in {
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = true)
+    Suit.suits.foreach { suit =>
+      val northHolding = deal.north.holdings.getOrElse(suit, Holding(suit))
+      val southHolding = deal.south.holdings.getOrElse(suit, Holding(suit))
+      northHolding.isAdjustedWith(southHolding) shouldBe true
+      southHolding.isAdjustedWith(northHolding) shouldBe true
+    }
+  }
 }

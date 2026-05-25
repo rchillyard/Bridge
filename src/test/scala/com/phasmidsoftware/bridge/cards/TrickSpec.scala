@@ -4,10 +4,11 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec
+import org.scalatest.matchers.should
 
 //noinspection ScalaStyle
-class TrickSpec extends FlatSpec with Matchers {
+class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   behavior of "Trick"
 
@@ -26,7 +27,7 @@ class TrickSpec extends FlatSpec with Matchers {
   }
 
   it should "history" in {
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val whist0 = Whist(deal, 0)
     val state0 = State(whist0)
     val states = state0.enumeratePlays
@@ -43,18 +44,19 @@ class TrickSpec extends FlatSpec with Matchers {
     val state5alternatives = state40.enumeratePlays
     val state50 = state5alternatives.head
     val target = state50.trick.history
-//    println(target)
+    //    println(target)
     target.size shouldBe 2
-    target.head shouldBe state4alternatives.head.trick
+    target.head shouldBe state40.trick // completed trick 1
+    target.last shouldBe state50.trick // current trick
   }
 
   it should "append" in {
     val index = 0
     val nothing = Trick(index, Nil, None)
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val play = CardPlay(deal, None, 0, Spades, 5)
     val target = nothing :+ play
-    target.plays shouldBe Seq(play)
+    target.plays shouldBe List(play)
     target.started shouldBe true
     target.maybeSuit shouldBe Some(Spades)
     target.winner should matchPattern { case Some(Winner(_, false)) => }
@@ -65,57 +67,57 @@ class TrickSpec extends FlatSpec with Matchers {
   }
 
   it should "not append" in {
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val play1 = CardPlay(deal, None, 0, Spades, 5) // S9
     a[CardException] should be thrownBy Trick.empty :+ play1 :+ play1
   }
 
   it should "pick correct winner0" in {
     val index = 0
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val play1 = CardPlay(deal, None, index, Hearts, 10) // H4
     val play2 = CardPlay(deal, None, index + 1, Hearts, 0) // HA
     val play3 = CardPlay(deal, None, index + 2, Diamonds, 12) // D2
     val play4 = CardPlay(deal, None, index + 3, Hearts, 3) // HJ
     val target = Trick.empty :+ play1 :+ play2 :+ play3 :+ play4
-    target.winner.get.play.asCard shouldBe Card("HA")
+    target.winner.get.play.card shouldBe Card("HA")
   }
 
   it should "pick correct winner1" in {
     val index = 0
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val play1 = CardPlay(deal, None, index, Spades, 5) // S9
     val play2 = CardPlay(deal, None, index + 1, Spades, 1) // SK
     val play3 = CardPlay(deal, None, index + 2, Diamonds, 12) // D2
     val play4 = CardPlay(deal, None, index + 3, Spades, 2) // SQ
     val target = Trick.empty :+ play1 :+ play2 :+ play3 :+ play4
-    target.winner.get.play.asCard shouldBe Card("SK")
+    target.winner.get.play.card shouldBe Card("SK")
   }
 
   it should "pick correct winner2" in {
     val index = 0
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val play1 = CardPlay(deal, None, index, Spades, 5) // S9
     val play2 = CardPlay(deal, None, index + 1, Diamonds, 11) // D3
     val play3 = CardPlay(deal, None, index + 2, Spades, 0) // SA
     val play4 = CardPlay(deal, None, index + 3, Spades, 2) // SQ
     val target = Trick.empty :+ play1 :+ play2 :+ play3 :+ play4
-    target.winner.get.play.asCard shouldBe Card("SA")
+    target.winner.get.play.card shouldBe Card("SA")
   }
 
   it should "pick correct winner3" in {
     val index = 0
-    val deal = Deal("test", 0L, adjustForPartnerships = false)
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val play1 = CardPlay(deal, Some(Diamonds), index, Spades, 5) // S9
     val play2 = CardPlay(deal, Some(Diamonds), index + 1, Diamonds, 11) // D3
     val play3 = CardPlay(deal, Some(Diamonds), index + 2, Spades, 0) // SA
     val play4 = CardPlay(deal, Some(Diamonds), index + 3, Spades, 2) // SQ
     val target = Trick.empty :+ play1 :+ play2 :+ play3 :+ play4
-    target.winner.get.play.asCard shouldBe Card("D3")
+    target.winner.get.play.card shouldBe Card("D3")
   }
 
   it should "enumerate plays 1" in {
-    val deal = Deal("test", 0L)
+    val deal = Deal.createRandom("test", 0L)
     val whist0 = Whist(deal, 0)
     val state0 = State(whist0)
     val states = state0.enumeratePlays
@@ -129,7 +131,7 @@ class TrickSpec extends FlatSpec with Matchers {
     openingLead.priority shouldBe 2
     openingLead.suit shouldBe Hearts
     openingLead.hand shouldBe 0
-    openingLead.asCard shouldBe Card("HQ")
+    openingLead.card shouldBe Card("HQ")
     val trick2alternatives = trick1.enumerateSubsequentPlays(whist1)
     trick2alternatives.size shouldBe 2
     val state2alternatives = whist1.makeStates(state1.tricks, trick2alternatives)
@@ -142,11 +144,11 @@ class TrickSpec extends FlatSpec with Matchers {
     secondHandPlay0.priority shouldBe 0
     val trick21 = trick2alternatives.last
     trick21.cardsPlayed shouldBe 2
-    trick21.winner.get.play.asCard shouldBe Card("HQ")
+    trick21.winner.get.play.card shouldBe Card("HQ")
     val secondHandPlay1 = trick21.last
     secondHandPlay1.suit shouldBe Hearts
     secondHandPlay1.priority shouldBe 7
-    val trick3alternatives: List[Trick] = trick20.enumerateSubsequentPlays(whist20)
+    val trick3alternatives: Seq[Trick] = trick20.enumerateSubsequentPlays(whist20)
     val state3alternatives: Seq[State] = state20.enumeratePlays
     state3alternatives.size shouldBe 2
     whist20.makeStates(state20.tricks, trick3alternatives) shouldBe state3alternatives
@@ -161,7 +163,7 @@ class TrickSpec extends FlatSpec with Matchers {
     state50.trick.index shouldBe 2
   }
   it should "enumerate plays 2" in {
-    val deal = Deal.fromHandStrings("test", "N", Seq(Seq("AQ", "", "J", "3"), Seq("K3", "T", "", "6"), Seq("", "87", "J", "8"), Seq("", "A", "9", "T9")))
+    val deal = Deal.fromHandStrings("test", "N", List(List("AQ", "", "J", "3"), List("K3", "T", "", "6"), List("", "87", "T", "8"), List("", "A", "9", "T9")))
     val whist0 = Whist(deal, 0, Some(Clubs))
     val state0 = State(whist0)
     val states = state0.enumeratePlays
@@ -175,7 +177,7 @@ class TrickSpec extends FlatSpec with Matchers {
     openingLead.priority shouldBe 0
     openingLead.suit shouldBe Spades
     openingLead.hand shouldBe 0
-    openingLead.asCard shouldBe Card("SA")
+    openingLead.card shouldBe Card("SA")
     val trick2alternatives = trick1.enumerateSubsequentPlays(whist1)
     trick2alternatives.size shouldBe 2
     val state2alternatives = whist1.makeStates(state1.tricks, trick2alternatives)
@@ -190,10 +192,10 @@ class TrickSpec extends FlatSpec with Matchers {
     val secondHandPlay1 = trick21.last
     secondHandPlay1.suit shouldBe Spades
     secondHandPlay1.priority shouldBe 1
-    val trick3alternatives: List[Trick] = trick20.enumerateSubsequentPlays(whist20)
+    val trick3alternatives: Seq[Trick] = trick20.enumerateSubsequentPlays(whist20)
     val state3alternatives: Seq[State] = state20.enumeratePlays
     state3alternatives.size shouldBe 3
-    state3alternatives.head.trick.plays.drop(2).head.asCard shouldBe Card(Clubs, Eight)
+    state3alternatives.head.trick.plays.drop(2).head.card shouldBe Card(Clubs, Eight)
     whist20.makeStates(state20.tricks, trick3alternatives) shouldBe state3alternatives
     val state30 = state3alternatives.head
     val state4alternatives = state30.enumeratePlays
@@ -204,5 +206,135 @@ class TrickSpec extends FlatSpec with Matchers {
     val state50 = state5alternatives.head
     state50.whist.deal.nCards shouldBe 11
     state50.trick.index shouldBe 2
+  }
+
+  // In TrickSpec:
+
+  behavior of "Trick.sufficientMovesRemaining"
+
+  it should "return true when enough moves remain for NS goal" in {
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
+    val trick = Trick.empty
+    val tricks = Tricks(0, 0)
+    // 52 moves remaining, need 9 tricks = 36 moves
+    trick.sufficientMovesRemaining(52, directionNS = true, 9, tricks) shouldBe true
+  }
+
+  it should "return false when not enough moves remain for NS goal" in {
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
+    val trick = Trick.empty
+    // NS has 0 tricks, needs 9, only 8 moves remaining = 2 tricks max
+    trick.sufficientMovesRemaining(8, directionNS = true, 9, Tricks(0, 0)) shouldBe false
+  }
+
+  it should "return true when NS already has enough tricks" in {
+    val trick = Trick.empty
+    // NS already has 9 tricks, needs 9
+    trick.sufficientMovesRemaining(0, directionNS = true, 9, Tricks(9, 0)) shouldBe true
+  }
+
+  it should "return false when EW has already defeated NS goal" in {
+    val trick = Trick.empty
+    // NS needs 9, EW has 5 = 13-9+1, goal impossible
+    trick.sufficientMovesRemaining(16, directionNS = true, 9, Tricks(0, 5)) shouldBe false
+  }
+
+  it should "return true when declaring side can win with cards in current trick" in {
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
+    // NS needs 1 more trick, 0 full tricks remain but NS is winning current trick
+    // South (hand 2) has SA (priority 0) — NS side
+    val play1 = CardPlay(deal, None, 2, Spades, 0) // SA - NS winning
+    val trick = Trick.empty :+ play1
+    trick.sufficientMovesRemaining(3, directionNS = true, 1, Tricks(0, 0)) shouldBe true
+  }
+
+  behavior of "Trick.canSubsequentPlayWin"
+
+  it should "return false for an empty trick" in {
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
+    Trick.empty.canSubsequentPlayWin(deal, None) shouldBe false
+  }
+
+  it should "return false when no subsequent player can beat" in {
+    // North leads SA (priority 0) — no one can beat the Ace
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
+    // South has SA (hand 2, priority 0)
+    val play1 = CardPlay(deal, None, 2, Spades, 0) // SA
+    val trick = Trick.empty :+ play1
+    trick.canSubsequentPlayWin(deal, None) shouldBe false
+  }
+
+  it should "return true when a subsequent player can beat in suit" in {
+    // North leads S9 (priority 5) — East has SK (priority 1) which beats it
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
+    val play1 = CardPlay(deal, None, 0, Spades, 5) // S9
+    val trick = Trick.empty :+ play1
+    trick.canSubsequentPlayWin(deal, None) shouldBe true
+  }
+
+  it should "return true when a subsequent player can ruff" in {
+    // North leads a spade, East is void in spades and has clubs (trumps)
+    val deal = Deal.fromHandStrings("test", "N",
+      List(
+        List("AQ", "", "J", "3"), // North: SA, SQ, DJ, C3
+        List("", "T", "8", "J6"), // East: HT, D8, CJ6 (void in spades, has clubs)
+        List("", "87", "Q", "8"), // South: H87, DQ, C8
+        List("", "A", "9", "T9") // West: HA, D9, CT9
+      ))
+    val whist = Whist(deal, 0, Some(Clubs))
+    val play1 = CardPlay(deal, Some(Clubs), 0, Spades, 0) // SA
+    val trick = Trick.empty :+ play1
+    // East is void in spades and has clubs (trumps) — can ruff
+    trick.canSubsequentPlayWin(deal, Some(Clubs)) shouldBe true
+  }
+
+  it should "return false when last player is void in suit and has no trumps" in {
+    val deal = Deal.fromHandStrings("test", "N",
+      List(
+        List("A", "", "", ""), // North: SA
+        List("", "T", "", ""), // East: HT (void in spades, void in clubs)
+        List("", "", "Q", ""), // South: DQ
+        List("", "", "T", "") // West: DT
+      ))
+    val play1 = CardPlay(deal, Some(Clubs), 0, Spades, 0) // SA
+    val play2 = CardPlay(deal, Some(Clubs), 1, Hearts, 4) // HT - East discards
+    val play3 = CardPlay(deal, Some(Clubs), 2, Diamonds, 2) // DQ - South discards
+    val trick = Trick.empty :+ play1 :+ play2 :+ play3
+    // Only West remains, has CT but led suit is Spades
+    // Wait - West has CT which IS clubs (trumps) so can ruff!
+    trick.canSubsequentPlayWin(deal, Some(Clubs)) shouldBe false
+  }
+  it should "return false when no subsequent player can beat the Ace in notrump" in {
+    val deal = Deal.fromHandStrings("test", "N",
+      List(
+        List("A", "", "", ""), // North: SA
+        List("3", "", "", ""), // East: S3
+        List("2", "", "", ""), // South: S2
+        List("4", "", "", "") // West: S4
+      ))
+    val play1 = CardPlay(deal, None, 0, Spades, 0) // SA
+    val trick = Trick.empty :+ play1
+    trick.canSubsequentPlayWin(deal, None) shouldBe false
+  }
+
+  it should "return false when trick is complete" in {
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
+    val play1 = CardPlay(deal, None, 0, Spades, 5) // S9
+    val play2 = CardPlay(deal, None, 1, Spades, 1) // SK
+    val play3 = CardPlay(deal, None, 2, Spades, 0) // SA
+    val play4 = CardPlay(deal, None, 3, Spades, 2) // SQ
+    val trick = Trick.empty :+ play1 :+ play2 :+ play3 :+ play4
+    trick.isComplete shouldBe true
+    trick.canSubsequentPlayWin(deal, None) shouldBe false
+  }
+
+  it should "return true when third hand can beat second hand's card" in {
+    // North leads S9, East plays S7 (doesn't beat), South has SA
+    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
+    val play1 = CardPlay(deal, None, 0, Spades, 5) // S9 - North leads
+    val play2 = CardPlay(deal, None, 1, Spades, 7) // S7 - East plays low
+    val trick = Trick.empty :+ play1 :+ play2
+    // South (hand 2) has SA — can beat
+    trick.canSubsequentPlayWin(deal, None) shouldBe true
   }
 }

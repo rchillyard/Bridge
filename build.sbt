@@ -1,26 +1,50 @@
+organization := "com.phasmidsoftware"
+
 name := "Bridge"
 
-version := "1.0.2-SNAPSHOT"
+version := "1.1.2"
 
-scalaVersion := "2.12.5"
+scalaVersion := "3.7.4"
 
-val scalaTestVersion = "3.0.5"
+val scalaTestVersion = "3.2.20"
 
-resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
-
-libraryDependencies ++= Seq(
-  "com.phasmid" %% "lascala" % "1.0.11",
-  "com.phasmidsoftware" %% "decisiontree" % "1.0.1",
-  "joda-time" % "joda-time" % "2.9.2",
-  "org.scala-lang.modules" %% "scala-xml" % "1.0.5",
-  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.5",
-  "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
-  "ch.qos.logback" % "logback-classic" % "1.2.3" % "runtime",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
+scalacOptions ++= Seq(
+  "-deprecation",
+  "-feature"
 )
 
-val sprayGroup = "io.spray"
-val sprayJsonVersion = "1.3.2"
-libraryDependencies ++= List("spray-json") map {c => sprayGroup %% c % sprayJsonVersion}
+javacOptions ++= Seq("-source", "23", "-target", "23")
 
-//wartremoverErrors ++= Warts.unsafe
+resolvers += Resolver.mavenLocal
+
+lazy val versionFlog   = "1.0.13"
+lazy val versionNumber = "1.10.5"
+lazy val versionGambit = "1.2.1"
+
+libraryDependencies ++= Seq(
+  "com.phasmidsoftware"        %% "flog"                     % versionFlog,
+  "com.phasmidsoftware"        %% "number"                   % versionNumber,
+  "com.phasmidsoftware"        %% "gambit"                   % versionGambit,
+  "com.typesafe.play"          %% "play-json"                % "2.10.8",
+  "com.typesafe.scala-logging" %% "scala-logging"            % "3.9.6",
+  "org.scala-lang.modules"     %% "scala-xml"                % "2.4.0",
+  "org.scala-lang.modules"     %% "scala-parser-combinators" % "2.4.0",
+  "joda-time"                   % "joda-time"                % "2.14.2",
+  "org.scalatest"              %% "scalatest"                % scalaTestVersion % Test,
+  "ch.qos.logback"              % "logback-classic"          % "1.5.9"          % Runtime
+)
+
+//lazy val IT = config("it") extend Test
+//
+//lazy val root = project.in(file("."))
+//  .configs(IT)
+//  .settings(
+//    inConfig(IT)(Defaults.testSettings),
+//    IT / scalaSource := baseDirectory.value / "src" / "it" / "scala"
+//  )
+
+// NOTE: the following does not seem to work.
+run / javaOptions ++= Seq("-Xms512m", "-Xmx8g")
+run / fork := true
+Test / javaOptions ++= Seq("-Xms512m", "-Xmx8g")
+Test / fork := true

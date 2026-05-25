@@ -4,11 +4,12 @@
 
 package com.phasmidsoftware.bridge.cards
 
+import com.phasmidsoftware.bridge.cards.DDResult
+import com.phasmidsoftware.bridge.cards.Rank.ranks
+import com.phasmidsoftware.bridge.cards.Suit.suits
+import com.phasmidsoftware.gambit.util.{LazyLogger, Output, Outputable, Shuffle}
+
 import java.io.Writer
-
-import com.phasmid.laScala.Shuffle
-import com.phasmidsoftware.util.{Loggable, Loggables, Output, Outputable}
-
 import scala.language.postfixOps
 
 /**
@@ -36,7 +37,7 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
   /**
     * Method to return a sequence representing the four hands of this Deal.
     */
-  lazy val hands: Seq[Hand] = (for ((i, hs) <- holdings) yield Hand(i, hs)).toSeq
+  val hands: Seq[Hand] = (for ((i, hs) <- holdings) yield Hand(i, hs)).toSeq
 
   /**
     * @return an eagerly promoted Deal.
@@ -44,19 +45,25 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
   def quit: Deal = _quit
 
   /**
+    * Asserts that the deal has been adjusted and that the adjustment invariant holds.
+    * This method verifies the internal consistency of the deal after an adjustment
+    * by asserting that either the deal is not adjusted, or it satisfies the adjustment invariant.
+    *
+    * @return Unit (no value is returned, but an assertion error is thrown if the invariant is violated)
+    */
+  def assertAdjusted(): Unit =
+    assert(checkAdjustmentInvariant, "adjustment invariant violated")
+
+  /**
     * Apply adjustments based on cooperation from partner.
     *
     * @return an eagerly promoted X.
     */
-  def adjustForPartnerships: Deal = _cooperate._quit._reprioritize
-
-  private[cards] lazy val north: Hand = n
-
-  private[cards] lazy val east: Hand = e
-
-  private[cards] lazy val south: Hand = s
-
-  private[cards] lazy val west: Hand = w
+  lazy val adjustForPartnerships: Deal =
+    println(s"Adjusting deal for partnerships: $title")
+    val result = _cooperate._quit._reprioritize
+    result.assertAdjusted()
+    result
 
   /**
     * Play a card from this Deal.
@@ -64,21 +71,68 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     * @param cardPlay the card play.
     * @return a new Playable.
     */
-  def play(cardPlay: CardPlay): Deal = Deal(title, hands map (_.play(cardPlay)))
+  def play(cardPlay: CardPlay): Deal =
+    Deal(title, hands map (_.play(cardPlay)))
 
   /**
     * Evaluate the N and S hands heuristically.
     *
-    * @return a number which corresponds to the trick-taking ability of the N/S hands.
+    * @return a number that corresponds to the trick-taking ability of the N/S hands.
     */
-  def evaluate: Double = _evaluate
-
+  lazy val evaluate: Double = evaluateNS - evaluateEW
+  lazy val evaluateNS: Double = hands.head.evaluate + hands(2).evaluate
+  lazy val evaluateEW: Double = hands(1).evaluate + hands(3).evaluate
   /**
     * Method to check this Deal.
     *
     * @return true if this Deal is valid.
     */
   def validate: Boolean = hands.forall(_.validate) && allCards
+
+  /**
+    * Analyzes a sequence of bridge contracts using double-dummy analysis.
+    * This method evaluates each contract in the provided list and determines
+    * whether the declarer can fulfill the specified contract under ideal play.
+    *
+    * @param max             The maximum number of contracts to analyze. 
+    *                        If max is less than or equal to 0, all contracts in the list are analyzed.
+    *
+    * @param contractDetails A sequence of tuples representing the contracts to analyze.
+    *                        Each tuple contains the following values:
+    *                        - The index of the player who leads the play.
+    *                        - An optional value representing the strain (suit or notrump) of the contract.
+    *                        - The number of tricks the declarer needs to succeed in the contract.
+    *                        - The index of the player who is the declarer for this contract.
+    *
+    * @param board           The index or number of the board being analyzed.
+    * @return A sequence of Options containing Booleans. Each Option corresponds to a contract's result:
+    *         - `Some(true)` if the declarer can meet the contract.
+    *         - `Some(false)` if the contract cannot be met.
+    *         - `None` if the analysis fails or no result is found for a specific contract.
+    */
+  def analyzeContracts(board: Int, contractDetails: Seq[(Int, Option[Suit], Int, Int)], max: Int = 0): Seq[DDResult] = {
+    val work = if max > 0 then contractDetails.take(max) else contractDetails
+    work map {
+      case (leader, strain, tricks, declarer) =>
+        this.analyzeContract(board, leader, strain, tricks, declarer)
+    }
+  }
+
+  /**
+    * Analyzes the outcome of a given bridge contract using double-dummy analysis.
+    *
+    * @param board    The board number being analyzed.
+    * @param leader   The index of the player on opening lead.
+    * @param strain   The trump strain, or `None` for notrump.
+    * @param tricks   The number of tricks the declarer needs.
+    * @param declarer The index of the declarer.
+    * @return A [[DDResult]]: [[DDResult.Exact]], [[DDResult.Partial]], or [[DDResult.Inconclusive]].
+    */
+  def analyzeContract(board: Int, leader: Int, strain: Option[Suit], tricks: Int, declarer: Int): DDResult = {
+    val result = Whist(this, leader, strain).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0)
+    println(s"analyzeDoubleDummy: board=$board result=$result")
+    result
+  }
 
   /**
     * @return the number of cards remaining in this Deal.
@@ -101,10 +155,19 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
   lazy val neatOutput: String = s"Deal $title ($nCards) ${hands.map(_.neatOutput)}"
 
   /**
-    * @return a String which represents this Deal, primarily for debugging purposes.
+    * @return a String that represents this Deal, primarily for debugging purposes.
     */
-  override def toString: String = s"Deal $title ($nCards cards and $countSequences sequences)"
+  override def toString: String =
+    s"Deal $title ($nCards cards and $countSequences sequences)"
 
+  /**
+    * Converts the provided metadata map and board number into a PBN (Portable Bridge Notation) representation.
+    * The method constructs a PBN string by combining metadata, board information, and deal details.
+    *
+    * @param map   a map containing key-value pairs of metadata to include in the PBN representation
+    * @param board an integer representing the board number
+    * @return a string representing the PBN format for the given metadata and board information
+    */
   def asPBN(map: Map[String, String], board: Int): String = {
     val result = new StringBuilder()
     for ((k, v) <- map) result.append(s"""[$k "$v"]\n""")
@@ -115,7 +178,36 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     result.toString
   }
 
-  lazy val countSequences: Int = (for ((_, m) <- holdings; (_, h) <- m; q = h.sequences.length) yield q).sum
+  /**
+    * Computes the total count of sequences across all holdings within this deal.
+    *
+    * A sequence refers to a specific property of a holding, and the computation aggregates
+    * the length of sequences from all holdings across the available hands in the deal.
+    *
+    * The result is obtained using nested "for" comprehensions:
+    * - Outer loop iterates through the holdings.
+    * - Inner loop iterates through the mappings of suits to holdings.
+    * - For each mapping, it extracts the length of sequences and accumulates the total.
+    */
+  lazy val countSequences: Int =
+    (for ((_, m) <- holdings; (_, h) <- m; q = h.sequences.length) yield q).sum
+
+  private def checkAdjustmentInvariant: Boolean =
+    (0 until Deal.HandsPerDeal by 2).forall { k =>
+      Suit.suits.forall { suit =>
+        val myHolding = holdings(k).getOrElse(suit, Holding(suit))
+        val partnerHolding = holdings((k + 2) % Deal.HandsPerDeal).getOrElse(suit, Holding(suit))
+        myHolding.isAdjustedWith(partnerHolding)
+      }
+    }
+
+  private[cards] lazy val north: Hand = n
+
+  private[cards] lazy val east: Hand = e
+
+  private[cards] lazy val south: Hand = s
+
+  private[cards] lazy val west: Hand = w
 
   /**
     * Play a trick (made up of four card plays).
@@ -124,24 +216,32 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     *
     * @param trick the card play from each of the four hands.
     */
-  private[cards] def playAll(trick: Trick): Deal = Deal(title, hands map (_.playAll(trick)))
+  private[cards] def playAll(trick: Trick): Deal =
+    Deal(title, hands map (_.playAll(trick)))
 
   private val Seq(n, e, s, w) = hands
 
-  private lazy val _quit = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.quit))
+  private lazy val _quit =
+    Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.quit))
 
   /**
-    * TODO Should be private
+    * CONSIDER Should be private
     */
-  lazy val _cooperate = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.cooperate(partner(k)(s))))
+  lazy val _cooperate: Deal =
+    Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.cooperate(partner(k).getOrElse(s, Holding(s)))))
 
-  lazy val _reprioritize = Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.reprioritize))
+  lazy val _reprioritize: Deal =
+    Deal(title, for ((k, v) <- holdings) yield k -> (for ((s, h) <- v) yield s -> h.reprioritize))
 
-  private def outputHand(name: String, hand: Hand): Output = (Output(s"$name:\t") :+ hand.neatOutput).insertBreak()
+  private def outputHand(name: String, hand: Hand): Output =
+    (Output(s"$name:\t") :+ hand.neatOutput).insertBreak
 
-  private lazy val _evaluate = hands.sliding(1, 2).flatten.map(_.evaluate).sum
+  //  private lazy val _evaluate =
+  //    hands.sliding(1, 2).flatten.map(_.evaluate).sum
 
-  private lazy val allCards: Boolean = hands.flatMap(_.cards).distinct.size == Deal.CardsPerDeal
+  private lazy val allCards: Boolean =
+    hands.flatMap(_.cards).distinct.size == Deal.CardsPerDeal
+
 }
 
 object Deal {
@@ -170,6 +270,8 @@ object Deal {
     */
   val CardsPerTrick: Int = 4
 
+  def apply(title: String, holdings: Map[Int, Map[Suit, Holding]]): Deal = new Deal(title, holdings)
+
   /**
     * Create a new Deal from a title and four Hands.
     *
@@ -178,6 +280,22 @@ object Deal {
     * @return a new Deal.
     */
   def apply(title: String, hands: Seq[Hand]): Deal = apply(title, (for (h <- hands) yield h.index -> h.holdings).toMap)
+
+  /**
+    * Construct a Deal from a random number generator which will yield an arrangement of cards.
+    * This method does NOT adjust for partnerships as it is used principally for testing.
+    *
+    * @param title                 a title for the Deal.
+    * @param seed                  a seed for the random number generator (defaults to the system--nano--clock)
+    * @param adjustForPartnerships (defaults to true) if true then the result will have priorities adjusted for partnerships.
+    * @return a new Deal.
+    */
+  def createRandom(title: String, seed: Long = System.nanoTime(), adjustForPartnerships: Boolean = true): Deal = {
+    val newDeck: Seq[Card] =
+      for (s <- suits; r <- ranks) yield Card(s, r)
+    val shuffler: Iterable[Card] => Seq[Card] = Shuffle[Card](_, seed)
+    fromCards(title, shuffler(newDeck), adjustForPartnerships)
+  }
 
   /**
     * Construct a Deal from a sequence of Cards.
@@ -190,9 +308,12 @@ object Deal {
     * @param adjust adjustForPartnerships if true (default)
     * @return a new Deal.
     */
-  def fromCards(title: String, cs: Seq[Card], adjust: Boolean): Deal = {
-    val deal = new Deal(title, (for ((cs, index) <- cs.grouped(CardsPerHand).zipWithIndex) yield index -> Hand.createHoldings(cs.toList)).toMap)
-    if (adjust) deal.adjustForPartnerships else deal
+  def fromCards(title: String, cs: Seq[Card], adjust: Boolean = true): Deal = {
+    val deal = new Deal(title, (for ((cs, index) <- cs.grouped(CardsPerHand).zipWithIndex) yield index -> Hand.createHoldings(cs)).toMap)
+    if (adjust)
+      deal.adjustForPartnerships
+    else
+      deal
   }
 
   /**
@@ -200,31 +321,32 @@ object Deal {
     *
     * @param title the title for the deal.
     * @param start the player who will lead to this deal.
-    * @param wss a sequence in order NESW of a sequence in order SHDC of card representations.
+    * @param wss   a sequence in order NESW of a sequence in order SHDC of card representations.
     * @return a new deal. Yeah to FDR.
     */
   def fromHandStrings(title: String, start: String, wss: Seq[Seq[String]]): Deal = {
-    val firstIndex = start match { case "N" => 0; case "E" => 1; case "S" => 2; case "W" => 3 }
-    val hSss: Seq[Seq[(Suit, Holding)]] = for (ws <- wss) yield for ((w, x) <- ws zip Seq(Spades, Hearts, Diamonds, Clubs)) yield x -> Holding(x, w)
+    val firstIndex = start match {
+      case "N" => 0;
+      case "E" => 1;
+      case "S" => 2;
+      case "W" => 3
+    }
+    val nCards = wss.flatten.map(_.length).sum
+    if (nCards % Deal.CardsPerTrick != 0) throw new IllegalArgumentException(s"Number of cards must be a multiple of $CardsPerTrick, but got $nCards")
+    val hSss: Seq[Seq[(Suit, Holding)]] = for (ws <- wss) yield for ((w, x) <- ws zip suits) yield x -> Holding(x, w)
     val hands = for ((hHs, i) <- hSss zipWithIndex) yield Hand(Hand.next(firstIndex, i), hHs.toMap)
+    val cardsPerHand = nCards / Deal.CardsPerTrick
+    val cards = for {
+      hand <- hands
+      if hand.cards.size == cardsPerHand
+      (suit, holding) <- hand.holdings
+      sequence <- holding.sequences
+      card <- sequence.cards
+    } yield card
+    val set = Set.from(cards)
+    if (set.size != nCards) throw new IllegalStateException(s"Expected $nCards unique cards, but got ${set.size}")
     val (nonNorth, north) = hands.splitAt(4 - firstIndex)
     Deal(title, north ++ nonNorth).adjustForPartnerships
-  }
-
-  /**
-    * Construct a Deal from a random number generator which will yield an arrangement of cards..
-    * This method does NOT adjust for partnerships as it is used principally for testing.
-    *
-    * @param title a title for the Deal.
-    * @param seed  a seed for the random number generator (defaults to the system--nano--clock)
-    * @param adjustForPartnerships (defaults to true) if true then the result will have priorities adjusted for partnerships.
-    * @return a new Deal.
-    */
-  def apply(title: String, seed: Long = System.nanoTime(), adjustForPartnerships: Boolean = true): Deal = {
-    val newDeck: Seq[Card] =
-      for (s <- Seq(Spades, Hearts, Diamonds, Clubs); r <- Seq(Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Trey, Deuce)) yield Card(s, r)
-    val shuffler = Shuffle[Card](seed)
-    fromCards(title, shuffler(newDeck), adjustForPartnerships)
   }
 
   def writePBN(writer: Writer, map: Map[String, String], boards: Seq[Deal]): Unit = {
@@ -233,7 +355,5 @@ object Deal {
     writer.flush()
   }
 
-  implicit object LoggableDeal extends Loggable[Deal] with Loggables {
-    def toLog(t: Deal): String = s"Deal ${t.title}/${t.nCards}"
-  }
+  private val logger = LazyLogger(getClass)
 }

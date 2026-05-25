@@ -1,5 +1,5 @@
 <!--
-  ~ LaScala
+  ~ Bridge
   ~ Copyright (c) 2017. Phasmid Software
   -->
 
@@ -37,4 +37,11 @@
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>
     </root>
+
+    <logger name="com.phasmidsoftware.bridge.cards.State$" level="INFO"/>
+    <logger name="com.phasmidsoftware.bridge.cards.Whist$" level="INFO"/>
+    <logger name="com.phasmidsoftware.bridge.gambit.WhistState$" level="INFO"/>
+    <logger name="com.phasmidsoftware.bridge.gambit.WhistGame$" level="INFO"/>
+    <logger name="com.phasmidsoftware.gambit.game.AlphaBetaPlayer$" level="INFO"/>
+
 </configuration>

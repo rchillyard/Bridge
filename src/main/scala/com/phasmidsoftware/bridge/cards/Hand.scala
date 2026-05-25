@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.util._
+import com.phasmidsoftware.gambit.util.{Output, Outputable}
 
 import scala.language.implicitConversions
 
@@ -34,7 +34,7 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     * @param trick the trick.
     * @return a new Hand based on this Hand and all of the card plays.
     */
-  def playAll(trick: Trick): Hand = trick.plays.foldLeft[Hand](this)(_ play _)
+  def playAll(trick: Trick): Hand = trick.plays.foldLeft[Hand](this)(_ `play` _)
 
   /**
     * Create new Hand based on the play of a card.
@@ -42,14 +42,12 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     * @param cardPlay the card play.
     * @return a new Hand.
     */
-  def play(cardPlay: CardPlay): Hand = {
+  def play(cardPlay: CardPlay): Hand =
     val priority = cardPlay.priority
-    val result = if (cardPlay.hand == index)
-      this - (cardPlay.suit, priority)
+    if cardPlay.hand == index then
+      (this - (cardPlay.suit, priority)).promote(cardPlay.suit, priority)
     else
-      this
-    result promote(cardPlay.suit, priority)
-  }
+      promote(cardPlay.suit, priority) // returns `this` if void, via short-circuit
 
   /**
     * Method to determine possible discard plays.
@@ -59,14 +57,15 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     * @param trick  the current state of the Trick.
     * @return a sequence of card plays.
     */
-  def discardOrRuff(deal: Deal, strain: Option[Suit], trick: Trick): List[CardPlay] = {
+  def discardOrRuff(deal: Deal, strain: Option[Suit], trick: Trick): Seq[CardPlay] = {
     def strategy(suit: Suit, cards: Int): Strategy =
       strain map (_ == suit) map (b => if (b && cards > 0) Ruff else Discard) getOrElse Discard
 
     /**
       * Compare two plays returning:
-      *   if both are ruffs or both are discards then we return true if the first play is less worthy than the second play (using current priority);
-      *   otherwise, we return according to whether the first play is a ruff.
+      * if both are ruffs or both are discards then we return true if the first play is less worthy than the second play (using current priority);
+      * otherwise, we return according to whether the first play is a ruff.
+      *
       * @param play1 the first play to compare.
       * @param play2 the second play to compare.
       * @return true if we want to choose the first play.
@@ -96,9 +95,9 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     *
     * @param deal  the deal from which the plays will be made.
     * @param trick the prior plays to the current trick.
-    * @return a List[CardPlay].
+    * @return a Seq[CardPlay].
     */
-  def choosePlays(deal: Deal, trick: Trick, strain: Option[Suit]): List[CardPlay] =
+  def choosePlays(deal: Deal, trick: Trick, strain: Option[Suit]): Seq[CardPlay] =
     if (trick.started) {
       val holding = holdings(trick.maybeSuit.get)
       if (holding.isVoid) discardOrRuff(deal, strain, trick)
@@ -148,7 +147,9 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     * @return a new eagerly promoted Hand.
     */
   def promote(suit: Suit, priority: Int): Hand =
-    Hand(index, holdings + (suit -> holdings(suit).promote(priority)))
+    holdings.get(suit) match
+      case None => this // void in suit: promotion irrelevant, return same object
+      case Some(h) => Hand(index, holdings + (suit -> h.promote(priority)))
 
   /**
     * @return an eagerly promoted Hand.
@@ -164,10 +165,11 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     * @return a new instance of Output.
     */
   def output(output: Output, xo: Option[Unit]): Output = {
-    // TODO figure out why we can't just import SuitOrdering from Suit
+    // XXX figure out why we can't just import SuitOrdering from Suit
     // NOTE: unused
     implicit object SuitOrdering extends Ordering[Suit] {
-      override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
+      override def compare(x: Suit, y: Suit): Int =
+        -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
     }
     val keys = holdings.keys.toList.sorted.reverse
     output ++ (for (k <- keys) yield holdings(k).output(output.copy))
@@ -179,10 +181,11 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     * @return a debug string for this Hand.
     */
   override def toString: String = {
-    // TODO figure out why we can't just import SuitOrdering from Suit
+    // XXX figure out why we can't just import SuitOrdering from Suit
     // NOTE: unused
     implicit object SuitOrdering extends Ordering[Suit] {
-      override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
+      override def compare(x: Suit, y: Suit): Int =
+        -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
     }
     val keys = holdings.keys.toList.sorted.reverse
     s"""${(for (k <- keys) yield s"${holdings(k)}").mkString("", "\n", "")}"""
@@ -194,9 +197,10 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
     * @return
     */
   lazy val neatOutput: String = {
-    // TODO figure out why we can't just import SuitOrdering from Suit
+    // XXX figure out why we can't just import SuitOrdering from Suit
     implicit object SuitOrdering extends Ordering[Suit] {
-      override def compare(x: Suit, y: Suit): Int = -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
+      override def compare(x: Suit, y: Suit): Int =
+        -x.asInstanceOf[Priority].priority + y.asInstanceOf[Priority].priority
     }
     val keys = holdings.keys.toList.sorted.reverse
     (for (k <- keys) yield holdings(k).neatOutput).mkString(" ")
@@ -207,7 +211,8 @@ case class Hand(index: Int, holdings: Map[Suit, Holding]) extends Outputable[Uni
   private lazy val _evaluate = holdings.values.map(_.evaluate).sum
 
   // NOTE: only used for testing
-  private lazy val _quit = Hand(index, for ((k, v) <- holdings) yield k -> v.quit)
+  private lazy val _quit =
+    Hand(index, for ((k, v) <- holdings) yield k -> v.quit)
 
   private lazy val _longestSuit = holdings.values.maxBy(_.length)
 }
@@ -216,10 +221,11 @@ object Hand {
 
   /**
     * Create holdings from a list of Cards.
+    *
     * @param cs the list of Cards.
     * @return a Map of Suit->Holding
     */
-  def createHoldings(cs: List[Card]): Map[Suit, Holding] = for ((suit, cards) <- cs.groupBy(c => c.suit)) yield (suit, Holding.create(suit, cards))
+  def createHoldings(cs: Seq[Card]): Map[Suit, Holding] = for ((suit, cards) <- cs.groupBy(c => c.suit)) yield (suit, Holding.create(suit, cards))
 
   /**
     * Create a Hand from a set of Strings representing Holdings.
@@ -248,7 +254,8 @@ object Hand {
     * @param step  the number of moves clockwise around the table.
     * @return subsequent hand.
     */
-  def next(index: Int, step: Int): Int = (index + step) % Deal.HandsPerDeal
+  def next(index: Int, step: Int): Int =
+    (index + step) % Deal.HandsPerDeal
 
   /**
     * Method to determine if the given hand is on the same side as the other hand.
@@ -257,7 +264,8 @@ object Hand {
     * @param other the other hand's index.
     * @return true if their difference is an even number.
     */
-  def sameSide(hand: Int, other: Int): Boolean = (other - hand) % 2 == 0
+  def sameSide(hand: Int, other: Int): Boolean =
+    (other - hand) % 2 == 0
 
   /**
     * Method to determine if the given hand is declarer or dummy.
@@ -266,9 +274,10 @@ object Hand {
     * @param index       the hand index.
     * @return true if the hand is on declaring side.
     */
-  def isDeclaringSide(directionNS: Boolean, index: Int): Boolean = (index % 2 == 1) ^ directionNS
+  def isDeclaringSide(directionNS: Boolean, index: Int): Boolean =
+    (index % 2 == 1) ^ directionNS
 
-  implicit val z: Loggable[Hand] = (t: Hand) => t.neatOutput
+  //  implicit val z: Loggable[Hand] = (t: Hand) => t.neatOutput
 
   /**
     * This method must only be called with a valid index value.
@@ -276,5 +285,5 @@ object Hand {
     * @param index an index between 0 and 3.
     * @return an appropriate name for the hand.
     */
-  def name(index: Int): String = Seq("N", "E", "S", "W")(index)
+  def name(index: Int): String = List("N", "E", "S", "W")(index)
 }

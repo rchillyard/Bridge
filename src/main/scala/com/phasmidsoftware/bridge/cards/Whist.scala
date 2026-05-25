@@ -4,22 +4,40 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.decisiontree.{Expandable, GoalDriven}
-import com.phasmidsoftware.util._
+import com.phasmidsoftware.bridge.cards.Whist.{logger, runPlayer}
+import com.phasmidsoftware.bridge.gambit.{WhistGame, WhistState}
+import com.phasmidsoftware.bridge.pbn.{PBN, PBNParser}
+import com.phasmidsoftware.gambit.game.{AlphaBetaPlayer, AlphaBetaWindow, FlatTTCache, TTCache}
+import com.phasmidsoftware.gambit.util.LazyLogger
 
-import scala.language.implicitConversions
+import scala.util.{Random, Success}
+
+type BridgePlayer = AlphaBetaPlayer[State, State, CardPlay, Int, CacheKey]
+
+/**
+  * The result of a double-dummy analysis.
+  *
+  * - [[DDResult.Exact]]       — full search completed; result is definitive.
+  * - [[DDResult.Partial]]     — node limit hit, but one side found a witness line;
+  *   result is a qualified best-effort.
+  * - [[DDResult.Inconclusive]] — node limit hit before either side found a witness;
+  *   no reliable conclusion can be drawn.
+  */
+enum DDResult:
+  case Exact(makes: Boolean, tricks: Int)
+  case Partial(makes: Boolean, tricks: Int)
+  case Inconclusive
 
 /**
   * This class represents a game of Whist.
   * In Whist, there are four players around a table.
   * Players sitting opposite each other are part of the same "team." They are said to be partners.
-  * Play goes clockwise around the table, each player contributing one card, and the team which contributed the highest card (or possibly the highest trump)
-  * is credited with that "trick".
+  * Play goes clockwise around the table, each player contributing one card, and the team which
+  * contributed the highest card (or possibly the highest trump) is credited with that "trick".
   * There being 52 cards in a deck (pack), there will be 13 tricks.
   * The player (not the team) who wins one trick must lead to the following trick.
-  * At the start of the game, it is arbitrary which player is the opening leader--there are various schemes to determine
-  * who leads, most notably Auction and Contract Bridge designate the player sitting on "declarer's" left.
-  * Here, however, the opening leader is simply determined by parameter.
+  * At the start of the game, it is arbitrary which player is the opening leader — here it is
+  * simply determined by parameter.
   *
   * The particular arrangement (shuffle) of the cards is determined by the deal parameter.
   *
@@ -27,191 +45,132 @@ import scala.language.implicitConversions
   * @param openingLeader the player on opening lead (0 thru 3 for "North" thru "West").
   * @param strain        the (optional) trump suit: None indicates notrump.
   */
-case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None) extends Playable[Whist] with Quittable[Whist] {
+case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
+  extends Playable[Whist] with Quittable[Whist]:
 
   /**
     * Method to make a sequence of States from the given sequence of Trick instances.
     *
-    * NOTE: this originally had a filter that removed States that did not have a high fitness.
-    *
-    * @param tricks the current value of Tricks (i.e. current score NS vs. EW).
+    * @param tricks the current value of Tricks (i.e., current score NS vs. EW).
     * @param ts     a sequence of Trick instances.
     * @return a sequence of State objects corresponding to the values of ts.
     */
-  def makeStates(tricks: Tricks, ts: List[Trick]): List[State] = ts.map(t => State.create(this, t, tricks))
+  def makeStates(tricks: Tricks, ts: Seq[Trick]): Seq[State] =
+    ts.map(t => State.create(this, t, tricks))
 
   /**
     * Play a card from this Playable object.
     *
     * @param cardPlay the card play.
-    * @return a new Playable.
+    * @return a new Whist.
     */
-  def play(cardPlay: CardPlay): Whist = Whist(deal.play(cardPlay), openingLeader, strain)
+  def play(cardPlay: CardPlay): Whist =
+    Whist(deal.play(cardPlay), openingLeader, strain)
 
   /**
-    * Solve this Whist game as a double-dummy problem where one side or the other (depending on directionNS)
-    * attempts to reach a total of tricks. As soon as our protagonists have reached the trick total, all expansion will cease.
-    * When the opponents have made it impossible for the protagonists to reach said trick total, all expansion will cease.
+    * Analyzes the potential outcome of a double-dummy play scenario based on the given parameters.
     *
-    * @param tricks      the number of tricks required.
-    * @param directionNS if true then the direction we care about is NS else EW.
-    * @return an optional State which indicates the first "solution" found.
-    *         It may represent success or failure on the part of the protagonists.
-    *         If the result is None, it means that no solution of any sort was found.
+    * @param tricks      The number of tricks needed by the protagonists to succeed.
+    * @param directionNS A boolean indicating whether the protagonists are North-South (true) or East-West (false).
+    * @param depth       The depth of the search tree for the analysis. Defaults to the minimum of the cards in the deal or the maximum cards per deal.
+    * @return A [[DDResult]]:
+    *         - [[DDResult.Exact]] if the full search completed.
+    *         - [[DDResult.Partial]] if the node limit was hit but one side found a witness line.
+    *         - [[DDResult.Inconclusive]] if the node limit was hit before any witness was found.
     */
-  def analyzeDoubleDummy(tricks: Int, directionNS: Boolean): Option[Boolean] = {
-    implicit val sg: GoalDriven[State] = Whist.goal(tricks, directionNS)
-    //    implicit val se: Expandable[State] = (t: State) => t.enumeratePlays
-    implicit val se: Expandable[State] = new Expandable[State] {
-      def successors(t: State): List[State] = t.enumeratePlays
+  def analyzeDoubleDummy(
+                          tricks: Int,
+                          directionNS: Boolean,
+                          depth: Int = math.min(Deal.CardsPerDeal, deal.nCards)
+                        ): DDResult =
 
-      override def runaway(t: State): Boolean = t.sequence > Whist.MAX_STATES
-    }
-    StateTree(this).expand().so flatMap (sn => sn.tricks.decide(tricks, directionNS))
-  }
+    given gameTC: WhistGame = new WhistGame(this) // needs to be a named given so WhistState can find it
 
-  override def toString: String = s"Whist($deal, ${Hand.name(openingLeader)}, $sStrain)"
+    given stateTC: WhistState = new WhistState(tricks, directionNS)
+    given com.phasmidsoftware.gambit.game.State[State, State] = stateTC
+    given com.phasmidsoftware.gambit.game.Game[State, CardPlay, Int] = gameTC
+
+    given TTCache[CacheKey] = FlatTTCache()
+
+    deal.assertAdjusted()
+    val player = new BridgePlayer(
+      me = if directionNS then 0 else 1,
+      depth = depth
+    ).withMaxNodes(Whist.NODES_PER_ITERATION)
+      .withKeyFn(s => s.evaluateKey)
+      .withAspirationWindow(AlphaBetaWindow(-0.5, 0.5))
+    val initialState = State(this)
+    logger.info(s"analyzeDoubleDummy: neededTricks=$tricks, directionNS=$directionNS, depth=$depth, branching=${initialState.enumeratePlays.size}")
+    val t0 = System.currentTimeMillis()
+    val result: DDResult = runPlayer(player, directionNS, depth, initialState, new Random(0L))
+    logger.info(s"analyzeDoubleDummy: maxNSTricks=${stateTC.maxNSTricks}")
+    logger.info(s"analyzeDoubleDummy: result=$result, elapsed=${System.currentTimeMillis() - t0}ms, tableSize=${player.tableSize}")
+    result
+
+  override def toString: String =
+    s"Whist($deal, ${Hand.name(openingLeader)}, $sStrain)"
 
   /**
     * Method to enact the pending promotions on this Quittable.
     *
     * @return an eagerly promoted Whist game.
     */
-  def quit: Whist = Whist(deal.quit, openingLeader, strain)
+  def quit: Whist =
+    Whist(deal.quit, openingLeader, strain)
 
   /**
     * Create an initial state for this Whist game.
-    *
     * NOTE: only used in unit testing.
-    *
-    * @return a State using deal and openingLeader
     */
   lazy val createState: State = State(this)
 
-  lazy val sStrain: String = strain map (_.toString) getOrElse "NT"
-}
+  private lazy val sStrain: String = strain.map(_.toString).getOrElse("NT")
 
-object Whist {
 
-  val MAX_STATES = 1000000
+object Whist:
 
-  implicit object LoggableWhist extends Loggable[Whist] with Loggables {
-    def toLog(t: Whist): String = s"${implicitly[Loggable[Deal]].toLog(t.deal)}@${Hand.name(t.openingLeader)}:${t.sStrain}"
+  /**
+    * Runs iterative deepening search and converts the result to a [[DDResult]].
+    *
+    * - Completes all iterations to `depth`: [[DDResult.Exact]] with tricks = depth / CardsPerTrick.
+    * - Node limit fires after at least one completed iteration: [[DDResult.Partial]]
+    *   with tricks = completedDepth / CardsPerTrick.
+    * - Node limit fires before any iteration completes: [[DDResult.Inconclusive]].
+    */
+  private def runPlayer(player: BridgePlayer, directionNS: Boolean, depth: Int, initialState: State, random: Random) =
+    player.chooseMoveIterativeDeepening(initialState, random, Whist.DEPTH_STEP) match
+      case Some((_, score, completedDepth)) =>
+        val makes = if directionNS then score > 0 else score < 0
+        val tricksSearched = completedDepth / Deal.CardsPerTrick
+        if completedDepth >= depth then DDResult.Exact(makes, tricksSearched)
+        else DDResult.Partial(makes, tricksSearched)
+      case None =>
+        DDResult.Inconclusive
+
+  val MAX_STATES: Int = 800_000
+  val MAX_NODES: Int = 5_000_000 // retained for reference / future use
+  val NODES_PER_ITERATION: Int = 1_000_000 // node budget per iterative-deepening iteration
+  val DEPTH_STEP: Int = Deal.CardsPerTrick // 4: iterate at trick boundaries
+  private val logger = LazyLogger(getClass)
+
+@main def doubleDummySolver(args: String*): Unit = {
+  import scala.io.{Codec, Source}
+  assert(args.nonEmpty, "At least one argument required")
+  val filename = args(0)
+  val maybeBoard = args.lift(1).flatMap(_.toIntOption)
+
+  given Codec = Codec.UTF8
+
+  PBNParser.parsePBN(Source.fromFile(filename)) match {
+    case Success(PBN(games)) =>
+      (for (x <- maybeBoard; g <- games.lift(x)) yield g) match {
+        case Some(g) =>
+          g.analyzeMakableContracts()
+        case None =>
+          System.err.println(s"No game to parse PBN file: $filename ($maybeBoard)")
+      }
+    case _ =>
+      System.err.println(s"Failed to parse PBN file: $filename")
+      return
   }
-
-  def goal(_neededTricks: Int, _directionNS: Boolean, _totalTricks: Int = Deal.TricksPerDeal): WhistGoalDriven = new WhistGoalDriven {
-    val neededTricks: Int = _neededTricks
-    val directionNS: Boolean = _directionNS
-    val totalTricks: Int = _totalTricks
-  }
-
-}
-
-/**
-  * Trait to customize the behavior of GoalDriven for a whist/bridge game.
-  */
-trait WhistGoalDriven extends GoalDriven[State] {
-  val neededTricks: Int
-  val directionNS: Boolean
-  val totalTricks: Int
-
-  def goalAchieved(t: State): Boolean = t.tricks.decide(neededTricks, directionNS) match {
-    case Some(x) => x
-    case None => false
-  }
-
-  def goalImpossible(t: State, moves: Int): Boolean =
-    !t.trick.sufficientMovesRemaining(moves, directionNS, neededTricks, t.tricks)
-}
-
-/**
-  * The behavior of this trait is to (eagerly) quit a trick (holding, sequence),
-  * which is to say take the (lazy) promotions of a sequence and to promote them eagerly according to the
-  * quitting of the current trick.
-  *
-  * @tparam X the underlying type.
-  */
-trait Quittable[X] {
-  /**
-    * Method to enact the pending promotions on this Quittable.
-    *
-    * @return an eagerly promoted X.
-    */
-  def quit: X
-}
-
-/**
-  * The behavior of this trait is to (eagerly) quit a trick (holding, sequence),
-  * which is to say take the (lazy) promotions of a sequence and to promote them eagerly according to the
-  * quitting of the current trick.
-  *
-  * @tparam X the underlying type.
-  */
-trait Cooperative[X] {
-  /**
-    * Method to adjust for the virtual promotions on this Cooperative.
-    *
-    * @param x the cooperating object
-    * @return an eagerly promoted X.
-    */
-  def cooperate(x: X): X
-}
-
-/**
-  * The behavior of this trait is to reprioritize an X
-  *
-  * @tparam X the underlying type.
-  */
-trait Reprioritizable[X] {
-  /**
-    * Method to reprioritize.
-    *
-    * @return
-    */
-  def reprioritize: X
-}
-
-/**
-  * Trait to describe behavior of a type which can experience the play of a card.
-  *
-  * For example, Holding, Sequence, etc. can have cards played.
-  *
-  * NOTE: in practice, this trait is implemented via hierarchy, not type-class.
-  *
-  * @tparam X the underlying type.
-  */
-trait Playable[X] {
-  /**
-    * Play a card from this Playable object.
-    *
-    * @param cardPlay the card play.
-    * @return a new Playable.
-    */
-  def play(cardPlay: CardPlay): X
-}
-
-/**
-  * Trait to model the property of being (heuristically) evaluated.
-  */
-trait Evaluatable {
-
-  /**
-    * Evaluate this Evaluatable object for its (heuristic) trick-taking capability.
-    *
-    * @return a Double
-    */
-  def evaluate: Double
-}
-
-trait Removable {
-  /**
-    * Method to remove an element of the appropriate priority from a Removable.
-    *
-    * CONSIDER renaming this and also adding a suit parameter so that Hand can define it.
-    *
-    * @param priority the priority.
-    * @return a new Removable without an element of the given priority.
-    */
-  //noinspection ScalaStyle
-  def -(priority: Int): Removable
 }

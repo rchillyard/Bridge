@@ -1,0 +1,30 @@
+Newton Nov 5th 2024
+A DW
+1	N	Judith Tucker & Penny Scharfman
+2	N	Susan Stearns & Chris Battat
+1	E	Carolyn Draplin & Art Fine
+2	E	Carol Leahy & Kathy Roberts
+3   E   Lise & Robin
+P 1 1
+1 -50
+2 500
+
+P 2 2
+1 110
+2 130
+
+P 1 3
+3 100
+4 140
+
+P 2 1
+3 -120
+4 620
+
+P 1 2
+5 -140
+6 100
+
+P 2 3
+5 -140
+6 -600

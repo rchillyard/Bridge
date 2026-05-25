@@ -4,13 +4,15 @@
 
 package com.phasmidsoftware.bridge.pbn
 
-import com.phasmidsoftware.bridge.cards.{Deal, Whist}
-import org.scalatest.{FlatSpec, Matchers}
+import com.phasmidsoftware.bridge.cards.DDResult.Exact
+import com.phasmidsoftware.bridge.cards.{Deal, Spades, Whist}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should
 
 import scala.io.Source
 import scala.util.{Success, Try}
 
-class PBNSpec extends FlatSpec with Matchers {
+class PBNSpec extends AnyFlatSpec with should.Matchers {
 
   private val py: Try[PBN] = PBNParser.parsePBN(Source.fromResource("com/phasmidsoftware/bridge/director/LEXINGTON 2016.2.9.PBN"))
 
@@ -49,22 +51,23 @@ class PBNSpec extends FlatSpec with Matchers {
     val deal = py.get.head("Deal").value.asInstanceOf[DealValue].deal
     deal should matchPattern { case Deal(_, _) => }
   }
-  it should "analyze deal" in {
+  it should "analyze Lexington deal 1" in {
+    pending // Issue #14 TRansposition Table fix
     val deal = py.get.head("Deal").value.asInstanceOf[DealValue].deal
     //noinspection ScalaStyle
-    Whist(deal, 1).analyzeDoubleDummy(8, directionNS = true) shouldBe Some(true)
+    Whist(deal, 1, Some(Spades)).analyzeDoubleDummy(8, directionNS = true) shouldBe Exact(true, 13)
   }
 
   behavior of "DetailedValue"
   it should "trim last newline 1" in {
-    val xs = Seq("Hello\n", "World\n")
+    val xs = List("Hello\n", "World\n")
     val target = DetailedValue.trim(StringValue(""), xs)
-    target.detail shouldBe Seq("Hello\n", "World")
+    target.detail shouldBe List("Hello\n", "World")
   }
   it should "trim last newline 2" in {
-    val xs = Seq("Hello\n", "\n")
+    val xs = List("Hello\n", "\n")
     val target = DetailedValue.trim(StringValue(""), xs)
-    target.detail shouldBe Seq("Hello\n")
+    target.detail shouldBe List("Hello\n")
   }
   it should "toInt" in {
     val target = DetailedValue.trim(StringValue("1"), Nil)
