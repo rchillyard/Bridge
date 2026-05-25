@@ -46,7 +46,8 @@ case class CardPlay(deal: Deal, strain: Option[Suit], hand: Int, suit: Suit, pri
     * @param nCards the number of cards in the suit.
     * @return true if it's a stiff lead.
     */
-  def isStiff(nCards: Int): Boolean = nCards == 1 && strain.nonEmpty && !strain.contains(suit)
+  def isStiff(nCards: Int): Boolean =
+    nCards == 1 && strain.nonEmpty && !strain.contains(suit)
 
   /**
     * Yield the actual card to be played for this CardPlay (we arbitrarily choose the top card of a sequence)
@@ -65,21 +66,15 @@ case class CardPlay(deal: Deal, strain: Option[Suit], hand: Int, suit: Suit, pri
   /**
     * Find the sequence (lazily) that this CardPlay is from.
     */
-  lazy val findSequence: Option[Sequence] = for (h <- deal.hands(hand).holdings.get(suit); s <- h.sequence(priority)) yield s
+  def findSequence: Option[Sequence] =
+    for (h <- deal.hands(hand).holdings.get(suit); s <- h.sequence(priority)) yield s
 
   override def toString: String = s"Play: $hand $asCard"
 
-  def output(output: Output, xo: Option[Deal]): Output = output :+ (Hand.name(hand) + ":" + asCard)
+  def output(output: Output, xo: Option[Deal]): Output =
+    output :+ (Hand.name(hand) + ":" + asCard)
 }
 
 object CardPlay {
-
-  // NOTE: not used
-  //  implicit object LoggableCardPlay extends Loggable[CardPlay] with Loggables {
-  //    val loggable: Loggable[CardPlay] = toLog4((deal: Deal, hand: Int, suit: Suit, priority: Int) => CardPlay.apply(deal, None, hand, suit, priority), List("deal", "hand", "suit", "priority"))
-  //
-  //    def toLog(t: CardPlay): String = loggable.toLog(t)
-  //  }
-
 }
 

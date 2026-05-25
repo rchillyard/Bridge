@@ -94,13 +94,13 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     val player = new AlphaBetaPlayer[State, State, CardPlay, Int, CacheKey](
       me = if directionNS then 0 else 1,
       depth = depth
-    ).withMaxNodes(Whist.MAX_NODES)
+    ).withMaxNodes(Whist.NODES_PER_ITERATION)
       .withKeyFn(s => s.evaluateKey)
       .withAspirationWindow(AlphaBetaWindow(-0.5, 0.5))
     val initialState = State(this)
     logger.info(s"analyzeDoubleDummy: neededTricks=$tricks, directionNS=$directionNS, depth=$depth, branching=${initialState.enumeratePlays.size}")
     val t0 = System.currentTimeMillis()
-    val result = runPlayer(player, initialState, new Random(0L), depth)
+    val result: DDResult = runPlayer(player, initialState, new Random(0L), depth)
     logger.info(s"analyzeDoubleDummy: maxNSTricks=${stateTC.maxNSTricks}")
     logger.info(s"analyzeDoubleDummy: result=$result, elapsed=${System.currentTimeMillis() - t0}ms, tableSize=${player.tableSize}")
     result
@@ -145,11 +145,12 @@ object Whist:
         DDResult.Inconclusive
 
   val MAX_STATES: Int = 800_000
-  val MAX_NODES: Int = 5_000_000
+  val MAX_NODES: Int = 5_000_000 // retained for reference / future use
+  val NODES_PER_ITERATION: Int = 1_000_000 // node budget per iterative-deepening iteration
   val DEPTH_STEP: Int = Deal.CardsPerTrick // 4: iterate at trick boundaries
   private val logger = LazyLogger(getClass)
 
-@main def myApp(args: String*): Unit = {
+@main def doubleDummySolver(args: String*): Unit = {
   import scala.io.{Codec, Source}
   assert(args.nonEmpty, "At least one argument required")
   val filename = args(0)
