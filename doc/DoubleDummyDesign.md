@@ -334,12 +334,22 @@ allocation for that case. Since hands become increasingly void as the game
 progresses, savings grow with search depth — exactly where pressure is worst.
 This produced measurable speedup on the 11- and 12-card end-position tests.
 
-**GC thrashing at depth 32+**: with a shared 5M node budget, by the time
+**`CardPlay` stores `Card` not `Deal`** (implemented): `CardPlay` previously
+held a `Deal` reference to resolve display. It now stores the resolved `Card`
+directly (just suit + rank), with the `Deal` used only at construction time
+and immediately discarded. This is a cleaner design — historical play display
+is correct regardless of subsequent deal evolution — though the memory saving
+is modest since the `Deal` objects were already live on the stack via the
+`State`/`Whist` chain.
+
+**GC thrashing at depth 32+**: with a shared node budget, by the time
 depth-28 completes the heap is nearly exhausted. The JVM spends most of its
-time in GC rather than searching, making progress toward depth-32 extremely
-slow. The fix is a **per-iteration node budget** — resetting the node counter
-between iterations allows the GC to recover between depths, since the previous
-iteration's stack has fully unwound and its objects are reclaimable.
+time in GC rather than searching. The fix is a **per-iteration node budget**
+(`NODES_PER_ITERATION = 1_000_000`) — resetting the node counter between
+iterations allows GC to recover between depths, since the previous iteration's
+stack has fully unwound and its objects are reclaimable. With this fix the
+search reliably reaches 5-6 tricks depth and produces correct `Partial` results
+for all 20 contracts of a full deal in ~360 seconds.
 
 The next structural fix would be play/unplay (mutable `Deal` with undo on
 backtrack), which would eliminate the copy chain entirely but requires
@@ -363,15 +373,19 @@ launcher JVM.
 
 ### Full Deal Analysis
 
-The 52-card full deal analysis is the ultimate goal. With iterative deepening
-and 5M nodes, the search reaches depth 28 (7 tricks) before GC pressure halts
-progress. The next step is a **per-iteration node budget** — a smaller per-iteration
-limit (e.g. 500K nodes) allows GC to recover between iterations, trading raw
-depth for reliable progress through more iterations.
+With iterative deepening (`DEPTH_STEP = 4`), per-iteration node budget
+(`NODES_PER_ITERATION = 1_000_000`), and 8GB heap, the solver produces correct
+`Partial` results for all 20 contracts of a full 52-card deal in ~360 seconds.
+Results reach 5-6 tricks depth consistently. All results agree with the known
+double-dummy table in the PBN file.
+
+The primary remaining bottleneck is the immutable `State`/`Deal` copy chain.
+Play/unplay (mutable `Deal` with undo) would eliminate this and allow much
+deeper search within the same memory budget.
 
 The reference DDS implementation achieves full deal analysis in optimised C++;
 a JVM Scala implementation will be slower but should be tractable with
-per-iteration budgets and correct TT flag reuse.
+play/unplay and correct TT flag reuse.
 
 ---
 

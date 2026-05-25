@@ -118,8 +118,7 @@ case class Trick(index: Int, plays: Seq[CardPlay], maybePrior: Option[Trick]) ex
   def evaluate: Double = _evaluate
 
   override def toString: String =
-    s"T$index ${leader.map(_.toString).getOrElse("")} ${plays.map(_.asCard).mkString("{", ", ", "}")}"
-
+    s"T$index ${leader.map(_.toString).getOrElse("")} ${plays.mkString("{", ", ", "}")}"
   /**
     * Refactor this recursive method.
     */

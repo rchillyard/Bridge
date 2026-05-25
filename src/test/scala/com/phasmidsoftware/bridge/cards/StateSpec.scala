@@ -86,13 +86,13 @@ class StateSpec extends AnyFlatSpec with should.Matchers {
 
   it should "toString" in {
     val target: State = State.create(whist, trick0 :+ play0, tricks0)
-    target.toString shouldBe "State(Whist(Deal test (51 cards and 39 sequences), N, NT),T1 0 {S5},0:0)"
+    target.toString shouldBe "State(Whist(Deal test (51 cards and 39 sequences), N, NT),T1 0 {Play: N S5},0:0)"
   }
 
   it should "neatOutput" in {
     val target = State.create(whist, trick0 :+ play0, tricks0)
     target.neatOutput shouldBe
-      "State: Trick History: \"T1 0 {S5}\" 0:0 -2.1 Deal test (51) List(S9 HQ9432 D64 CT652," +
+      "State: Trick History: \"T1 0 {Play: N S5}\" 0:0 -2.1 Deal test (51) List(S9 HQ9432 D64 CT652," +
         " SK742 HA7 DT93 CAQJ7, SAJT86 HKT8 DK82 CK3, SQ3 HJ65 DAQJ75 C984)"
   }
 
@@ -102,7 +102,7 @@ class StateSpec extends AnyFlatSpec with should.Matchers {
   }
 
   it should "output" in {
-    val target = State.create(whist, trick0 :+ play0, tricks0)
+    val target = State.create(whist, (trick0 :+ play0), tricks0)
     val writer = MockWriter()
     target.output(Output(writer)).close()
     writer.spilled shouldBe 14
@@ -150,7 +150,7 @@ class StateSpec extends AnyFlatSpec with should.Matchers {
     val target = state5alternatives.head
     // NOTE the trick history had SK in T2 1 first position previously. Now, it is CA.
     target.neatOutput shouldBe
-      """State: Trick History: "T1 0 {HQ, HA, H8, H5}, T2 1 {CA}" 0:1 0.1 Deal test (47) List(S95 H9432 D64 CT652, SK742 H7 DT93 CQJ7, SAJT86 HKT DK82 CK3, SQ3 HJ6 DAQJ75 C984)""".stripMargin
+      """State: Trick History: "T1 0 {Play: N HQ, Play: E HA, Play: S H8, Play: W H5}, T2 1 {Play: E CA}" 0:1 0.1 Deal test (47) List(S95 H9432 D64 CT652, SK742 H7 DT93 CQJ7, SAJT86 HKT DK82 CK3, SQ3 HJ6 DAQJ75 C984)""".stripMargin
   }
 
   // In StateSpec:

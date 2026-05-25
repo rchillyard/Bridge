@@ -80,7 +80,7 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val play3 = CardPlay(deal, None, index + 2, Diamonds, 12) // D2
     val play4 = CardPlay(deal, None, index + 3, Hearts, 3) // HJ
     val target = Trick.empty :+ play1 :+ play2 :+ play3 :+ play4
-    target.winner.get.play.asCard shouldBe Card("HA")
+    target.winner.get.play.card shouldBe Card("HA")
   }
 
   it should "pick correct winner1" in {
@@ -91,7 +91,7 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val play3 = CardPlay(deal, None, index + 2, Diamonds, 12) // D2
     val play4 = CardPlay(deal, None, index + 3, Spades, 2) // SQ
     val target = Trick.empty :+ play1 :+ play2 :+ play3 :+ play4
-    target.winner.get.play.asCard shouldBe Card("SK")
+    target.winner.get.play.card shouldBe Card("SK")
   }
 
   it should "pick correct winner2" in {
@@ -102,7 +102,7 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val play3 = CardPlay(deal, None, index + 2, Spades, 0) // SA
     val play4 = CardPlay(deal, None, index + 3, Spades, 2) // SQ
     val target = Trick.empty :+ play1 :+ play2 :+ play3 :+ play4
-    target.winner.get.play.asCard shouldBe Card("SA")
+    target.winner.get.play.card shouldBe Card("SA")
   }
 
   it should "pick correct winner3" in {
@@ -113,7 +113,7 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val play3 = CardPlay(deal, Some(Diamonds), index + 2, Spades, 0) // SA
     val play4 = CardPlay(deal, Some(Diamonds), index + 3, Spades, 2) // SQ
     val target = Trick.empty :+ play1 :+ play2 :+ play3 :+ play4
-    target.winner.get.play.asCard shouldBe Card("D3")
+    target.winner.get.play.card shouldBe Card("D3")
   }
 
   it should "enumerate plays 1" in {
@@ -131,7 +131,7 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
     openingLead.priority shouldBe 2
     openingLead.suit shouldBe Hearts
     openingLead.hand shouldBe 0
-    openingLead.asCard shouldBe Card("HQ")
+    openingLead.card shouldBe Card("HQ")
     val trick2alternatives = trick1.enumerateSubsequentPlays(whist1)
     trick2alternatives.size shouldBe 2
     val state2alternatives = whist1.makeStates(state1.tricks, trick2alternatives)
@@ -144,7 +144,7 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
     secondHandPlay0.priority shouldBe 0
     val trick21 = trick2alternatives.last
     trick21.cardsPlayed shouldBe 2
-    trick21.winner.get.play.asCard shouldBe Card("HQ")
+    trick21.winner.get.play.card shouldBe Card("HQ")
     val secondHandPlay1 = trick21.last
     secondHandPlay1.suit shouldBe Hearts
     secondHandPlay1.priority shouldBe 7
@@ -177,7 +177,7 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
     openingLead.priority shouldBe 0
     openingLead.suit shouldBe Spades
     openingLead.hand shouldBe 0
-    openingLead.asCard shouldBe Card("SA")
+    openingLead.card shouldBe Card("SA")
     val trick2alternatives = trick1.enumerateSubsequentPlays(whist1)
     trick2alternatives.size shouldBe 2
     val state2alternatives = whist1.makeStates(state1.tricks, trick2alternatives)
@@ -195,7 +195,7 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val trick3alternatives: Seq[Trick] = trick20.enumerateSubsequentPlays(whist20)
     val state3alternatives: Seq[State] = state20.enumeratePlays
     state3alternatives.size shouldBe 3
-    state3alternatives.head.trick.plays.drop(2).head.asCard shouldBe Card(Clubs, Eight)
+    state3alternatives.head.trick.plays.drop(2).head.card shouldBe Card(Clubs, Eight)
     whist20.makeStates(state20.tricks, trick3alternatives) shouldBe state3alternatives
     val state30 = state3alternatives.head
     val state4alternatives = state30.enumeratePlays

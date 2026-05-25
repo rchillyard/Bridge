@@ -145,7 +145,6 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
     */
   def cooperate(holding: Holding): Holding = _cooperate(holding)
 
-
   def reprioritize: Holding = _reprioritize
 
   /**

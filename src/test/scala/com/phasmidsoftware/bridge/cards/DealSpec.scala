@@ -63,7 +63,7 @@ class DealSpec extends AnyFlatSpec with should.Matchers {
   it should "asCard" in {
     val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val cardPlay = CardPlay(deal, None, 0, Spades, 5)
-    val card = cardPlay.asCard
+    val card = cardPlay.card
     card shouldBe Card(Spades, Nine)
     card.toString shouldBe "S9"
   }
@@ -71,12 +71,12 @@ class DealSpec extends AnyFlatSpec with should.Matchers {
   it should "asCard 2" in {
     val deal1 = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val play1 = CardPlay(deal1, None, 0, Spades, 5)
-    val card1 = play1.asCard
+    val card1 = play1.card
     card1 shouldBe Card(Spades, Nine)
     card1.toString shouldBe "S9"
     val deal2 = deal1.play(play1)
     val play2 = CardPlay(deal2, None, 0, Spades, 9)
-    val card2 = play2.asCard
+    val card2 = play2.card
     card2 shouldBe Card(Spades, Five)
     card2.toString shouldBe "S5"
   }
@@ -84,7 +84,7 @@ class DealSpec extends AnyFlatSpec with should.Matchers {
   it should "asCard 3" in {
     val deal1 = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val play1 = CardPlay(deal1, None, 0, Spades, 5)
-    val card1 = play1.asCard
+    val card1 = play1.card
     card1 shouldBe Card(Spades, Nine)
     card1.toString shouldBe "S9"
     val deal2 = deal1.play(play1)
