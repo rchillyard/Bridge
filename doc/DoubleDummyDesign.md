@@ -59,9 +59,9 @@ def analyzeDoubleDummy(
 - `tricks` — the number of tricks the protagonists need to make
 - `directionNS` — `true` if NS are the protagonists (declarer side)
 - Returns a `DDResult`:
-  - `DDResult.Exact(makes)` — full search completed; result is definitive
-  - `DDResult.Partial(makes)` — node limit hit, but one side found a witness line
-  - `DDResult.Inconclusive` — node limit hit before either side found a witness
+    - `DDResult.Exact(makes)` — full search completed; result is definitive
+    - `DDResult.Partial(makes)` — node limit hit, but one side found a witness line
+    - `DDResult.Inconclusive` — node limit hit before either side found a witness
 
 ### DDResult
 
@@ -296,25 +296,24 @@ Performance degrades exponentially with deal size. The 12-card ending takes
 Suit-level grouping (treating equivalent cards as one move) is already
 implemented and is the primary branching-factor reduction.
 
-A node limit (`MAX_NODES = 2,500,000`) is applied via `withMaxNodes` to prevent
-OOM when analyzing multiple contracts in sequence. When the limit is hit,
-`runPlayer` returns a `DDResult` based on `bestSoFar` and `worstSoFar`:
+**Iterative deepening** (implemented) — `runPlayer` now calls
+`chooseMoveIterativeDeepening` with `DEPTH_STEP = 4` (trick boundaries).
+The search proceeds through depths 4, 8, 12, … 52, re-ordering top-level moves
+at each iteration using the previous iteration's actual minimax scores. The node
+budget is shared across all iterations. With 5M nodes, the search reaches
+depth 28 (7 complete tricks) before the node budget is exhausted.
 
-- If `bestSoFar` score > 0 → `DDResult.Partial(true)`
-- If `worstSoFar` score ≤ 0 → `DDResult.Partial(false)`
-- Otherwise → `DDResult.Inconclusive`
+`DDResult` now carries a `tricks` field indicating how many complete tricks were
+searched in the last completed iteration:
 
-In practice, for full 52-card deals even 2.5M nodes is insufficient to complete
-a single top-level move (branching factor ~8, depth 52), so all results are
-currently `Inconclusive`. The heap profile shows ~250KB per 100K nodes with 8GB
-heap; GC fires and recovers well but allocation is fundamentally tied to the
-immutable `State`/`Deal` copy chain (see Memory below).
+- `DDResult.Exact(makes, tricks)` — all iterations completed to `depth`
+- `DDResult.Partial(makes, tricks)` — node limit hit; `tricks` = last completed depth / 4
+- `DDResult.Inconclusive` — node limit hit before even depth-4 completed
 
 The remaining performance levers are:
 
-1. **Iterative deepening** — search to depth 4, 8, 12, … so every depth
-   completes all top-level moves, ensuring `bestSoFar`/`worstSoFar` are always
-   populated and providing move ordering for deeper iterations
+1. **Per-iteration node budget** — reset the node counter between iterations
+   so GC can recover between depths; prevents GC thrashing at depth 32+
 2. **Full TT bound propagation** (Issue #14)
 3. **`Holding.promote` short-circuit** — return `this` when no sequence has
    priority ≥ the played priority (non-void but unaffected case)
@@ -335,6 +334,13 @@ allocation for that case. Since hands become increasingly void as the game
 progresses, savings grow with search depth — exactly where pressure is worst.
 This produced measurable speedup on the 11- and 12-card end-position tests.
 
+**GC thrashing at depth 32+**: with a shared 5M node budget, by the time
+depth-28 completes the heap is nearly exhausted. The JVM spends most of its
+time in GC rather than searching, making progress toward depth-32 extremely
+slow. The fix is a **per-iteration node budget** — resetting the node counter
+between iterations allows the GC to recover between depths, since the previous
+iteration's stack has fully unwound and its objects are reclaimable.
+
 The next structural fix would be play/unplay (mutable `Deal` with undo on
 backtrack), which would eliminate the copy chain entirely but requires
 significant refactoring of `Deal`, `Hand`, and `Holding`.
@@ -342,10 +348,9 @@ significant refactoring of `Deal`, `Hand`, and `Holding`.
 ### OOM / Node Limit
 
 Analyzing all contracts for a deal (up to 20 strain × leader combinations) with
-no node limit causes OOM. The node-count limit (`MAX_NODES = 2,500,000`,
-tunable in `Whist`) prevents this by throwing `NodeLimitException` and
-returning the best partial result found. The JVM heap should be configured to
-at least 8GB via `.jvmopts` in the project root:
+no node limit causes OOM. The node-count limit (`MAX_NODES`, tunable in `Whist`,
+currently 5M) prevents this. The JVM heap should be configured to at least 8GB
+via `.jvmopts` in the project root:
 
 ```
 -Xms512m
@@ -358,19 +363,15 @@ launcher JVM.
 
 ### Full Deal Analysis
 
-The 52-card full deal analysis is the ultimate goal. The current bottleneck is
-that no single top-level move completes within the 2.5M node budget — the search
-tree at depth 52 with branching factor ~8 is simply too large even with aspiration
-search and `sufficientMovesRemaining` pruning.
-
-The primary planned fix is **iterative deepening**: by searching to increasing
-depths (4, 8, 12, …), every depth completes all top-level moves within budget,
-`bestSoFar`/`worstSoFar` are always populated, and move ordering from shallower
-iterations dramatically improves pruning at deeper ones.
+The 52-card full deal analysis is the ultimate goal. With iterative deepening
+and 5M nodes, the search reaches depth 28 (7 tricks) before GC pressure halts
+progress. The next step is a **per-iteration node budget** — a smaller per-iteration
+limit (e.g. 500K nodes) allows GC to recover between iterations, trading raw
+depth for reliable progress through more iterations.
 
 The reference DDS implementation achieves full deal analysis in optimised C++;
-a JVM Scala implementation will be slower but should be tractable with iterative
-deepening and correct TT flag reuse.
+a JVM Scala implementation will be slower but should be tractable with
+per-iteration budgets and correct TT flag reuse.
 
 ---
 
