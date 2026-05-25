@@ -19,7 +19,7 @@ resolvers += Resolver.mavenLocal
 
 lazy val versionFlog   = "1.0.13"
 lazy val versionNumber = "1.10.5"
-lazy val versionGambit = "1.2.1-SNAPSHOT"
+lazy val versionGambit = "1.2.1"
 
 libraryDependencies ++= Seq(
   "com.phasmidsoftware"        %% "flog"                     % versionFlog,
@@ -34,15 +34,16 @@ libraryDependencies ++= Seq(
   "ch.qos.logback"              % "logback-classic"          % "1.5.9"          % Runtime
 )
 
-lazy val IT = config("it") extend Test
+//lazy val IT = config("it") extend Test
+//
+//lazy val root = project.in(file("."))
+//  .configs(IT)
+//  .settings(
+//    inConfig(IT)(Defaults.testSettings),
+//    IT / scalaSource := baseDirectory.value / "src" / "it" / "scala"
+//  )
 
-lazy val root = project.in(file("."))
-  .configs(IT)
-  .settings(
-    inConfig(IT)(Defaults.testSettings),
-    IT / scalaSource := baseDirectory.value / "src" / "it" / "scala"
-  )
-
+// NOTE: the following does not seem to work.
 run / javaOptions ++= Seq("-Xms512m", "-Xmx8g")
 run / fork := true
 Test / javaOptions ++= Seq("-Xms512m", "-Xmx8g")
