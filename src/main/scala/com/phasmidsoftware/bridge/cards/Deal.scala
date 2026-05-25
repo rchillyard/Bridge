@@ -7,7 +7,6 @@ package com.phasmidsoftware.bridge.cards
 import com.phasmidsoftware.bridge.cards.DDResult
 import com.phasmidsoftware.bridge.cards.Rank.ranks
 import com.phasmidsoftware.bridge.cards.Suit.suits
-import com.phasmidsoftware.bridge.director.Player
 import com.phasmidsoftware.gambit.util.{LazyLogger, Output, Outputable, Shuffle}
 
 import java.io.Writer
@@ -92,30 +91,46 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
 
   /**
     * Analyzes a sequence of bridge contracts using double-dummy analysis.
+    * This method evaluates each contract in the provided list and determines
+    * whether the declarer can fulfill the specified contract under ideal play.
     *
-    * @param board     The board number being analyzed.
-    * @param contracts A sequence of (leader, strain, tricks, declarer) tuples.
-    * @param max       Maximum number of contracts to analyze; 0 means all.
-    * @return A sequence of [[DDResult]] values, one per contract.
+    * @param max             The maximum number of contracts to analyze. 
+    *                        If max is less than or equal to 0, all contracts in the list are analyzed.
+    *
+    * @param contractDetails A sequence of tuples representing the contracts to analyze.
+    *                        Each tuple contains the following values:
+    *                        - The index of the player who leads the play.
+    *                        - An optional value representing the strain (suit or notrump) of the contract.
+    *                        - The number of tricks the declarer needs to succeed in the contract.
+    *                        - The index of the player who is the declarer for this contract.
+    *
+    * @param board           The index or number of the board being analyzed.
+    * @return A sequence of Options containing Booleans. Each Option corresponds to a contract's result:
+    *         - `Some(true)` if the declarer can meet the contract.
+    *         - `Some(false)` if the contract cannot be met.
+    *         - `None` if the analysis fails or no result is found for a specific contract.
     */
-  def analyzeContracts(board: Int, contracts: Seq[Contract], max: Int = 0): Seq[DDResult] = {
-    val work = if max > 0 then contracts.take(max) else contracts
-    work map analyzeContract
+  def analyzeContracts(board: Int, contractDetails: Seq[(Int, Option[Suit], Int, Int)], max: Int = 0): Seq[DDResult] = {
+    val work = if max > 0 then contractDetails.take(max) else contractDetails
+    work map {
+      case (leader, strain, tricks, declarer) =>
+        this.analyzeContract(board, leader, strain, tricks, declarer)
+    }
   }
 
   /**
-    * Analyzes a given bridge contract using double-dummy analysis to determine its outcome.
+    * Analyzes the outcome of a given bridge contract using double-dummy analysis.
     *
-    * @param contract The contract to be analyzed, consisting of attributes such as board, leader, strain, tricks, and declarer.
-    * @return A [[DDResult]], which represents the outcome of the double-dummy analysis. Possible outcomes are:
-    *         - [[DDResult.Exact]]: Full search completed, and the result is definitive.
-    *         - [[DDResult.Partial]]: Node limit hit, but a partial conclusion was reached.
-    *         - [[DDResult.Inconclusive]]: Node limit hit without any reliable conclusion.
+    * @param board    The board number being analyzed.
+    * @param leader   The index of the player on opening lead.
+    * @param strain   The trump strain, or `None` for notrump.
+    * @param tricks   The number of tricks the declarer needs.
+    * @param declarer The index of the declarer.
+    * @return A [[DDResult]]: [[DDResult.Exact]], [[DDResult.Partial]], or [[DDResult.Inconclusive]].
     */
-  def analyzeContract(contract: Contract): DDResult = {
-    println(s"analyzeContract: $contract...")
-    val result = Whist(this, contract.leader.toInt, contract.strain).analyzeDoubleDummy(contract.tricks, directionNS = contract.declarer.toInt % 2 == 0)
-    println(s"analyzeContract: contract=$contract; result=$result")
+  def analyzeContract(board: Int, leader: Int, strain: Option[Suit], tricks: Int, declarer: Int): DDResult = {
+    val result = Whist(this, leader, strain).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0)
+    println(s"analyzeDoubleDummy: board=$board result=$result")
     result
   }
 
@@ -342,9 +357,3 @@ object Deal {
 
   private val logger = LazyLogger(getClass)
 }
-
-case class Board(board: Int, deal: Deal):
-  override def toString: String = s"Board(board=$board)"
-
-case class Contract(board: Board, leader: Player, strain: Option[Suit], tricks: Int, declarer: Player):
-  override def toString: String = s"Contract(board=${board.board}, leader=$leader, strain=$strain, tricks=$tricks, declarer=$declarer)"

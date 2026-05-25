@@ -5,7 +5,6 @@
 package com.phasmidsoftware.bridge.pbn
 
 import com.phasmidsoftware.bridge.cards.*
-import com.phasmidsoftware.bridge.director.Player
 
 /**
   * This class represents the PBN (Portable Bridge Notation) for a set of games.
@@ -27,6 +26,7 @@ case class PBN(games: Seq[Game]) extends Iterable[Game] with (Int => Game) {
   def sorted(implicit ev: Ordering[Game]): Seq[Game] = games.sorted
 }
 
+
 /**
   * This class represents a game in PBN form.
   *
@@ -42,19 +42,22 @@ case class Game(tagPairs: Seq[(Name, DetailedValue)]) extends Iterable[(Name, De
   def iterator: Iterator[(Name, DetailedValue)] = tagPairs.iterator
 
   /**
-    * Analyzes the makable contracts for the given bridge deal.
+    * Analyzes the makable contracts for the given bridge deal. This method evaluates the possible contracts
+    * that can be made based on the deal's data, including the declarer, board, strain, and number of tricks.
     *
-    * @param max an optional integer that limits the number of contracts analyzed. 0 means no limit.
-    * @return a sequence of [[DDResult]] values, one per contract.
-    * @throws PBNException  if the deal is invalid.
-    * @throws CardException when a contract detail cannot be parsed.
+    * @param max an optional integer that sets a limit on the number of contracts analyzed. Default is 0, indicating no limit.
+    * @return a sequence of optional booleans where each element indicates whether a particular contract is makable.
+    *         Returns `None` if the result for the contract cannot be determined.
+    *
+    * @throws PBNException  if the deal provided in the context is invalid or does not meet the expected constraints.
+    * @throws CardException when there is an error parsing the contract details from the provided data.
     */
   def analyzeMakableContracts(max: Int = 0): Seq[DDResult] = {
     val deal: Deal = this ("Deal").value.asInstanceOf[DealValue].deal
     if (deal.validate) {
       val board = this ("Board").toInt
       val declarerTricksR = """([NESW])\s*(NT|S|H|D|C)\s*(\d+)""".r
-      val contracts: Seq[Contract] = this ("OptimumResultTable").detail map {
+      val cases: Seq[(Int, Option[Suit], Int, Int)] = this ("OptimumResultTable").detail map {
         case contract@declarerTricksR(l, z, n) =>
           val declarer = "NESW".indexOf(l)
           val leader = Hand.next(declarer)
@@ -65,13 +68,15 @@ case class Game(tagPairs: Seq[(Name, DetailedValue)]) extends Iterable[(Name, De
             case _ =>
               throw CardException(s"cannot parse the contract detail: $contract")
           }
-          Contract(Board(board, deal), Player(leader), strain, n.toInt, Player(declarer))
+          val tricks = n.toInt
+          println(s"analyzeDoubleDummy: board=$board tricks=$tricks, strain=${strain.getOrElse("NT")} declarer=$l, leader=$leader")
+          (leader, strain, tricks, declarer)
       }
-      val results = deal.analyzeContracts(board, contracts, max)
+      val results = deal.analyzeContracts(board, cases, max)
       results.foreach {
-        case DDResult.Exact(makes) => println(s"  => Exact: makes=$makes")
-        case DDResult.Partial(makes) => println(s"  => Partial (node limit): makes=$makes (qualified)")
-        case DDResult.Inconclusive => println(s"  => Inconclusive (node limit, no witness found)")
+        case DDResult.Exact(makes, t) => println(s"  => Exact($t tricks): makes=$makes")
+        case DDResult.Partial(makes, t) => println(s"  => Partial($t tricks, node limit): makes=$makes (qualified)")
+        case DDResult.Inconclusive => println(s"  => Inconclusive (node limit, no iteration completed)")
       }
       results
     }

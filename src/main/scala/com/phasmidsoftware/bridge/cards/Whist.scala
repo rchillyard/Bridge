@@ -7,7 +7,7 @@ package com.phasmidsoftware.bridge.cards
 import com.phasmidsoftware.bridge.cards.Whist.{logger, runPlayer}
 import com.phasmidsoftware.bridge.gambit.{WhistGame, WhistState}
 import com.phasmidsoftware.bridge.pbn.{PBN, PBNParser}
-import com.phasmidsoftware.gambit.game.{AlphaBetaPlayer, AlphaBetaWindow, FlatTTCache, NodeLimitException, TTCache}
+import com.phasmidsoftware.gambit.game.{AlphaBetaPlayer, AlphaBetaWindow, FlatTTCache, TTCache}
 import com.phasmidsoftware.gambit.util.LazyLogger
 
 import scala.util.{Random, Success}
@@ -22,8 +22,8 @@ import scala.util.{Random, Success}
   *   no reliable conclusion can be drawn.
   */
 enum DDResult:
-  case Exact(makes: Boolean)
-  case Partial(makes: Boolean)
+  case Exact(makes: Boolean, tricks: Int)
+  case Partial(makes: Boolean, tricks: Int)
   case Inconclusive
 
 /**
@@ -127,30 +127,26 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
 
 object Whist:
 
-  import scala.util.Try
-
+  /**
+    * Runs iterative deepening search and converts the result to a [[DDResult]].
+    *
+    * - Completes all iterations to `depth`: [[DDResult.Exact]] with tricks = depth / CardsPerTrick.
+    * - Node limit fires after at least one completed iteration: [[DDResult.Partial]]
+    *   with tricks = completedDepth / CardsPerTrick.
+    * - Node limit fires before any iteration completes: [[DDResult.Inconclusive]].
+    */
   private def runPlayer(player: AlphaBetaPlayer[State, State, CardPlay, Int, CacheKey], initialState: State, random: Random, depth: Int): DDResult =
-    Try(player.chooseMoveWithScore(initialState, random)) match
-      case scala.util.Success(Some((_, score))) =>
-        DDResult.Exact(score > 0)
-      case scala.util.Success(None) =>
-        DDResult.Inconclusive
-      case scala.util.Failure(_: NodeLimitException) =>
-        val best = player.getBestSoFar.map(_._2)
-        val worst = player.getWorstSoFar.map(_._2)
-        logger.warn(s"analyzeDoubleDummy: node limit reached, depth=$depth, bestSoFar=$best, worstSoFar=$worst")
-        (best, worst) match
-          case (Some(b), _) if b > 0 => DDResult.Partial(makes = true)
-          case (_, Some(w)) if w <= 0 => DDResult.Partial(makes = false)
-          case (Some(b), _) => DDResult.Partial(makes = false) // best is negative: protagonist failed
-          case _ => DDResult.Inconclusive
-      case scala.util.Failure(e) =>
-        logger.error(s"analyzeDoubleDummy: unexpected failure: ${e.getMessage}")
+    player.chooseMoveIterativeDeepening(initialState, random, Whist.DEPTH_STEP) match
+      case Some((_, score, completedDepth)) =>
+        val tricksSearched = completedDepth / Deal.CardsPerTrick
+        if completedDepth >= depth then DDResult.Exact(score > 0, tricksSearched)
+        else DDResult.Partial(score > 0, tricksSearched)
+      case None =>
         DDResult.Inconclusive
 
-  val MAX_STATES = 800_000
-  private val ASPIRATION_WINDOW: AlphaBetaWindow = AlphaBetaWindow(-0.5, 0.5)
-  private val MAX_NODES: Int = 2_500_000
+  val MAX_STATES: Int = 800_000
+  val MAX_NODES: Int = 5_000_000
+  val DEPTH_STEP: Int = Deal.CardsPerTrick // 4: iterate at trick boundaries
   private val logger = LazyLogger(getClass)
 
 @main def myApp(args: String*): Unit = {

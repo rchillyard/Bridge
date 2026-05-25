@@ -55,7 +55,7 @@ class PBNSpec extends AnyFlatSpec with should.Matchers {
     pending // Issue #14 TRansposition Table fix
     val deal = py.get.head("Deal").value.asInstanceOf[DealValue].deal
     //noinspection ScalaStyle
-    Whist(deal, 1, Some(Spades)).analyzeDoubleDummy(8, directionNS = true) shouldBe Exact(true)
+    Whist(deal, 1, Some(Spades)).analyzeDoubleDummy(8, directionNS = true) shouldBe Exact(true, 13)
   }
 
   behavior of "DetailedValue"
