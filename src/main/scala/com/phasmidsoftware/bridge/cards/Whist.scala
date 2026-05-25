@@ -12,6 +12,8 @@ import com.phasmidsoftware.gambit.util.LazyLogger
 
 import scala.util.{Random, Success}
 
+type BridgePlayer = AlphaBetaPlayer[State, State, CardPlay, Int, CacheKey]
+
 /**
   * The result of a double-dummy analysis.
   *
@@ -91,7 +93,7 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     given TTCache[CacheKey] = FlatTTCache()
 
     deal.assertAdjusted()
-    val player = new AlphaBetaPlayer[State, State, CardPlay, Int, CacheKey](
+    val player = new BridgePlayer(
       me = if directionNS then 0 else 1,
       depth = depth
     ).withMaxNodes(Whist.NODES_PER_ITERATION)
@@ -100,7 +102,7 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     val initialState = State(this)
     logger.info(s"analyzeDoubleDummy: neededTricks=$tricks, directionNS=$directionNS, depth=$depth, branching=${initialState.enumeratePlays.size}")
     val t0 = System.currentTimeMillis()
-    val result: DDResult = runPlayer(player, initialState, new Random(0L), depth)
+    val result: DDResult = runPlayer(player, directionNS, depth, initialState, new Random(0L))
     logger.info(s"analyzeDoubleDummy: maxNSTricks=${stateTC.maxNSTricks}")
     logger.info(s"analyzeDoubleDummy: result=$result, elapsed=${System.currentTimeMillis() - t0}ms, tableSize=${player.tableSize}")
     result
@@ -135,12 +137,13 @@ object Whist:
     *   with tricks = completedDepth / CardsPerTrick.
     * - Node limit fires before any iteration completes: [[DDResult.Inconclusive]].
     */
-  private def runPlayer(player: AlphaBetaPlayer[State, State, CardPlay, Int, CacheKey], initialState: State, random: Random, depth: Int): DDResult =
+  private def runPlayer(player: BridgePlayer, directionNS: Boolean, depth: Int, initialState: State, random: Random) =
     player.chooseMoveIterativeDeepening(initialState, random, Whist.DEPTH_STEP) match
       case Some((_, score, completedDepth)) =>
+        val makes = if directionNS then score > 0 else score < 0
         val tricksSearched = completedDepth / Deal.CardsPerTrick
-        if completedDepth >= depth then DDResult.Exact(score > 0, tricksSearched)
-        else DDResult.Partial(score > 0, tricksSearched)
+        if completedDepth >= depth then DDResult.Exact(makes, tricksSearched)
+        else DDResult.Partial(makes, tricksSearched)
       case None =>
         DDResult.Inconclusive
 
