@@ -2,7 +2,7 @@ organization := "com.phasmidsoftware"
 
 name := "Bridge"
 
-version := "1.1.2"
+version := "1.1.3-SNAPSHOT"
 
 scalaVersion := "3.7.4"
 
@@ -31,7 +31,7 @@ libraryDependencies ++= Seq(
   "org.scala-lang.modules"     %% "scala-parser-combinators" % "2.4.0",
   "joda-time"                   % "joda-time"                % "2.14.2",
   "org.scalatest"              %% "scalatest"                % scalaTestVersion % Test,
-  "ch.qos.logback"              % "logback-classic"          % "1.5.9"          % Runtime
+  "ch.qos.logback"              % "logback-classic"          % "1.5.32"          % Runtime
 )
 
 //lazy val IT = config("it") extend Test

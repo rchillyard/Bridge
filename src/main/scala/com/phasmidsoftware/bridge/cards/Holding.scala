@@ -128,7 +128,8 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
     * @return a new Holding with the promotion added to the pending list.
     */
   def promote(priority: Int): Holding =
-    Holding(sequences, suit, promotions :+ priority)
+    if sequences.forall(_.priority <= priority) then this
+    else Holding(sequences, suit, promotions :+ priority)
 
   /**
     * Method to enact the pending promotions on this Holding.
