@@ -313,8 +313,6 @@ searched in the last completed iteration:
 The remaining performance levers are:
 
 1. **Full TT bound propagation** (Issue #14)
-2. **`Holding.promote` short-circuit (non-void case)** — return `this` when
-   no sequence has priority ≥ the played priority
 
 ### Memory
 
@@ -328,9 +326,14 @@ depth 52, all 52 levels of this chain are simultaneously live on the stack.
 
 **`Hand.promote` short-circuit** (implemented): `Hand.promote` now returns
 `this` when the hand is void in the led suit, avoiding a new `Hand` and `Map`
-allocation for that case. Since hands become increasingly void as the game
-progresses, savings grow with search depth — exactly where pressure is worst.
-This produced measurable speedup on the 11- and 12-card end-position tests.
+allocation for that case.
+
+**`Holding.promote` short-circuit** (implemented): `Holding.promote` now
+returns `this` when all sequences have priority ≤ the played priority — meaning
+the played card ranks below all our sequences and no promotion is warranted.
+Together with the `Hand.promote` void short-circuit, allocations are avoided
+at two levels. Since hands become increasingly void and unaffected as the game
+progresses, savings grow with search depth.
 
 **`CardPlay` stores `Card` not `Deal`** (implemented): `CardPlay` previously
 held a `Deal` reference to resolve display. It now stores the resolved `Card`
@@ -402,7 +405,7 @@ sbt "runMain com.phasmidsoftware.bridge.cards.doubleDummySolver path/to/file.pbn
 ```
 
 Arguments:
-- `path/to/file.pbn` — path to a PBN file (example: `src/test/resources/com/phasmidsoftware/bridge/director/example5.pbn`)
+- `path/to/file.pbn` — path to a PBN file
 - `0` — zero-based index of the game within the file to analyze
 
 The program calls `analyzeMakableContracts` on the selected game, which evaluates
