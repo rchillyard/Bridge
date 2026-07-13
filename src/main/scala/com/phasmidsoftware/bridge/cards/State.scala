@@ -38,21 +38,24 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
     * It resulted in being able to complete for the double-dummy analysis.
     *
     * Each hand's `Long` only ever uses bits 0-51 (`suit.priority*13 + seq.priority` maxes out
-    * at 3*13+12 = 51), leaving bits 52-63 free. Those spare bits carry the current trick's
-    * in-progress state (the leader, how many cards have been played to it so far, and each of
-    * those plays' actual suit/rank) -- WITHOUT that, two genuinely different positions with the
-    * same remaining cards in every hand but a different partial-trick history (different
-    * leader, different provisional winner) hash identically, and a proven/bounded result cached
-    * for one can be wrongly served up for the other. This was latent even when only `Exact`
-    * entries were reused (the collision still had to land on an `Exact` entry to bite), but
-    * became a real, reproducible wrong answer once `LowerBound`/`UpperBound` entries -- which
-    * make up most entries in a real search -- became reusable too (see the Gambit-side
-    * `TTCache.probe` fix this key change accompanies).
+    * at 3*13+12 = 51), leaving bits 52-63 free. Those spare bits carry state that isn't
+    * otherwise determined by which cards remain in each hand, but which still affects the
+    * game-theoretic value of the position: the current trick's in-progress state (leader, how
+    * many cards have been played to it so far, and each of those plays' actual suit/rank) and
+    * the NS trick count (`tricks.ew` is derivable from remaining cards minus `tricks.ns`, so
+    * doesn't need its own encoding). Two genuinely different positions can otherwise share
+    * identical remaining cards in every hand -- e.g. same total tricks completed but a
+    * different NS/EW split, or the same next leader reached via a different trick history --
+    * and a proven/bounded result cached for one would then be wrongly served up for the other.
+    * This was latent even when only `Exact` entries were reused (the collision still had to
+    * land on an `Exact` entry to bite), but became a real, reproducible wrong answer once
+    * `LowerBound`/`UpperBound` entries -- which make up most entries in a real search --
+    * became reusable too (see the Gambit-side `TTCache.probe` fix this key change accompanies).
     *
     * @return a tuple of four Long values: the low 52 bits of each are the bitwise encoding of
     *         the card sequences held in one of the four hands in the deal; the top 12 bits of
-    *         the first carry the trick's leader and play count, and the top 12 bits of each
-    *         (including the first) carry that play-slot's actual card, if any.
+    *         the first two carry the trick's leader, play count, and NS trick count, and the
+    *         top 12 bits of all four carry that play-slot's actual card, if any.
     */
   def evaluateKey: CacheKey =
     def handBits(hand: Hand): Long =
@@ -73,11 +76,14 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
     val countCode: Long = trick.plays.size.toLong // 3 bits, 0..4
 
     val trickBits0 = (leaderCode << 9) | (countCode << 6) | slotBits(0)
+    // tricks.ew is derivable from remaining cards (already in handBits) minus tricks.ns, so only
+    // tricks.ns needs encoding here; 4 bits, 0..13.
+    val trickBits1 = (tricks.ns.toLong << 6) | slotBits(1)
 
     val h = whist.deal.hands
     (
       handBits(h.head) | (trickBits0 << 52),
-      handBits(h(1)) | (slotBits(1) << 52),
+      handBits(h(1)) | (trickBits1 << 52),
       handBits(h(2)) | (slotBits(2) << 52),
       handBits(h(3)) | (slotBits(3) << 52)
     )
