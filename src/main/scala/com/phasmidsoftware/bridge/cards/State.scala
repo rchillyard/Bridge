@@ -75,17 +75,31 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
     val leaderCode: Long = trick.leader.map(_.toLong).getOrElse(4L) // 3 bits; 4 = undefined (only the initial state)
     val countCode: Long = trick.plays.size.toLong // 3 bits, 0..4
 
-    val trickBits0 = (leaderCode << 9) | (countCode << 6) | slotBits(0)
-    // tricks.ew is derivable from remaining cards (already in handBits) minus tricks.ns, so only
-    // tricks.ns needs encoding here; 4 bits, 0..13.
-    val trickBits1 = (tricks.ns.toLong << 6) | slotBits(1)
+    // The extra info to pack (leader, count, up to 3 played cards, NS trick count) adds up to
+    // more than 12 bits, so it can't fit in any one hand's spare region -- it has to be split
+    // into four independent 12-bit payloads, one per hand's Long. Which payload rides with
+    // which hand is an arbitrary bin-packing choice (they're unrelated to that hand's own
+    // cards); slots 0/1 double up two small fields each purely because they happen to add up
+    // to <= 12 bits, while slots 2/3 each carry just one play's card with room to spare:
+    //   extra0 (-> hand 0's Long): leader (3 bits) | count (3 bits) | play-slot-0's card (6 bits)
+    //   extra1 (-> hand 1's Long): tricks.ns (4 bits) | play-slot-1's card (6 bits)
+    //   extra2 (-> hand 2's Long): play-slot-2's card (6 bits)
+    //   extra3 (-> hand 3's Long): play-slot-3's card (6 bits)
+    // (tricks.ew isn't encoded: it's derivable from remaining cards, already in handBits, minus
+    // tricks.ns.)
+    val extra0 = (leaderCode << 9) | (countCode << 6) | slotBits(0)
+    val extra1 = (tricks.ns.toLong << 6) | slotBits(1)
+    val extra2 = slotBits(2)
+    val extra3 = slotBits(3)
 
+    // Each extraN is OR'd into hand N's Long, shifted left by 52 so it lands in that Long's
+    // spare bits 52-63 without disturbing its real card bits 0-51.
     val h = whist.deal.hands
     (
-      handBits(h.head) | (trickBits0 << 52),
-      handBits(h(1)) | (trickBits1 << 52),
-      handBits(h(2)) | (slotBits(2) << 52),
-      handBits(h(3)) | (slotBits(3) << 52)
+      handBits(h.head) | (extra0 << 52),
+      handBits(h(1)) | (extra1 << 52),
+      handBits(h(2)) | (extra2 << 52),
+      handBits(h(3)) | (extra3 << 52)
     )
 
   /**
