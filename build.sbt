@@ -19,7 +19,8 @@ resolvers += Resolver.mavenLocal
 
 lazy val versionFlog   = "1.0.13"
 lazy val versionNumber = "1.10.5"
-lazy val versionGambit = "1.2.1"
+lazy val versionGambit = "1.2.2-SNAPSHOT"
+val versionLogback = "1.5.38"
 
 libraryDependencies ++= Seq(
   "com.phasmidsoftware"        %% "flog"                     % versionFlog,
@@ -31,7 +32,7 @@ libraryDependencies ++= Seq(
   "org.scala-lang.modules"     %% "scala-parser-combinators" % "2.4.0",
   "joda-time"                   % "joda-time"                % "2.14.2",
   "org.scalatest"              %% "scalatest"                % scalaTestVersion % Test,
-  "ch.qos.logback"              % "logback-classic"          % "1.5.32"          % Runtime
+  "ch.qos.logback"              % "logback-classic"          % versionLogback          % Runtime
 )
 
 lazy val IT = config("it") extend Test
