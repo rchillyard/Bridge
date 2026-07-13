@@ -90,7 +90,7 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     given com.phasmidsoftware.gambit.game.State[State, State] = stateTC
     given com.phasmidsoftware.gambit.game.Game[State, CardPlay, Int] = gameTC
 
-    given TTCache[CacheKey] = FlatTTCache()
+    given TTCache[CacheKey] = FlatTTCache(maxSize = BridgeConfig.ttMaxSize)
 
     deal.assertAdjusted()
     val player = new BridgePlayer(

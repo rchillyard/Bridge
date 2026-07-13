@@ -1,7 +1,7 @@
 package com.phasmidsoftware.bridge.gambit.bits
 
 import com.phasmidsoftware.bridge.cards.bits.{BitConversions, BitState, DealBits, TrickPlay}
-import com.phasmidsoftware.bridge.cards.{CacheKey, DDResult, Deal, Suit, Tricks}
+import com.phasmidsoftware.bridge.cards.{BridgeConfig, CacheKey, DDResult, Deal, Suit, Tricks}
 import com.phasmidsoftware.gambit.game.{AlphaBetaPlayer, AlphaBetaWindow, FlatTTCache, State as GState, TTCache}
 
 import scala.util.Random
@@ -29,7 +29,7 @@ object BitAnalysis:
     given gameTC: BitWhistGame = new BitWhistGame
     given stateTC: BitWhistState = new BitWhistState(neededTricks, directionNS)
     given GState[BitState, BitState] = stateTC
-    given TTCache[CacheKey] = FlatTTCache()
+    given TTCache[CacheKey] = FlatTTCache(maxSize = BridgeConfig.ttMaxSize)
 
     val player = new AlphaBetaPlayer[BitState, BitState, TrickPlay, Int, CacheKey](
       me = if directionNS then 0 else 1,
