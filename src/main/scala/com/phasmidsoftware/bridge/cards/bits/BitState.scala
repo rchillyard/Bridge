@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards.bits
 
-import com.phasmidsoftware.bridge.cards.{CacheKey, Tricks}
+import com.phasmidsoftware.bridge.cards.{BridgeConfig, CacheKey, Tricks}
 
 /**
   * A double-dummy search state expressed entirely in bitboard terms -- no `Deal`/`Hand`/
@@ -124,17 +124,19 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
           if deal.nCards >= requiredMoves then None else Some(false)
 
   /**
-    * NS-centric heuristic for non-terminal positions: tricks banked so far, scaled well
-    * inside (-0.5, 0.5) -- `Whist`'s aspiration window `AlphaBetaWindow(-0.5, 0.5)` (which
-    * `BitAnalysis` reuses) assumes any non-terminal value stays inside that window, with
-    * only a PROVEN `isGoal` result (`heuristic` above returns `±Double.MaxValue` for those,
-    * overriding this) allowed to fall outside it. An unscaled integer trick-count would
-    * blow past +-0.5 as soon as either side banks even one more trick than the other,
-    * causing the narrow-window search to clamp/cut off before reaching a real conclusion.
-    * The max possible trick difference is `Deal.TricksPerDeal` (13); 0.03/trick keeps the
-    * worst case (0.39) safely inside the window.
+    * NS-centric heuristic for non-terminal positions: tricks banked so far, scaled by
+    * `BridgeConfig.heuristicScale` to stay safely inside the aspiration window
+    * (`BridgeConfig.aspirationWindow`, which `BitAnalysis` also uses) -- that window's
+    * search assumes every non-terminal value stays strictly inside it, with only a PROVEN
+    * `isGoal` result (`heuristic` above returns `±Double.MaxValue` for those, overriding
+    * this) allowed to fall outside. An unscaled integer trick-count would blow past the
+    * window as soon as either side banks even one more trick than the other, causing the
+    * narrow-window search to clamp/cut off before reaching a real conclusion.
+    * `heuristicScale` is derived from `aspirationWindow`, not independently configured, so
+    * the two can't drift out of the relationship that makes this safe -- see
+    * `BridgeConfig`'s doc comments.
     */
-  def heuristic: Double = (tricks.ns - tricks.ew).toDouble * 0.03
+  def heuristic: Double = (tricks.ns - tricks.ew).toDouble * BridgeConfig.heuristicScale
 
   /**
     * A transposition-table key. `deal.hands` (each a `HandBits`) already uses only bits

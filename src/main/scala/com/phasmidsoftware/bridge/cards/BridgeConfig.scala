@@ -23,3 +23,32 @@ object BridgeConfig:
     * some redundant re-computation, never correctness.
     */
   val ttMaxSize: Int = config.getInt("bridge.transposition-table.max-size")
+
+  /**
+    * The node budget for a single iterative-deepening iteration (`AlphaBetaPlayer.withMaxNodes`).
+    * The counter (and, separately, the transposition table) resets at the start of every
+    * iteration, so this is a per-depth budget, not a total one.
+    */
+  val nodesPerIteration: Int = config.getInt("bridge.nodes-per-iteration")
+
+  /**
+    * The half-width of the root aspiration window passed to `withAspirationWindow` (i.e. the
+    * search uses `AlphaBetaWindow(-aspirationWindow, aspirationWindow)`). This is the one free
+    * parameter here -- `heuristicScale` below is *derived* from it, deliberately not
+    * independently configurable, because the two must stay coupled: the aspiration-window
+    * technique is only sound if every non-terminal heuristic value is guaranteed to stay
+    * strictly inside the window, and only a proven result is allowed to fall outside it.
+    */
+  val aspirationWindow: Double = config.getDouble("bridge.aspiration-window")
+
+  /**
+    * The per-trick scale used by `BitState.heuristic` (tricks-banked-so-far * heuristicScale),
+    * derived from `aspirationWindow` rather than configured independently: the worst case,
+    * `Deal.TricksPerDeal` tricks in one side's favour, must stay strictly inside the window,
+    * with `safetyMargin` (< 1) left as headroom. Getting this wrong the same way twice -- one
+    * knob changed without the other -- is exactly the bug `aspirationWindow`'s doc just
+    * described; deriving it removes the possibility rather than just documenting it.
+    */
+  val heuristicScale: Double =
+    val safetyMargin = 0.9
+    safetyMargin * aspirationWindow / Deal.TricksPerDeal

@@ -15,8 +15,9 @@ import scala.util.Random
   */
 object BitAnalysis:
 
-  val NODES_PER_ITERATION: Int = 1_000_000
-  val DEPTH_STEP: Int = 4
+  // A trick is always 4 cards -- not a tunable assumption, so unlike nodesPerIteration/
+  // aspiration-window (BridgeConfig) this isn't configurable.
+  val DEPTH_STEP: Int = Deal.CardsPerTrick
 
   def analyzeDoubleDummy(
                            deal: DealBits,
@@ -34,9 +35,9 @@ object BitAnalysis:
     val player = new AlphaBetaPlayer[BitState, BitState, TrickPlay, Int, CacheKey](
       me = if directionNS then 0 else 1,
       depth = depth
-    ).withMaxNodes(NODES_PER_ITERATION)
+    ).withMaxNodes(BridgeConfig.nodesPerIteration)
       .withKeyFn(s => s.evaluateKey)
-      .withAspirationWindow(AlphaBetaWindow(-0.5, 0.5))
+      .withAspirationWindow(AlphaBetaWindow(-BridgeConfig.aspirationWindow, BridgeConfig.aspirationWindow))
 
     val initialState = BitState(deal, strain, openingLeader, Nil, Tricks.zero)
     runPlayer(player, directionNS, depth, initialState)

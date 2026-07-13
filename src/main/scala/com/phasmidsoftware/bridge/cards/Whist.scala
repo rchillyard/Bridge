@@ -96,9 +96,9 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     val player = new BridgePlayer(
       me = if directionNS then 0 else 1,
       depth = depth
-    ).withMaxNodes(Whist.NODES_PER_ITERATION)
+    ).withMaxNodes(BridgeConfig.nodesPerIteration)
       .withKeyFn(s => s.evaluateKey)
-      .withAspirationWindow(AlphaBetaWindow(-0.5, 0.5))
+      .withAspirationWindow(AlphaBetaWindow(-BridgeConfig.aspirationWindow, BridgeConfig.aspirationWindow))
     val initialState = State(this)
     logger.info(s"analyzeDoubleDummy: neededTricks=$tricks, directionNS=$directionNS, depth=$depth, branching=${initialState.enumeratePlays.size}")
     val t0 = System.currentTimeMillis()
@@ -149,8 +149,8 @@ object Whist:
 
   val MAX_STATES: Int = 800_000
   val MAX_NODES: Int = 5_000_000 // retained for reference / future use
-  val NODES_PER_ITERATION: Int = 1_000_000 // node budget per iterative-deepening iteration
-  val DEPTH_STEP: Int = Deal.CardsPerTrick // 4: iterate at trick boundaries
+  val DEPTH_STEP: Int = Deal.CardsPerTrick // 4: iterate at trick boundaries -- a trick is always 4 cards,
+  // not a tunable assumption, so unlike NODES_PER_ITERATION/aspiration-window this isn't in BridgeConfig.
   private val logger = LazyLogger(getClass)
 
 @main def doubleDummySolver(args: String*): Unit = {
