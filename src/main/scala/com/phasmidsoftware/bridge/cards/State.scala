@@ -37,8 +37,22 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
     * This change resulted in approximately 3x performance improvement for the end-position tests.
     * It resulted in being able to complete for the double-dummy analysis.
     *
-    * @return a tuple of four Long values, each representing the bitwise encoding
-    *         of the card sequences held in one of the four hands in the deal.
+    * Each hand's `Long` only ever uses bits 0-51 (`suit.priority*13 + seq.priority` maxes out
+    * at 3*13+12 = 51), leaving bits 52-63 free. Those spare bits carry the current trick's
+    * in-progress state (the leader, how many cards have been played to it so far, and each of
+    * those plays' actual suit/rank) -- WITHOUT that, two genuinely different positions with the
+    * same remaining cards in every hand but a different partial-trick history (different
+    * leader, different provisional winner) hash identically, and a proven/bounded result cached
+    * for one can be wrongly served up for the other. This was latent even when only `Exact`
+    * entries were reused (the collision still had to land on an `Exact` entry to bite), but
+    * became a real, reproducible wrong answer once `LowerBound`/`UpperBound` entries -- which
+    * make up most entries in a real search -- became reusable too (see the Gambit-side
+    * `TTCache.probe` fix this key change accompanies).
+    *
+    * @return a tuple of four Long values: the low 52 bits of each are the bitwise encoding of
+    *         the card sequences held in one of the four hands in the deal; the top 12 bits of
+    *         the first carry the trick's leader and play count, and the top 12 bits of each
+    *         (including the first) carry that play-slot's actual card, if any.
     */
   def evaluateKey: CacheKey =
     def handBits(hand: Hand): Long =
@@ -48,8 +62,25 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
         }
       }
 
+    // 6 bits per play: suit.priority (2 bits) then rank.priority (4 bits) of the actual card played
+    // (not CardPlay.suit/priority, which reference the Sequence it came from, not necessarily the
+    // resolved card's own rank).
+    def playBits(play: CardPlay): Long = (play.card.suit.priority.toLong << 4) | play.card.rank.priority.toLong
+
+    def slotBits(index: Int): Long = if trick.plays.sizeIs > index then playBits(trick.plays(index)) else 0L
+
+    val leaderCode: Long = trick.leader.map(_.toLong).getOrElse(4L) // 3 bits; 4 = undefined (only the initial state)
+    val countCode: Long = trick.plays.size.toLong // 3 bits, 0..4
+
+    val trickBits0 = (leaderCode << 9) | (countCode << 6) | slotBits(0)
+
     val h = whist.deal.hands
-    (handBits(h.head), handBits(h(1)), handBits(h(2)), handBits(h(3)))
+    (
+      handBits(h.head) | (trickBits0 << 52),
+      handBits(h(1)) | (slotBits(1) << 52),
+      handBits(h(2)) | (slotBits(2) << 52),
+      handBits(h(3)) | (slotBits(3) << 52)
+    )
 
   /**
     * Method to enumerate all of the possible states that could be children of this State.
