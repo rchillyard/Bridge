@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards.bits
 
-import com.phasmidsoftware.bridge.cards.Tricks
+import com.phasmidsoftware.bridge.cards.{CacheKey, Tricks}
 
 /**
   * A double-dummy search state expressed entirely in bitboard terms -- no `Deal`/`Hand`/
@@ -135,3 +135,32 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
     * worst case (0.39) safely inside the window.
     */
   def heuristic: Double = (tricks.ns - tricks.ew).toDouble * 0.03
+
+  /**
+    * A transposition-table key. `deal.hands` (each a `HandBits`) already uses only bits
+    * 0-51 of its `Long` (`suitIndex*13 + rank` maxes out at 3*13+12 = 51), leaving bits
+    * 52-63 free -- used here for state that isn't otherwise determined by which cards
+    * remain in each hand, but that still affects the game-theoretic value of the position:
+    * the current trick's leader and in-progress plays (`trickPlays.size` is always 0..3;
+    * see `play`), and `tricks.ns` (`tricks.ew` is derivable from remaining cards minus
+    * `tricks.ns`, so doesn't need its own slot). Without these, two genuinely different
+    * positions -- same remaining cards, but reached via a different trick history, e.g. a
+    * different NS/EW split of already-completed tricks with the same next leader -- would
+    * hash identically. See `State.evaluateKey` in the object-graph engine for the bug this
+    * mirrors and avoids from the start.
+    */
+  def evaluateKey: CacheKey =
+    def playBits(p: TrickPlay): Long = (p.suitIndex.toLong << 4) | p.rank.toLong
+    def slotBits(index: Int): Long = if trickPlays.sizeIs > index then playBits(trickPlays(index)) else 0L
+
+    val extra0 = (leader.toLong << 8) | (trickPlays.size.toLong << 6) | tricks.ns.toLong
+    val extra1 = slotBits(0)
+    val extra2 = slotBits(1)
+    val extra3 = slotBits(2)
+
+    (
+      deal.hand(0).bits | (extra0 << 52),
+      deal.hand(1).bits | (extra1 << 52),
+      deal.hand(2).bits | (extra2 << 52),
+      deal.hand(3).bits | (extra3 << 52)
+    )

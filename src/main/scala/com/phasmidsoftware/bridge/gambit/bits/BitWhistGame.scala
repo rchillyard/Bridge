@@ -27,7 +27,16 @@ class BitWhistGame extends Game[BitState, TrickPlay, Int]:
 
   def nextPlayer(s: BitState, current: Int): Int = (current + 1) % 4
 
-  override def currentPlayer[P](s: BitState)(using state: GState[P, BitState]): Int = s.currentPlayer
+  /**
+    * Normalized to partnership (0 = NS, 1 = EW), matching `me`'s scale in `BitWhistState`/
+    * `AlphaBetaPlayer` -- NOT the raw hand index. `WhistGame.currentPlayer` does the same
+    * `seat % 2` normalization; returning the raw hand index here (as an earlier version of
+    * this method did) makes `isMaximizing` compare a partnership value against a seat value,
+    * so it only ever matches by coincidence -- e.g. correct for North (seat 0) but inverted
+    * for South (seat 2), silently treating the declaring side's own South-hand decisions as
+    * working against it.
+    */
+  override def currentPlayer[P](s: BitState)(using state: GState[P, BitState]): Int = s.currentPlayer % 2
 
   override def winner(s: BitState, current: Int): Map[Int, Int] =
     val prev = (current + 3) % 4

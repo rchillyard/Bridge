@@ -89,4 +89,21 @@ class BitAnalysisSpec extends flatspec.AnyFlatSpec with should.Matchers {
       }
     }
   }
+
+  // The three-card "automatic squeeze" position from WhistSpec -- the exact deal that exposed
+  // the evaluateKey collision bug in the object-graph engine (a proven-makeable squeeze coming
+  // back as not-makeable once LowerBound/UpperBound TT reuse was added). Both engines' TTs get
+  // exercised hardest here, across all four leaders and both strains, since that's exactly the
+  // dimension (trick-in-progress state, NS/EW split) the bug was in.
+  it should "agree with Whist.analyzeDoubleDummy on the three-card automatic squeeze, every leader and strain" in {
+    val target = Deal.fromHandStrings("test", "N",
+      List(List("AJ", "K", "", ""), List("KQ", "A", "", ""), List("2", "2", "", "A"), List("98", "", "4", "")))
+    for (leader <- 0 to 3; strain <- Seq(Some(Clubs), None)) {
+      val oldResult = Whist(target, leader, strain).analyzeDoubleDummy(3, directionNS = true)
+      val newResult = BitAnalysis.analyzeDoubleDummy(target, leader, strain, 3, directionNS = true)
+      withClue(s"leader=$leader, strain=$strain: old=$oldResult, new=$newResult: ") {
+        makesOf(newResult) shouldBe makesOf(oldResult)
+      }
+    }
+  }
 }

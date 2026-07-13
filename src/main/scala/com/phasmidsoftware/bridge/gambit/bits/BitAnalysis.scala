@@ -1,20 +1,17 @@
 package com.phasmidsoftware.bridge.gambit.bits
 
-import com.phasmidsoftware.bridge.cards.bits.{BitConversions, BitState, DealBits}
-import com.phasmidsoftware.bridge.cards.{DDResult, Deal, Suit, Tricks}
-import com.phasmidsoftware.gambit.game.{AlphaBetaPlayer, AlphaBetaWindow, State as GState}
+import com.phasmidsoftware.bridge.cards.bits.{BitConversions, BitState, DealBits, TrickPlay}
+import com.phasmidsoftware.bridge.cards.{CacheKey, DDResult, Deal, Suit, Tricks}
+import com.phasmidsoftware.gambit.game.{AlphaBetaPlayer, AlphaBetaWindow, FlatTTCache, State as GState, TTCache}
 
 import scala.util.Random
 
 /**
   * Entry point for the bitboard engine, mirroring `Whist.analyzeDoubleDummy`/`runPlayer`.
   *
-  * Deliberately does NOT use a transposition table (unlike the object-graph engine's
-  * `FlatTTCache[CacheKey]`): this is a first validation pass, and a cache key sound enough
-  * to avoid conflating different mid-trick positions (see the discussion in `BitState`'s
-  * doc comment about why the object-graph engine's key only needs the four hands' bits)
-  * needs its own careful design -- deferred until this engine's core correctness is
-  * established against known answers.
+  * Uses a transposition table keyed by `BitState.evaluateKey`, which -- having been designed
+  * after the object-graph engine's `State.evaluateKey` was found to be missing trick-in-progress
+  * state and the NS trick count -- includes both from the start.
   */
 object BitAnalysis:
 
@@ -32,11 +29,13 @@ object BitAnalysis:
     given gameTC: BitWhistGame = new BitWhistGame
     given stateTC: BitWhistState = new BitWhistState(neededTricks, directionNS)
     given GState[BitState, BitState] = stateTC
+    given TTCache[CacheKey] = FlatTTCache()
 
-    val player = AlphaBetaPlayer[BitState, BitState, com.phasmidsoftware.bridge.cards.bits.TrickPlay, Int](
+    val player = new AlphaBetaPlayer[BitState, BitState, TrickPlay, Int, CacheKey](
       me = if directionNS then 0 else 1,
       depth = depth
     ).withMaxNodes(NODES_PER_ITERATION)
+      .withKeyFn(s => s.evaluateKey)
       .withAspirationWindow(AlphaBetaWindow(-0.5, 0.5))
 
     val initialState = BitState(deal, strain, openingLeader, Nil, Tricks.zero)
@@ -60,7 +59,7 @@ object BitAnalysis:
     )
 
   private def runPlayer(
-                          player: AlphaBetaPlayer[BitState, BitState, com.phasmidsoftware.bridge.cards.bits.TrickPlay, Int, Any],
+                          player: AlphaBetaPlayer[BitState, BitState, TrickPlay, Int, CacheKey],
                           directionNS: Boolean,
                           depth: Int,
                           initialState: BitState
