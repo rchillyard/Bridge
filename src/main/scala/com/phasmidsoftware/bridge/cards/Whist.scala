@@ -147,10 +147,8 @@ object Whist:
       case None =>
         DDResult.Inconclusive
 
-  val MAX_STATES: Int = 800_000
-  val MAX_NODES: Int = 5_000_000 // retained for reference / future use
   val DEPTH_STEP: Int = Deal.CardsPerTrick // 4: iterate at trick boundaries -- a trick is always 4 cards,
-  // not a tunable assumption, so unlike NODES_PER_ITERATION/aspiration-window this isn't in BridgeConfig.
+  // not a tunable assumption, so unlike BridgeConfig.nodesPerIteration/aspirationWindow this isn't configurable.
   private val logger = LazyLogger(getClass)
 
 @main def doubleDummySolver(args: String*): Unit = {

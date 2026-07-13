@@ -213,7 +213,6 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
   behavior of "Trick.sufficientMovesRemaining"
 
   it should "return true when enough moves remain for NS goal" in {
-    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val trick = Trick.empty
     val tricks = Tricks(0, 0)
     // 52 moves remaining, need 9 tricks = 36 moves
@@ -221,7 +220,6 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
   }
 
   it should "return false when not enough moves remain for NS goal" in {
-    val deal = Deal.createRandom("test", 0L, adjustForPartnerships = false)
     val trick = Trick.empty
     // NS has 0 tricks, needs 9, only 8 moves remaining = 2 tricks max
     trick.sufficientMovesRemaining(8, directionNS = true, 9, Tricks(0, 0)) shouldBe false
@@ -281,7 +279,6 @@ class TrickSpec extends flatspec.AnyFlatSpec with should.Matchers {
         List("", "87", "Q", "8"), // South: H87, DQ, C8
         List("", "A", "9", "T9") // West: HA, D9, CT9
       ))
-    val whist = Whist(deal, 0, Some(Clubs))
     val play1 = CardPlay(deal, Some(Clubs), 0, Spades, 0) // SA
     val trick = Trick.empty :+ play1
     // East is void in spades and has clubs (trumps) — can ruff

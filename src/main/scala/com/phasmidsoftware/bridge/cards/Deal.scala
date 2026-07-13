@@ -7,7 +7,7 @@ package com.phasmidsoftware.bridge.cards
 import com.phasmidsoftware.bridge.cards.DDResult
 import com.phasmidsoftware.bridge.cards.Rank.ranks
 import com.phasmidsoftware.bridge.cards.Suit.suits
-import com.phasmidsoftware.gambit.util.{LazyLogger, Output, Outputable, Shuffle}
+import com.phasmidsoftware.gambit.util.{Output, Outputable, Shuffle}
 
 import java.io.Writer
 import scala.language.postfixOps
@@ -339,7 +339,7 @@ object Deal {
     val cards = for {
       hand <- hands
       if hand.cards.size == cardsPerHand
-      (suit, holding) <- hand.holdings
+      (_, holding) <- hand.holdings
       sequence <- holding.sequences
       card <- sequence.cards
     } yield card
@@ -354,6 +354,4 @@ object Deal {
     for ((d, i) <- boards.zipWithIndex) writer.append(d.asPBN(map, i + 1))
     writer.flush()
   }
-
-  private val logger = LazyLogger(getClass)
 }

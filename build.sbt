@@ -20,7 +20,7 @@ resolvers += Resolver.mavenLocal
 lazy val versionFlog   = "1.0.13"
 lazy val versionNumber = "1.10.5"
 lazy val versionGambit = "1.2.2-SNAPSHOT"
-val versionLogback = "1.5.38"
+val versionLogback     = "1.5.38"
 
 libraryDependencies ++= Seq(
   "com.phasmidsoftware"        %% "flog"                     % versionFlog,
