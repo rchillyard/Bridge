@@ -49,6 +49,14 @@ class WinchesterSpec extends flatspec.AnyFlatSpec with should.Matchers with Time
     analyzeMakableContracts(pbn(2))
   }
 
+  it should "analyze board 7" in {
+    analyzeMakableContracts(pbn(6))
+  }
+
+  it should "analyze board 12" in {
+    analyzeMakableContracts(pbn(11))
+  }
+
   private def analyzeMakableContracts(game: Game): Unit = {
     val deal = game("Deal").value.asInstanceOf[DealValue].deal
     val detail = game("OptimumResultTable").detail
