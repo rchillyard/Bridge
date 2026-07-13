@@ -25,7 +25,8 @@ object BitAnalysis:
                            strain: Option[Int],
                            neededTricks: Int,
                            directionNS: Boolean,
-                           depth: Int = Deal.CardsPerDeal
+                           depth: Int,
+                           maxNodes: Int
                          ): DDResult =
     given gameTC: BitWhistGame = new BitWhistGame
     given stateTC: BitWhistState = new BitWhistState(neededTricks, directionNS)
@@ -35,7 +36,7 @@ object BitAnalysis:
     val player = new AlphaBetaPlayer[BitState, BitState, TrickPlay, Int, CacheKey](
       me = if directionNS then 0 else 1,
       depth = depth
-    ).withMaxNodes(BridgeConfig.nodesPerIteration)
+    ).withMaxNodes(maxNodes)
       .withKeyFn(s => s.evaluateKey)
       .withAspirationWindow(AlphaBetaWindow(-BridgeConfig.aspirationWindow, BridgeConfig.aspirationWindow))
 
@@ -48,7 +49,8 @@ object BitAnalysis:
                            openingLeader: Int,
                            strain: Option[Suit],
                            neededTricks: Int,
-                           directionNS: Boolean
+                           directionNS: Boolean,
+                           maxNodes: Int = BridgeConfig.nodesPerIteration
                          ): DDResult =
     analyzeDoubleDummy(
       BitConversions.toDealBits(deal),
@@ -56,7 +58,8 @@ object BitAnalysis:
       BitConversions.toStrainIndex(strain),
       neededTricks,
       directionNS,
-      depth = math.min(Deal.CardsPerDeal, deal.nCards)
+      depth = math.min(Deal.CardsPerDeal, deal.nCards),
+      maxNodes = maxNodes
     )
 
   private def runPlayer(

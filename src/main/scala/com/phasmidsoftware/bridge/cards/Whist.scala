@@ -73,6 +73,8 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     * @param tricks      The number of tricks needed by the protagonists to succeed.
     * @param directionNS A boolean indicating whether the protagonists are North-South (true) or East-West (false).
     * @param depth       The depth of the search tree for the analysis. Defaults to the minimum of the cards in the deal or the maximum cards per deal.
+    * @param maxNodes    The per-iteration node budget. Defaults to `BridgeConfig.nodesPerIteration`; callers
+    *                    (e.g. a test trying a hard real deal with more patience than the default) may override it.
     * @return A [[DDResult]]:
     *         - [[DDResult.Exact]] if the full search completed.
     *         - [[DDResult.Partial]] if the node limit was hit but one side found a witness line.
@@ -81,7 +83,8 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
   def analyzeDoubleDummy(
                           tricks: Int,
                           directionNS: Boolean,
-                          depth: Int = math.min(Deal.CardsPerDeal, deal.nCards)
+                          depth: Int = math.min(Deal.CardsPerDeal, deal.nCards),
+                          maxNodes: Int = BridgeConfig.nodesPerIteration
                         ): DDResult =
 
     given gameTC: WhistGame = new WhistGame(this) // needs to be a named given so WhistState can find it
@@ -96,7 +99,7 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     val player = new BridgePlayer(
       me = if directionNS then 0 else 1,
       depth = depth
-    ).withMaxNodes(BridgeConfig.nodesPerIteration)
+    ).withMaxNodes(maxNodes)
       .withKeyFn(s => s.evaluateKey)
       .withAspirationWindow(AlphaBetaWindow(-BridgeConfig.aspirationWindow, BridgeConfig.aspirationWindow))
     val initialState = State(this)
