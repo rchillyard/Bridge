@@ -10,6 +10,15 @@ to play perfectly with full knowledge of all four hands.
 The solver is integrated via the Whist model — a simplified bridge game without
 auction — and is accessed through `Whist.analyzeDoubleDummy`.
 
+**Update, 2026-07-14**: everything below this point up to "The Bitboard Engine"
+describes the original object-graph engine (`State`/`WhistGame`/`WhistState`),
+still in place and still the trusted reference for cross-validation. A second,
+bitboard-based engine (`BitState`/`BitWhistGame`/`BitAnalysis`, package
+`bridge.cards.bits` / `bridge.gambit.bits`) was added afterwards, running
+*alongside* it rather than replacing it. See "The Bitboard Engine" and "Future
+Work and Performance Outlook" below for what changed, what's still open, and
+where performance is likely headed from here.
+
 Overarching design philosophy (where item 1 is what I naturally got wrong before):
 
 - Get the functionality right before worrying about performance or extensibility!!
@@ -464,3 +473,308 @@ Seven bugs were identified and fixed during the initial implementation:
    instead of partnership (0-1) caused wrong `maximizing` computation
 6. **`_enumeratePlays` leader** — wrong leader selected after a complete trick
 7. **`enumerateSubsequentPlays` leader** — related leader computation bug
+
+---
+
+## The Bitboard Engine
+
+### Motivation
+
+The object-graph engine's search algorithm (alpha-beta, iterative deepening,
+a transposition table, an aspiration window — all from Gambit) is sound and
+already reasonably tight. The actual cost, confirmed by reading the hot path
+rather than guessing, was the state representation: `Deal.play` rebuilds all
+four hands' persistent `Map`/`Seq` structures on every single card play, and
+`WhistGame.moves`/`applyMove` build full child `State`s just to read off one
+field, then discard them and re-derive the same candidates a second time in
+`applyMove`. None of that is inherent to double-dummy search; it's an
+artifact of representing a hand as a `Map` of `Holding`s of `Sequence`s.
+
+The fix: represent the search state as bitmasks (one `Long` per hand, one
+`Int` per suit) instead of the `Deal`/`Hand`/`Holding`/`Sequence` object
+graph, and run it as a **second, independent engine alongside the first** —
+not a rewrite of it. Every new result is cross-validated against the
+object-graph engine's known-correct answer on the same deal and target before
+being trusted (`BitAnalysisSpec`, `BitAnalysisITSpec`, `WinchesterBoard1Spec`,
+`WinchesterBoard12Spec`). This project deliberately never got to the point of
+touching `State`/`WhistGame`/`WhistState` themselves — the additive approach
+was safer and, so far, sufficient to prove out the idea.
+
+### Key Classes
+
+| Class | Package | Role |
+|-------|---------|------|
+| `SuitMask` | `bridge.cards.bits` | Opaque `Int`; a 13-bit mask over one suit's ranks |
+| `DealBits` | `bridge.cards.bits` | Four hands, each a `Long` (`suitIndex*13 + rank` per bit) |
+| `BitState` | `bridge.cards.bits` | Search state: `DealBits` + strain + trick-in-progress + running tricks |
+| `TrickBits` | `bridge.cards.bits` | Trick-winner scoring, ported from `Trick.score` to bit positions |
+| `BitConversions` | `bridge.cards.bits` | `Deal ⇄ DealBits`, `Suit ⇄ Int` at the boundary (parsing/display only) |
+| `BitWhistGame` | `bridge.gambit.bits` | Gambit `Game[BitState, TrickPlay, Int]` typeclass instance |
+| `BitWhistState` | `bridge.gambit.bits` | Gambit `State[BitState, BitState]` typeclass instance |
+| `BitAnalysis` | `bridge.gambit.bits` | Entry point, mirrors `Whist.analyzeDoubleDummy` |
+
+`Card`/`Suit`/`Rank` and the `Holding`/`Hand`/`Deal` object graph are kept —
+they still do the PBN-parsing and display work — but nothing on the search
+hot path touches them; conversion happens once at the root and, for display,
+once at the leaves.
+
+### Design Decisions
+
+**Bit direction is inverted from `Rank.priority`.** Bit 0 is the lowest
+surviving rank, bit 12 the highest — the opposite of `Rank.priority`
+elsewhere (where 0 is the Ace). This makes "does card X beat card Y" a plain
+integer comparison of bit positions, and makes rank promotion free: once a
+higher card's bit is cleared everywhere, the next card down is simply the new
+highest set bit. No `Holding.promote`/`quit` bookkeeping is needed at all.
+
+**Equivalence classes replace `Sequence`, computed fresh, not maintained.**
+`SuitMask.equivalenceClasses(handBits, opponentBits)` partitions a hand's
+suit-mask into maximal runs uninterrupted by an **opponent**-partnership
+card — not any other hand's card. A partner's card sitting between two of the
+hand's own cards does **not** break their equivalence; only a live opponent
+card does. This one distinction — partner doesn't count, opponent does — is
+the load-bearing design decision behind how aggressively the search prunes
+its own move list, and is discussed further under "Future Work" below, in
+response to a direct question about it.
+
+**The transposition-table key was designed correctly the first time.**
+`BitState.evaluateKey` packs the current trick's leader, in-progress plays,
+and `tricks.ns` into the spare high bits (52–63) of each hand's `Long`. This
+mirrors a fix that had to be **retrofitted twice** into the object-graph
+engine's `State.evaluateKey` after two real collision bugs were found by
+testing (see "Correctness Fixes" below) — the bit engine's key included both
+from the start, precisely because that lesson was already learned once.
+
+**Deliberate simplifications, chosen for a smaller and more easily verified
+first implementation, not for correctness reasons** (documented in
+`BitState`'s own class doc):
+
+- No `Strategy`-based move ordering (`Cover`/`Duck`/`Finesse`/`Ruff`/etc. from
+  the object-graph engine) — relies solely on Gambit's generic heuristic-based
+  reordering. This offers *every* equivalence-class representative as a legal
+  discard/ruff candidate, which is strictly more (never fewer) than the old
+  engine tries — correct by construction, just not as tightly ordered.
+- A weaker (but always-safe) "can the declaring side still reach the target"
+  check — omits the object-graph engine's extra `declaringSideCanWin`
+  tightening. Can only be slower to prove `false`, never wrong.
+- A coarser non-terminal heuristic (tricks-banked-so-far only, not the
+  object-graph engine's full card-potential `Deal.evaluate`). Only affects
+  move-ordering quality and unproven `Partial` estimates — never a proven
+  `Exact` result, since `isGoal` overrides the heuristic wherever it fires.
+
+### Shared Configuration (`BridgeConfig` / `application.conf`)
+
+Both engines now read the same tunables from
+`src/main/resources/application.conf` via `BridgeConfig`, each overridable
+without editing the file (e.g. `-Dbridge.nodes-per-iteration=2000000`):
+
+- `bridge.transposition-table.max-size` (`ttMaxSize`, default 800,000) — caps
+  `FlatTTCache` so a hard position can't grow the table without bound and OOM
+  before the node budget is hit; a full table just means more cache misses,
+  never a wrong answer.
+- `bridge.nodes-per-iteration` (`nodesPerIteration`, default 1,000,000) — the
+  per-iteration node budget for `withMaxNodes`; both `Whist.analyzeDoubleDummy`
+  and `BitAnalysis.analyzeDoubleDummy` also accept an explicit `maxNodes`
+  parameter overriding this default for a single call (used by
+  `WinchesterBoard12Spec` to give the two engines very different budgets —
+  see below).
+- `bridge.aspiration-window` (`aspirationWindow`, default 0.5) — the one free
+  parameter; `BridgeConfig.heuristicScale` (used by `BitState.heuristic`) is
+  *derived* from it rather than configured independently, since the two must
+  stay coupled for the aspiration-window technique to remain sound.
+
+`build.sbt`'s `forwardedBridgeProps` forwards any `-Dbridge.*` system property
+into the forked `Test`/`IT`/`run` JVMs, since `fork := true` would otherwise
+swallow it silently.
+
+### Gambit-Side Fixes (published as Gambit 1.2.2)
+
+Three fixes to the shared search engine, independent of the bitboard work but
+motivated by it:
+
+- **`LowerBound`/`UpperBound` transposition entries are now reused as
+  cutoffs**, not just `Exact` — the object-graph engine's own design doc
+  above had flagged this as "the primary remaining performance lever from the
+  TT side" (Issue #14); it's now done in `TTCache.scala`.
+- **Aspiration-window fail re-search**: when a narrow-window search fails high
+  or low, `searchWithAspirationRetry` now re-searches with the full window
+  rather than trusting the narrow, unresolved value. Without this, a single
+  heuristic overshoot at one node could get cached and reused verbatim at
+  every other node reaching that same position, turning a one-off estimate
+  into a repeated, amplified wrong answer.
+- **The transposition table is cleared at the start of every
+  iterative-deepening iteration**, not just once at the very start of the
+  search — otherwise it silently accumulates entries computed under earlier
+  iterations' now-stale alpha-beta windows.
+
+### Correctness Fixes Along the Way
+
+- **`evaluateKey` collision, found and fixed twice** in the object-graph
+  engine: first, trick-in-progress state (leader/count/in-progress plays)
+  was missing entirely from the key, so two genuinely different positions
+  reached via different partial tricks hashed identically; then `tricks.ns`
+  itself turned out to be a second, separate gap. Both are now included.
+  `BitState.evaluateKey` was designed with both from day one.
+- **`Trick.sufficientMovesRemaining`** fixed to not override an already-
+  exhausted deal.
+- **`BitWhistGame.currentPlayer`** was returning the raw hand index (0–3)
+  instead of the partnership (0/1) in its first draft — the exact same class
+  of bug the object-graph engine's design doc already documents fixing once
+  ("`currentPlayer` partnership vs seat"), recurring in the new engine and
+  caught only by cross-validating against the old one.
+
+### Test Infrastructure
+
+- The `IT` sbt configuration — present in `build.sbt` but commented out —
+  was restored and wired to `src/it/scala`, so `sbt IT/test` (or
+  `sbt "IT / test"`) actually runs it for the first time via a normal sbt
+  task.
+- Cross-validation specs were added comparing the two engines' live answers
+  against each other (not just against a fixed hand-derived expectation) on
+  both small hand-built end positions and real club/tournament deals
+  (`BitAnalysisSpec`/`BitAnalysisITSpec`, `WinchesterBoard1Spec`,
+  `WinchesterBoard12Spec`).
+- The slowest of these — the full-52-card `pendingUntilFixed` Winchester
+  board specs, and the ten-through-thirteen-card head-to-head cross-checks —
+  were relocated into `IT` once they pushed the default `sbt test` run past
+  7 minutes and, in one run inside IntelliJ (which does not necessarily
+  apply the same `-Xmx8g` fork setting `build.sbt` gives the sbt-launched
+  JVM), exhausted the heap. Default `sbt test` is back under a minute.
+- Running the full `IT` suite for what appears to be the first time (per the
+  above, it was never wired into sbt before this work) surfaced 25 failures
+  in specs that predate this project (`ProblemSpec`, `WinchesterSpec`,
+  `WhistPBNSpec`, `AnalysisSpec`) — some match previously-flagged
+  known-bad cases (e.g. a suspected fixture error on Winchester board 1;
+  boards 3/7 already flagged as slow/non-terminating), others (`AnalysisSpec`/
+  `WhistPBNSpec` failing on nearly every deal) don't have a prior baseline to
+  compare against, since this command could not run before. Not yet
+  investigated further — parked deliberately, not swept under the rug.
+
+### Empirical Performance Finding
+
+At 5× the default per-iteration node budget (5,000,000 nodes), the
+object-graph engine reliably runs out of memory — observed: 13 minutes, heap
+climbing steadily to an 8GB ceiling, dead mid-iteration. The bit engine
+handles the identical 5× budget in **~14 seconds**, heap never exceeding
+~2.6GB, with clear GC reclamation between checkpoints. This is a measured
+result, not a design argument: the bit engine genuinely does not retain
+`Deal`/`Hand`/`Holding` objects the way the object-graph engine does.
+
+### Known Open Gap
+
+On the ten/eleven/twelve-card synthetic end positions in `BitAnalysisITSpec`,
+the bit engine converges to *less* search depth than the object-graph engine
+on the identical position and target — a `Partial` result where the old
+engine reaches `Exact`, or a shallower `Partial` than the old engine's. Not
+yet root-caused. The leading suspect is the deliberate simplification noted
+above: no `Strategy`-based move ordering, so the bit engine's search explores
+its (equally legal) candidate moves in a less efficient order and does more
+work to reach the same conclusion. This is a hypothesis, not a diagnosis.
+
+---
+
+## Future Work and Performance Outlook
+
+### Not Yet Implemented
+
+1. **`Strategy`-based move ordering for the bit engine.** The single most
+   likely candidate to close the known depth gap above, and — see the next
+   section — also the safe way to capture the branching-factor intuition
+   behind the question that prompted this write-up. Purely a heuristic
+   (affects ordering, not legality), so it carries no correctness risk.
+2. **Rank reduction / cross-position suit canonicalization.** A suit's
+   *relative* structure (which of the 13 ranks are alive and who holds them,
+   independent of the absolute ranks) is often shared across otherwise
+   distinct positions. Real double-dummy solvers (DDS/GIB) exploit this
+   heavily; this codebase doesn't yet, beyond the exact-position transposition
+   table. Scoped in the original project plan as a stretch goal; not started.
+3. **Systematic profiling.** Every optimization so far has come from reading
+   the hot path and reasoning about allocation and search structure, not from
+   a profiler run (JFR/async-profiler) against the actual bit engine. Cheap
+   to do, and would settle open questions like how much time now goes to TT
+   hashing, GC, or recomputing equivalence classes fresh at every node versus
+   caching them once per unique 26-bit opponent/own-suit combination.
+4. **Parallel/multi-threaded search.** Not attempted at all. A modern
+   multi-core machine could plausibly give a near-linear win via a shared-TT
+   parallel search (e.g. Lazy-SMP style, as used in strong chess engines),
+   entirely orthogonal to every optimization above.
+5. **Root-causing the known gaps above** — the ten/eleven/twelve-card
+   depth disagreement, and the 25 IT-suite failures in pre-existing specs —
+   both flagged, neither investigated.
+6. **The object-graph engine's own "next structural fix"** (mutable
+   `Deal`/play-unplay, noted in this doc's original "Memory" section) is now
+   effectively moot: the bit engine already solves that exact allocation
+   problem via a different representation, so there's no remaining reason to
+   pursue it in the old engine.
+
+### Performance Prediction
+
+The honest answer is that sub-second full-52-card analysis is not close, and
+there is no single remaining change likely to get there — DDS/GIB reach that
+speed through years of accumulated technique (rank reduction across all four
+suits at once, a tuned move-ordering system, and in modern versions parallel
+search plus small-suit-combination lookup tables), of which this project has
+so far implemented one piece (equivalence classes) well, plus the standard
+alpha-beta/TT/aspiration-window/iterative-deepening machinery. What's been
+measured is a large **constant-factor** win — the memory/time comparison
+above is roughly two orders of magnitude — not a change in the underlying
+exponential blow-up with deal size.
+
+A calibrated expectation, not a promise: restoring move ordering (item 1
+above) should noticeably shrink the time to *prove* (`Exact`, not `Partial`)
+harder end positions — plausibly from minutes down to single-digit seconds
+for the currently-problematic ten-to-thirteen-card cases — because alpha-beta
+efficiency is dominated by whether the first move tried at each node is
+already the best one. Getting a full 52-card deal to `Exact` in real time
+almost certainly still needs rank reduction and/or parallel search on top of
+that; that's a project of comparable size to what's already been done here,
+not a tuning pass.
+
+### On Branching: the 4-and-2 Question
+
+The question was: even when two cards in a suit haven't merged into one
+`Sequence`/equivalence class, they're *usually* — but not always —
+interchangeable in practice. Should the search treat them as one anyway?
+
+Precisely stated, today's rule is: two cards in one hand are equivalent right
+now if and only if no **opponent** card (partner's cards don't count) has a
+rank between them. Holding the 4 and 2 of a suit with an opponent's live 3
+between them is exactly the case the current rule does *not* merge — by
+design, and correctly so under the strict definition, because in principle
+either of the two remaining cards could later matter (which one is kept back
+can affect a later cover/discard/entry decision once that opponent's 3 is in
+play). This rule is **sound**: applying it can never change the true
+double-dummy answer, it only ever avoids exploring a genuinely redundant
+branch. Every optimization implemented in this project so far — bitboards,
+this equivalence rule, the transposition table, the aspiration window,
+iterative deepening — shares that property: none of them can turn a correct
+answer into a wrong one.
+
+Treating "usually but not always" as prune-and-move-on would be a genuinely
+different kind of technique — heuristic forward pruning, as used in strong
+chess/Go engines, which accepts a small bounded risk of missing the true best
+line in exchange for speed. It is a real, known idea, but it would be the
+first departure in this whole project from "every result is either proven or
+honestly labeled unproven" — every prior fix here (the `evaluateKey`
+collisions, the `currentPlayer` bug, refusing to paper over the OOM with a
+bigger heap) has gone the opposite direction, toward *more* rigor, not less.
+
+Recommendation: get the same practical benefit without the risk, by using
+the intuition as **move ordering, not pruning** — try the "probably
+equivalent" card first at each node (this is exactly what the `Strategy`
+system already does in the object-graph engine — `Cover`/`Finesse`/
+`LeadTopOfSequence`/etc. are precisely encoded "usually right" preferences,
+expressed as an ordering, never as a legality restriction). If the guess is
+right, as it usually is, alpha-beta prunes the sibling branches away for
+free, at zero correctness cost. If it's occasionally wrong, the search just
+does the same work it would do today — nothing is lost. This is also,
+concretely, item 1 in "Not Yet Implemented" above: porting `Strategy`-based
+ordering to the bit engine would likely address this concern and the known
+ten/eleven/twelve-card depth gap at the same time, since both stem from the
+same missing piece.
+
+A true forward-pruning mode is worth keeping in mind as a distinct, explicit,
+opt-in future option (e.g. a new `DDResult` variant that's clearly labeled
+heuristic, never conflated with `Exact`) if a use case ever needs speed more
+than a guarantee — but it shouldn't be adopted silently as a change to the
+existing search.
