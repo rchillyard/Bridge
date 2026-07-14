@@ -104,37 +104,9 @@ class BitAnalysisSpec extends flatspec.AnyFlatSpec with should.Matchers {
     crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQJ76", "9", "J", "32"), List("K32", "QJT", "T", "J6"), List("4", "87", "Q8", "Q874"), List("5", "AK", "97", "KT95"))))
   }
 
-  it should "agree with Whist.analyzeDoubleDummy across every target on the ten-card end position" in {
-    crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(
-      List("AQJ76", "96", "J", "32"),
-      List("K32", "QJT5", "T", "J6"),
-      List("4", "874", "Q8", "Q874"),
-      List("5", "AK3", "97", "KT95"))))
-  }
-
-  it should "agree with Whist.analyzeDoubleDummy across every target on the eleven-card end position" in {
-    crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(
-      List("AQJ76", "96", "AJ", "32"),
-      List("KT32", "QJT5", "T", "J6"),
-      List("4", "8742", "Q8", "Q874"),
-      List("95", "AK3", "97", "KT95"))))
-  }
-
-  it should "agree with Whist.analyzeDoubleDummy across every target on the twelve-card end position" in {
-    crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(
-      List("AQJ876", "96", "AJ", "32"),
-      List("KT32", "QJT5", "KT", "J6"),
-      List("4", "8742", "Q86", "Q874"),
-      List("95", "AK3", "975", "KT95"))))
-  }
-
-  it should "agree with Whist.analyzeDoubleDummy across every target on the thirteen-card end position" in {
-    crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(
-      List("AQJ876", "96", "AJ4", "32"),
-      List("KT32", "QJT5", "KT3", "J6"),
-      List("4", "8742", "Q862", "Q874"),
-      List("95", "AK3", "975", "AKT95"))))
-  }
+  // The ten/eleven/twelve/thirteen-card cross-checks moved to BitAnalysisITSpec (src/it):
+  // full-budget searches on these larger end positions are slow enough (minutes, one
+  // observed IDE run OOM'd) that they don't belong in the default `sbt test` run.
 
   // The three-card "automatic squeeze" position from WhistSpec -- the exact deal that exposed
   // the evaluateKey collision bug in the object-graph engine (a proven-makeable squeeze coming
