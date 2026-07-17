@@ -16,13 +16,15 @@ import com.phasmidsoftware.bridge.cards.{BridgeConfig, CacheKey, Tricks}
   * Deliberate simplifications versus the object-graph engine (all favor correctness/safety
   * over search efficiency, since this is a first validation pass):
   *
-  *   - Move ordering is left to Gambit's own top-level heuristic-based reordering
-  *     (`AlphaBetaPlayer.orderedMoves`) rather than porting the `Strategy` system
-  *     (`Cover`/`Duck`/`Finesse`/`Ruff`/`Discard`/etc.) that the object-graph engine uses to
-  *     order and, for discards, to prune to a single "always discard the worst card" candidate.
-  *     This engine instead offers EVERY equivalence-class representative in every legal
-  *     suit for a discard/ruff, which is strictly more (never fewer) legal candidates than
-  *     the old engine tries -- correct by construction, just not as tightly pruned.
+  *   - `legalPlays` now ports the object-graph engine's `Strategy` system
+  *     (`Cover`/`Duck`/`Finesse`/`Ruff`/`Discard`/etc. in `Holding`/`Trick`) as a move-ordering
+  *     score (`leadScore`/`followSuitScore`/`discardScore`, see `legalPlays`' doc), feeding
+  *     Gambit's `AlphaBetaPlayer.orderedMoves` a pre-sorted candidate list instead of an
+  *     arbitrary one. Deliberately NOT ported: the old engine's discard/ruff behaviour
+  *     actually prunes to a single "always discard/ruff the worst card" candidate, not just
+  *     reorders. This engine still offers EVERY equivalence-class representative in every
+  *     legal suit for a discard/ruff (just ordered worst-first) -- strictly more (never
+  *     fewer) legal candidates than the old engine tries, correct by construction.
   *   - `isGoal`'s "declaring side cannot possibly reach the target" pruning uses only the
   *     unconditionally-safe arithmetic check (`cards remaining >= cards mathematically
   *     required`), omitting the object-graph engine's additional `declaringSideCanWin`
@@ -54,19 +56,85 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
     * Legal moves from this state: one representative `TrickPlay` per equivalence class,
     * per [[SuitMask.equivalenceClasses]]. Must-follow-suit if not void in the led suit;
     * otherwise any card from any other suit (discard or ruff) is legal.
+    *
+    * The three branches below are also the whole legal move-ordering story: within
+    * whichever one applies (leading, following suit, or discarding/ruffing -- these are
+    * mutually exclusive by construction, never mixed in one call), candidates are sorted
+    * by [[leadScore]]/[[followSuitScore]]/[[discardScore]], a bit-native port of the
+    * object-graph engine's `Strategy` system (`Cover`/`Duck`/`Finesse`/`LeadTopOfSequence`/
+    * etc. in `Holding`/`Trick`). Every one of those scores is ORDERING ONLY: the full set
+    * of equivalence-class representatives is still returned, just reordered, preserving
+    * the "strictly more (never fewer) legal candidates than the old engine tries" property
+    * documented above -- including for discard/ruff, where the old engine actually
+    * restricts to a single (lowest) candidate per suit rather than merely reordering.
+    * That restriction was deliberately not ported: it would be the first place in this
+    * engine where "usually right" gets treated as "always assumed," a tradeoff already
+    * discussed and declined in favour of ordering-only speedups (see the design doc's
+    * "On Branching" section).
     */
   def legalPlays: Seq[TrickPlay] =
     val player = currentPlayer
 
-    def playsInSuit(suitIndex: Int): Seq[TrickPlay] =
-      deal.equivalenceClasses(player, suitIndex).map(cls => TrickPlay(player, suitIndex, cls.topRank))
+    def classesInSuit(suitIndex: Int): Seq[(TrickPlay, SuitMask)] =
+      deal.equivalenceClasses(player, suitIndex).map(cls => TrickPlay(player, suitIndex, cls.topRank) -> cls)
 
     if trickPlays.isEmpty then
-      (0 until 4).filter(s => deal.hand(player).suitMask(s).nonEmpty).flatMap(playsInSuit)
+      (0 until 4).filter(s => deal.hand(player).suitMask(s).nonEmpty).flatMap(classesInSuit)
+        .sortBy((p, cls) => -leadScore(p, cls)).map(_._1)
     else
       val suit = ledSuit
-      if deal.hand(player).suitMask(suit).nonEmpty then playsInSuit(suit)
-      else (0 until 4).filterNot(_ == suit).filter(s => deal.hand(player).suitMask(s).nonEmpty).flatMap(playsInSuit)
+      if deal.hand(player).suitMask(suit).nonEmpty then
+        classesInSuit(suit).sortBy((p, _) => -followSuitScore(p)).map(_._1)
+      else
+        (0 until 4).filterNot(_ == suit).filter(s => deal.hand(player).suitMask(s).nonEmpty).flatMap(classesInSuit)
+          .sortBy((p, _) => -discardScore(p)).map(_._1)
+
+  /**
+    * Move-ordering score for an opening lead of `p` from an equivalence class `cls`; higher
+    * is tried first. Ported from `Trick.leadStrategy`/`Holding.getStrategyForFollowingSuit`'s
+    * `StandardOpeningLead`/`LeadTopOfSequence` case and `chooseLeads`' longest-suit-first sort:
+    * prefer a longer suit, and within a suit prefer leading a genuine (2+ card) sequence
+    * topped by an honor over a lone card. `cls.topRank` (this candidate's rank) is already
+    * the top of its run by construction (see `legalPlays`' class doc), so "lead top of
+    * sequence" falls out for free once a suit is chosen -- this only affects suit choice.
+    */
+  private def leadScore(p: TrickPlay, cls: SuitMask): Int =
+    val suitLength = deal.hand(p.handIndex).suitMask(p.suitIndex).size
+    val isRealSequence = cls.size >= 2
+    val isHonor = p.rank >= SuitMask.RanksPerSuit - 5 // top 5 ranks: T, J, Q, K, A
+    val sequenceBonus = if isRealSequence && isHonor then 100 else 0
+    suitLength * 10 + sequenceBonus + p.rank
+
+  /**
+    * Move-ordering score for following suit; higher is tried first. Ported from
+    * `Holding.applyFollowSuitStrategy`: if this card beats the provisional winner and that
+    * winner is an opponent's, prefer covering as cheaply as possible (the smallest winning
+    * margin); otherwise -- can't beat it, or the provisional winner is already partner's --
+    * prefer the lowest card, matching the old engine's `Duck` fallback in both cases.
+    * (Simplified versus the old engine's full trick-position-dependent Cover/Finesse/WinIt
+    * selection: this doesn't distinguish 2nd/3rd/4th hand, just "can I usefully beat the
+    * current winner." A coarser heuristic than the original, but still ordering-only.)
+    */
+  private def followSuitScore(p: TrickPlay): Int =
+    val winner = provisionalWinner.get // always defined: trickPlays.nonEmpty and p follows ledSuit
+    val partnerWinning = winner.handIndex % 2 == p.handIndex % 2
+    val canBeat = p.rank > winner.rank
+    if canBeat && !partnerWinning then winner.rank - p.rank // cover as cheaply as possible
+    else -p.rank // duck: can't usefully win, so prefer the lowest card
+
+  /**
+    * Move-ordering score for a discard or ruff; higher is tried first. Ported from
+    * `Hand.discardOrRuff`: prefer ruffing over discarding, unless partner already holds the
+    * trick (matching the old engine's `Ruff if isPartnerWinning => redirect(Discard)`), and
+    * within either category prefer the lowest card -- but, unlike the old engine, only as an
+    * ordering preference: see this method's class doc for why the old engine's harder
+    * restriction (try ONLY the lowest card per suit) was deliberately not carried over.
+    */
+  private def discardScore(p: TrickPlay): Int =
+    val isRuff = strain.contains(p.suitIndex)
+    val partnerWinning = provisionalWinner.exists(w => w.handIndex % 2 == p.handIndex % 2)
+    val ruffBonus = if isRuff && !partnerWinning then 1000 else 0
+    ruffBonus - p.rank
 
   /**
     * Apply one legal play, returning the successor state. When this completes the trick,
