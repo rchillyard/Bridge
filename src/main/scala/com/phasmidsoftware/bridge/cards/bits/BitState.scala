@@ -84,7 +84,7 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
     else
       val suit = ledSuit
       if deal.hand(player).suitMask(suit).nonEmpty then
-        classesInSuit(suit).sortBy((p, _) => -followSuitScore(p)).map(_._1)
+        classesInSuit(suit).sortBy((p, cls) => -followSuitScore(p, cls)).map(_._1)
       else
         (0 until 4).filterNot(_ == suit).filter(s => deal.hand(player).suitMask(s).nonEmpty).flatMap(classesInSuit)
           .sortBy((p, _) => -discardScore(p)).map(_._1)
@@ -107,34 +107,73 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
 
   /**
     * Move-ordering score for following suit; higher is tried first. Ported from
-    * `Holding.applyFollowSuitStrategy`: if this card beats the provisional winner and that
-    * winner is an opponent's, prefer covering as cheaply as possible (the smallest winning
-    * margin); otherwise -- can't beat it, or the provisional winner is already partner's --
-    * prefer the lowest card, matching the old engine's `Duck` fallback in both cases.
-    * (Simplified versus the old engine's full trick-position-dependent Cover/Finesse/WinIt
-    * selection: this doesn't distinguish 2nd/3rd/4th hand, just "can I usefully beat the
-    * current winner." A coarser heuristic than the original, but still ordering-only.)
+    * `Holding.getStrategyForFollowingSuit`/`applyFollowSuitStrategy`, distinguishing
+    * trick position (`trickPlays.size`, i.e. how many cards are already down) the same
+    * way the old engine's `Strategy` selection does:
+    *
+    *   - 2nd hand (`size == 1`): only even considers trying to win if the led card is an
+    *     honor or this hand holds a genuine (2+ card) sequence of its own -- `Cover` in
+    *     the old engine's terms. Otherwise (`Duck`): always play low, even if a cheap card
+    *     could technically beat the led one (classic "second hand low").
+    *   - 3rd hand (`size == 2`): if partner's already winning, don't bother (`Duck`). Else,
+    *     if the card to beat isn't an honor, play to win outright with the highest
+    *     available card (`WinIt`) rather than finesse; if it is an honor, finesse --
+    *     cover as cheaply as possible (`Finesse`, same formula as `Cover`).
+    *   - 4th/last hand (`size == 3`): always `Cover` -- cheapest sufficient card if one
+    *     exists, else low (nothing left to preserve by this point anyway).
+    *
+    * In every case where winning is "considered" and this candidate can't actually beat
+    * the provisional winner, the score falls back to preferring the lowest card, matching
+    * the old engine's behaviour of never distinguishing "won't try" from "can't beat it
+    * anyway" once a strategy has decided not to press for the win.
     */
-  private def followSuitScore(p: TrickPlay): Int =
+  private def followSuitScore(p: TrickPlay, cls: SuitMask): Int =
     val winner = provisionalWinner.get // always defined: trickPlays.nonEmpty and p follows ledSuit
     val partnerWinning = winner.handIndex % 2 == p.handIndex % 2
     val canBeat = p.rank > winner.rank
-    if canBeat && !partnerWinning then winner.rank - p.rank // cover as cheaply as possible
-    else -p.rank // duck: can't usefully win, so prefer the lowest card
+    val winnerIsHonor = winner.rank >= SuitMask.RanksPerSuit - 5
+
+    val (considerWinning, preferHighWin) = trickPlays.size match
+      case 1 => // 2nd hand: Cover only if the led card is an honor or we hold a real sequence
+        val ledIsHonor = trickPlays.head.rank >= SuitMask.RanksPerSuit - 5
+        (ledIsHonor || cls.size >= 2, false)
+      case 2 => // 3rd hand: Duck if partner's winning; else WinIt (non-honor) or Finesse (honor)
+        if partnerWinning then (false, false) else (true, !winnerIsHonor)
+      case _ => // 4th/last hand (size == 3): always Cover
+        (true, false)
+
+    if canBeat && considerWinning then
+      if preferHighWin then p.rank else winner.rank - p.rank // WinIt: highest; Cover/Finesse: cheapest sufficient
+    else -p.rank // duck, or can't usefully win: prefer the lowest card
 
   /**
     * Move-ordering score for a discard or ruff; higher is tried first. Ported from
     * `Hand.discardOrRuff`: prefer ruffing over discarding, unless partner already holds the
-    * trick (matching the old engine's `Ruff if isPartnerWinning => redirect(Discard)`), and
-    * within either category prefer the lowest card -- but, unlike the old engine, only as an
+    * trick (matching the old engine's `Ruff if isPartnerWinning => redirect(Discard)`).
+    * Within ruffs, prefer the lowest trump -- but, unlike the old engine, only as an
     * ordering preference: see this method's class doc for why the old engine's harder
     * restriction (try ONLY the lowest card per suit) was deliberately not carried over.
+    *
+    * Within discards (never applies to ruffs, where there's only one trump suit to choose
+    * from), also prefers a SUIT to discard from, not just a rank: "keep length with
+    * dummy/declarer" is a real defensive principle the old engine's `Strategy` system never
+    * modelled either (`Hand.discardOrRuff` only ever compares candidates by rank, same gap
+    * this port started with). The proxy here is coarse -- how much longer this hand is than
+    * the OTHER partnership (`DealBits.opponentMask`) in each candidate suit -- but captures
+    * the basic idea: discarding from a suit where this hand still has slack over the
+    * declaring side's length there is safer than discarding from one where it doesn't.
     */
   private def discardScore(p: TrickPlay): Int =
     val isRuff = strain.contains(p.suitIndex)
     val partnerWinning = provisionalWinner.exists(w => w.handIndex % 2 == p.handIndex % 2)
     val ruffBonus = if isRuff && !partnerWinning then 1000 else 0
-    ruffBonus - p.rank
+    val lengthSafety =
+      if isRuff then 0
+      else
+        val ourLength = deal.hand(p.handIndex).suitMask(p.suitIndex).size
+        val theirLength = deal.opponentMask(p.handIndex, p.suitIndex).size
+        (ourLength - theirLength) * 5
+    ruffBonus + lengthSafety - p.rank
 
   /**
     * Apply one legal play, returning the successor state. When this completes the trick,
