@@ -160,7 +160,7 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
     val extra2 = slotBits(1)
     val extra3 = slotBits(2)
 
-    (
+    CacheKey(
       deal.hand(0).bits | (extra0 << 52),
       deal.hand(1).bits | (extra1 << 52),
       deal.hand(2).bits | (extra2 << 52),

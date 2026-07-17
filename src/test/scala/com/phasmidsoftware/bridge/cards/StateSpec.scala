@@ -186,6 +186,6 @@ class StateSpec extends AnyFlatSpec with should.Matchers {
     val deal = Deal.createRandom("test", 0L)
     val s = State(Whist(deal, 0))
     val key = s.evaluateKey
-    key shouldBe a[(Long, Long, Long, Long)]
+    key shouldBe a[CacheKey]
   }
 }

@@ -95,7 +95,7 @@ case class State(whist: Whist, trick: Trick, tricks: Tricks) extends Outputable[
     // Each extraN is OR'd into hand N's Long, shifted left by 52 so it lands in that Long's
     // spare bits 52-63 without disturbing its real card bits 0-51.
     val h = whist.deal.hands
-    (
+    CacheKey(
       handBits(h.head) | (extra0 << 52),
       handBits(h(1)) | (extra1 << 52),
       handBits(h(2)) | (extra2 << 52),
