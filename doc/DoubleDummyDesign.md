@@ -688,12 +688,20 @@ work to reach the same conclusion. This is a hypothesis, not a diagnosis.
    distinct positions. Real double-dummy solvers (DDS/GIB) exploit this
    heavily; this codebase doesn't yet, beyond the exact-position transposition
    table. Scoped in the original project plan as a stretch goal; not started.
-3. **Systematic profiling.** Every optimization so far has come from reading
-   the hot path and reasoning about allocation and search structure, not from
-   a profiler run (JFR/async-profiler) against the actual bit engine. Cheap
-   to do, and would settle open questions like how much time now goes to TT
-   hashing, GC, or recomputing equivalence classes fresh at every node versus
-   caching them once per unique 26-bit opponent/own-suit combination.
+3. **Systematic profiling — done, 2026-07-17.** JFR (`jfr view hot-methods` /
+   `allocation-by-class`) against `BitAnalysis` (`WinchesterBoard12Spec`'s
+   new-engine tests) found the transposition-table key — `CacheKey`, a plain
+   `(Long, Long, Long, Long)` tuple — boxing every field to `Object` on every
+   probe/store (`Tuple4$.apply`, `Product4.productElement`, `java.lang.Long`
+   boxing all showed up as measurable costs). Fixed by making `CacheKey` a
+   dedicated case class instead of a tuple; the same test went from ~15.7s to
+   ~12.5s. The single biggest hot-methods entry, though (11.76%,
+   `HashMap.growTable`), is in Gambit's `FlatTTCache` — its `mutable.HashMap`
+   starts at default capacity and repeatedly resizes toward
+   `BridgeConfig.ttMaxSize` (800,000 default) — not fixed yet, since it needs
+   a Gambit change and thus another Gambit release; see "Pre-size
+   `FlatTTCache`'s HashMap" as a queued follow-up. Re-profiling after that
+   fix, and periodically after future changes, is cheap and worth repeating.
 4. **Parallel/multi-threaded search.** Not attempted at all. A modern
    multi-core machine could plausibly give a near-linear win via a shared-TT
    parallel search (e.g. Lazy-SMP style, as used in strong chess engines),
