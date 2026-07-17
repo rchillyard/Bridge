@@ -31,7 +31,7 @@ object BitAnalysis:
     given gameTC: BitWhistGame = new BitWhistGame
     given stateTC: BitWhistState = new BitWhistState(neededTricks, directionNS)
     given GState[BitState, BitState] = stateTC
-    given TTCache[CacheKey] = FlatTTCache(maxSize = BridgeConfig.ttMaxSize)
+    given TTCache[CacheKey] = FlatTTCache(maxSize = BridgeConfig.bitboardTtMaxSize)
 
     val player = new AlphaBetaPlayer[BitState, BitState, TrickPlay, Int, CacheKey](
       me = if directionNS then 0 else 1,
@@ -50,7 +50,7 @@ object BitAnalysis:
                            strain: Option[Suit],
                            neededTricks: Int,
                            directionNS: Boolean,
-                           maxNodes: Int = BridgeConfig.nodesPerIteration
+                           maxNodes: Int = BridgeConfig.bitboardNodesPerIteration
                          ): DDResult =
     analyzeDoubleDummy(
       BitConversions.toDealBits(deal),

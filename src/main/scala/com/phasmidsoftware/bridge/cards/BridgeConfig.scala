@@ -32,6 +32,24 @@ object BridgeConfig:
   val nodesPerIteration: Int = config.getInt("bridge.nodes-per-iteration")
 
   /**
+    * `ttMaxSize`'s counterpart for the bit engine (`BitAnalysis`): the bit engine measurably
+    * uses far less memory per node than the object-graph engine (see `doc/DoubleDummyDesign.md`'s
+    * "Empirical Performance Finding"), so it can afford a bigger table than `ttMaxSize` above
+    * without the same OOM risk. See `application.conf`'s `bridge.bitboard` block for exactly how
+    * this value (and `bitboardNodesPerIteration` below) were chosen empirically.
+    */
+  val bitboardTtMaxSize: Int = config.getInt("bridge.bitboard.transposition-table.max-size")
+
+  /**
+    * `nodesPerIteration`'s counterpart for the bit engine. Deliberately NOT just "bigger for the
+    * sake of it": raising this alone, with `bitboardTtMaxSize` left at `ttMaxSize`'s size, was
+    * measured to do almost nothing -- once the table fills, it stops caching, and the search
+    * thrashes without transposition reuse regardless of how many more nodes it's allowed. The
+    * two values were chosen together against real test cases; see `application.conf`.
+    */
+  val bitboardNodesPerIteration: Int = config.getInt("bridge.bitboard.nodes-per-iteration")
+
+  /**
     * The half-width of the root aspiration window passed to `withAspirationWindow` (i.e. the
     * search uses `AlphaBetaWindow(-aspirationWindow, aspirationWindow)`). This is the one free
     * parameter here -- `heuristicScale` below is *derived* from it, deliberately not
