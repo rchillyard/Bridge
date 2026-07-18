@@ -275,35 +275,30 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
   it should "analyzeDoubleDummy for five-card end position" in {
     val target = Deal.fromHandStrings("test", "N", List(List("AQ", "9", "J", "3"), List("K32", "T", "", "6"), List("4", "87", "Q", "8"), List("5", "A", "9", "T9")))
     val whist = Whist(target, 3, Some(Clubs))
-    val initialState = State(whist)
     val tricks = target.nCards / Deal.CardsPerTrick
     assertMakes(whist.analyzeDoubleDummy(tricks, directionNS = true), false)
   }
   it should "analyzeDoubleDummy for six-card end position" in {
     val target = Deal.fromHandStrings("test", "N", List(List("AQ6", "9", "J", "3"), List("K32", "T", "T", "6"), List("4", "87", "Q", "87"), List("5", "AK", "9", "T9")))
     val whist = Whist(target, 3, Some(Clubs))
-    val initialState = State(whist)
     val tricks = target.nCards / Deal.CardsPerTrick
     assertMakes(whist.analyzeDoubleDummy(tricks, directionNS = true), false)
   }
   it should "analyzeDoubleDummy for seven-card end position" in {
     val target = Deal.fromHandStrings("test", "N", List(List("AQ76", "9", "J", "3"), List("K32", "QT", "T", "6"), List("4", "87", "Q", "874"), List("5", "AK", "9", "T95")))
     val whist = Whist(target, 3, Some(Clubs))
-    val initialState = State(whist)
     val tricks = target.nCards / Deal.CardsPerTrick
     assertMakes(whist.analyzeDoubleDummy(tricks, directionNS = true), false)
   }
   it should "analyzeDoubleDummy for eight-card end position" in {
     val target = Deal.fromHandStrings("test", "N", List(List("AQ76", "9", "J", "32"), List("K32", "QT", "T", "J6"), List("4", "87", "Q", "Q874"), List("5", "AK", "9", "KT95")))
     val whist = Whist(target, 3, Some(Clubs))
-    val initialState = State(whist)
     val tricks = target.nCards / Deal.CardsPerTrick
     assertMakes(whist.analyzeDoubleDummy(tricks, directionNS = true), false)
   }
   it should "analyzeDoubleDummy for nine-card end position" in {
     val target = Deal.fromHandStrings("test", "N", List(List("AQJ76", "9", "J", "32"), List("K32", "QJT", "T", "J6"), List("4", "87", "Q8", "Q874"), List("5", "AK", "97", "KT95")))
     val whist = Whist(target, 3, Some(Clubs))
-    val initialState = State(whist)
     val tricks = target.nCards / Deal.CardsPerTrick
     assertMakes(whist.analyzeDoubleDummy(tricks, directionNS = true), false)
   }
@@ -315,7 +310,6 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
       List("5", "AK3", "97", "KT95"))
     )
     val whist = Whist(target, 3, Some(Clubs))
-    val initialState = State(whist)
     val tricks = target.nCards / Deal.CardsPerTrick
     assertMakes(whist.analyzeDoubleDummy(tricks, directionNS = true), false)
   }
@@ -327,7 +321,6 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
       List("95", "AK3", "97", "KT95")
     ))
     val whist = Whist(target, 3, Some(Clubs))
-    val initialState = State(whist)
     val tricks = target.nCards / Deal.CardsPerTrick
     assertMakes(whist.analyzeDoubleDummy(tricks, directionNS = true), false)
   }
@@ -339,7 +332,6 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
       List("95", "AK3", "975", "KT95")
     ))
     val whist = Whist(target, 3, Some(Clubs))
-    val initialState = State(whist)
     val tricks = target.nCards / Deal.CardsPerTrick
     assertMakes(whist.analyzeDoubleDummy(tricks, directionNS = true), false)
   }
@@ -351,7 +343,6 @@ class WhistSpec extends flatspec.AnyFlatSpec with should.Matchers {
       List("95", "AK3", "975", "AKT95")
     ))
     val whist = Whist(target, 3, Some(Clubs))
-    val initialState = State(whist)
     val tricks = target.nCards / Deal.CardsPerTrick
     assertMakes(whist.analyzeDoubleDummy(tricks, directionNS = true), false)
   }

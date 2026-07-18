@@ -81,7 +81,7 @@ case class Movement(moves: LazyList[Trio]) {
 }
 
 object Movement {
-  def apply(x: Moves)(implicit tables: Int): Movement =
+  def apply(x: Moves): Movement =
     Movement(Triple.zip(x))
 }
 

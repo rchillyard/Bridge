@@ -73,6 +73,8 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     * @param tricks      The number of tricks needed by the protagonists to succeed.
     * @param directionNS A boolean indicating whether the protagonists are North-South (true) or East-West (false).
     * @param depth       The depth of the search tree for the analysis. Defaults to the minimum of the cards in the deal or the maximum cards per deal.
+    * @param maxNodes    The per-iteration node budget. Defaults to `BridgeConfig.nodesPerIteration`; callers
+    *                    (e.g. a test trying a hard real deal with more patience than the default) may override it.
     * @return A [[DDResult]]:
     *         - [[DDResult.Exact]] if the full search completed.
     *         - [[DDResult.Partial]] if the node limit was hit but one side found a witness line.
@@ -81,7 +83,8 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
   def analyzeDoubleDummy(
                           tricks: Int,
                           directionNS: Boolean,
-                          depth: Int = math.min(Deal.CardsPerDeal, deal.nCards)
+                          depth: Int = math.min(Deal.CardsPerDeal, deal.nCards),
+                          maxNodes: Int = BridgeConfig.nodesPerIteration
                         ): DDResult =
 
     given gameTC: WhistGame = new WhistGame(this) // needs to be a named given so WhistState can find it
@@ -90,15 +93,15 @@ case class Whist(deal: Deal, openingLeader: Int, strain: Option[Suit] = None)
     given com.phasmidsoftware.gambit.game.State[State, State] = stateTC
     given com.phasmidsoftware.gambit.game.Game[State, CardPlay, Int] = gameTC
 
-    given TTCache[CacheKey] = FlatTTCache()
+    given TTCache[CacheKey] = FlatTTCache(maxSize = BridgeConfig.ttMaxSize)
 
     deal.assertAdjusted()
     val player = new BridgePlayer(
       me = if directionNS then 0 else 1,
       depth = depth
-    ).withMaxNodes(Whist.NODES_PER_ITERATION)
+    ).withMaxNodes(maxNodes)
       .withKeyFn(s => s.evaluateKey)
-      .withAspirationWindow(AlphaBetaWindow(-0.5, 0.5))
+      .withAspirationWindow(AlphaBetaWindow(-BridgeConfig.aspirationWindow, BridgeConfig.aspirationWindow))
     val initialState = State(this)
     logger.info(s"analyzeDoubleDummy: neededTricks=$tricks, directionNS=$directionNS, depth=$depth, branching=${initialState.enumeratePlays.size}")
     val t0 = System.currentTimeMillis()
@@ -147,10 +150,8 @@ object Whist:
       case None =>
         DDResult.Inconclusive
 
-  val MAX_STATES: Int = 800_000
-  val MAX_NODES: Int = 5_000_000 // retained for reference / future use
-  val NODES_PER_ITERATION: Int = 1_000_000 // node budget per iterative-deepening iteration
-  val DEPTH_STEP: Int = Deal.CardsPerTrick // 4: iterate at trick boundaries
+  val DEPTH_STEP: Int = Deal.CardsPerTrick // 4: iterate at trick boundaries -- a trick is always 4 cards,
+  // not a tunable assumption, so unlike BridgeConfig.nodesPerIteration/aspirationWindow this isn't configurable.
   private val logger = LazyLogger(getClass)
 
 @main def doubleDummySolver(args: String*): Unit = {

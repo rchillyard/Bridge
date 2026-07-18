@@ -175,7 +175,12 @@ case class Trick(index: Int, plays: Seq[CardPlay], maybePrior: Option[Trick]) ex
     */
   def sufficientMovesRemaining(moves: Int, directionNS: Boolean, neededTricks: Int, tricks: Tricks): Boolean = {
     val requiredMoves = (neededTricks - (if (directionNS) tricks.ns else tricks.ew)) * Deal.CardsPerTrick
-    moves >= requiredMoves || (declaringSideCanWin(directionNS) && (plays.size >= requiredMoves - moves))
+    // NOTE: the `moves > 0` guard is required: declaringSideCanWin is a heuristic proxy based on
+    // who led the last completed trick, and without this guard it can report "still sufficient"
+    // even when moves == 0 (the deal is exhausted, no cards remain anywhere) -- masking an
+    // already-decided position as undecided, which then falls through to a raw (unbounded)
+    // heuristic leaf value instead of a proven result.
+    moves >= requiredMoves || (moves > 0 && declaringSideCanWin(directionNS) && (plays.size >= requiredMoves - moves))
   }
 
   /**

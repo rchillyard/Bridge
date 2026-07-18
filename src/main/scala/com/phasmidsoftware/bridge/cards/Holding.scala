@@ -123,12 +123,17 @@ case class Holding(sequences: Seq[Sequence], suit: Suit, promotions: Seq[Int] = 
     * Method to promote this holding if it ranks lower than the given priority.
     * NOTE: this does not immediately change the priority of any sequences in this Holding--
     * instead we use a lazy approach--adding to the list of pending promotions which will be enacted when quit is called.
+    * 
+    * CONSIDER simplifying the conditional check for promotion--
+    * it doesn't seem to make a big difference either way.
     *
     * @param priority the priority.
     * @return a new Holding with the promotion added to the pending list.
     */
   def promote(priority: Int): Holding =
-    Holding(sequences, suit, promotions :+ priority)
+    if sequences.forall(_.priority <= priority) 
+    then this
+    else Holding(sequences, suit, promotions :+ priority)
 
   /**
     * Method to enact the pending promotions on this Holding.

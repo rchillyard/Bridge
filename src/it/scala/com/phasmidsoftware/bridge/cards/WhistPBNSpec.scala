@@ -21,6 +21,13 @@ class WhistPBNSpec extends flatspec.AnyFlatSpec with should.Matchers with TimeLi
   // But the main problem is that one particular test is going very slowly.
   val timeLimit = Span(25, Seconds)
 
+  /** Assert only on the makes field, ignoring tricks depth. */
+  private def assertMakes(result: DDResult, expected: Boolean): Unit =
+    result match
+      case DDResult.Exact(makes, _) => makes shouldBe expected
+      case DDResult.Partial(makes, _) => makes shouldBe expected
+      case DDResult.Inconclusive => fail(s"Expected makes=$expected but got Inconclusive")
+
   private val py: Try[PBN] = PBNParser.parsePBN(Source.fromResource("com/phasmidsoftware/bridge/director/LEXINGTON 2016.2.9.PBN"))
   private val pbn: PBN = py.get
 
@@ -91,7 +98,7 @@ class WhistPBNSpec extends flatspec.AnyFlatSpec with should.Matchers with TimeLi
             //                  System.err.println("Skipping this test")
             //                  return
           }
-          Whist(deal, leader, strain).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0) shouldBe Some(false)
+          assertMakes(Whist(deal, leader, strain).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0), false)
       }
 
     }

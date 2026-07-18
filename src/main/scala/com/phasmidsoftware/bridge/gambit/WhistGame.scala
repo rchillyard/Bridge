@@ -2,7 +2,7 @@ package com.phasmidsoftware.bridge.gambit
 
 import com.phasmidsoftware.bridge.cards.*
 import com.phasmidsoftware.gambit.game.{Game, State as GState}
-import com.phasmidsoftware.gambit.util.{LazyLogger, Output, Outputable, Shuffle}
+import com.phasmidsoftware.gambit.util.LazyLogger
 
 /**
   * The Gambit `Game[State, CardPlay, Int]` typeclass instance for Whist card play.
