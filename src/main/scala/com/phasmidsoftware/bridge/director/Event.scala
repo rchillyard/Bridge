@@ -224,6 +224,13 @@ case class Pair(number: Int, maybeDirection: Option[String], players: (Player, P
   private lazy val direction = maybeDirection getOrElse ""
 }
 
+object Pair:
+  def apply(number: Int, maybeDirection: Option[String], players: (Player, Player)): Pair = maybeDirection match {
+    case Some("NS") => new Pair(number, maybeDirection, players._1.setDirection(0) -> players._2.setDirection(2))
+    case Some("EW") => new Pair(number, maybeDirection, players._1.setDirection(1) -> players._2.setDirection(3))
+    case _ => new Pair(number, maybeDirection, players)
+  }
+
 /**
   * Class to represent a player.
   *
@@ -231,9 +238,23 @@ case class Pair(number: Int, maybeDirection: Option[String], players: (Player, P
   *
   * @param name the name of the player
   */
-case class Player(name: String) {
+case class Player(name: String, dir: Int):
+  def isNS: Boolean = dir % 2 == 0
+
+  def toInt: Int = dir
+
+  def setDirection(d: Int): Player = this.copy(dir = d)
   override def toString: String = name
-}
+
+
+object Player:
+  def apply(i: Int): Player = i match {
+    case 0 => Player("North", 0)
+    case 1 => Player("East", 1)
+    case 2 => Player("South", 2)
+    case 3 => Player("West", 3)
+    case _ => throw new IllegalArgumentException(s"Invalid player index: $i")
+  }
 
 /**
   * Class to represent a "Card" for a pair.

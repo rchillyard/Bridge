@@ -6,9 +6,9 @@ package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.pbn.{DealValue, Game, PBN, PBNParser}
 import org.scalatest.concurrent.TimeLimitedTests
-import org.scalatest.time.{Seconds, Span}
 import org.scalatest.flatspec
 import org.scalatest.matchers.should
+import org.scalatest.time.{Seconds, Span}
 
 import scala.io.Source
 import scala.util.Try
@@ -20,6 +20,13 @@ class WhistPBNSpec extends flatspec.AnyFlatSpec with should.Matchers with TimeLi
   // We are doing a lot more now (5 strains instead of just NT).
   // But the main problem is that one particular test is going very slowly.
   val timeLimit = Span(25, Seconds)
+
+  /** Assert only on the makes field, ignoring tricks depth. */
+  private def assertMakes(result: DDResult, expected: Boolean): Unit =
+    result match
+      case DDResult.Exact(makes, _) => makes shouldBe expected
+      case DDResult.Partial(makes, _) => makes shouldBe expected
+      case DDResult.Inconclusive => fail(s"Expected makes=$expected but got Inconclusive")
 
   private val py: Try[PBN] = PBNParser.parsePBN(Source.fromResource("com/phasmidsoftware/bridge/director/LEXINGTON 2016.2.9.PBN"))
   private val pbn: PBN = py.get
@@ -77,7 +84,7 @@ class WhistPBNSpec extends flatspec.AnyFlatSpec with should.Matchers with TimeLi
           val leader = Hand.next(declarer)
           val strain = z match {
             case "NT" => None
-            case x if x.length > 0 => Some(Suit.apply(x.head))
+            case x if x.nonEmpty => Some(Suit.apply(x.head))
             case _ => throw CardException(s"cannot parse the contract detail: $contract")
           }
           val tricks = n.toInt
@@ -91,7 +98,7 @@ class WhistPBNSpec extends flatspec.AnyFlatSpec with should.Matchers with TimeLi
             //                  System.err.println("Skipping this test")
             //                  return
           }
-          Whist(deal, leader, strain).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0) shouldBe Some(true)
+          assertMakes(Whist(deal, leader, strain).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0), false)
       }
 
     }

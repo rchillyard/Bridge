@@ -275,10 +275,10 @@ class EventSpec extends AnyFlatSpec with should.Matchers {
 
   it should "apply with pickups" in {
     val pairs = List(
-      director.Pair(1, Some("N"), (Player("tweedledum"), Player("tweedledee"))),
-      director.Pair(2, Some("N"), (Player("James Clark Maxwell"), Player("Albert Einstein"))),
-      director.Pair(1, Some("E"), (Player("Tristan"), Player("Isolde"))),
-      director.Pair(2, Some("E"), (Player("Romeo"), Player("Juliet")))
+      director.Pair(1, Some("N"), (Player("tweedledum", 0), Player("tweedledee", 2))),
+      director.Pair(2, Some("N"), (Player("James Clark Maxwell", 0), Player("Albert Einstein", 2))),
+      director.Pair(1, Some("E"), (Player("Tristan", 1), Player("Isolde", 3))),
+      director.Pair(2, Some("E"), (Player("Romeo", 1), Player("Juliet", 3)))
     )
     val preamble = Preamble("A", None, pairs)
     val bd1 = 1
@@ -306,10 +306,10 @@ class EventSpec extends AnyFlatSpec with should.Matchers {
   it should "work for travelers" in {
 
     val pairs = List(
-      director.Pair(1, Some("N"), (Player("tweedledum"), Player("tweedledee"))),
-      director.Pair(2, Some("N"), (Player("James Clark Maxwell"), Player("Albert Einstein"))),
-      director.Pair(1, Some("E"), (Player("Tristan"), Player("Isolde"))),
-      director.Pair(2, Some("E"), (Player("Romeo"), Player("Juliet")))
+      director.Pair(1, Some("N"), (Player("tweedledum", 0), Player("tweedledee", 2))),
+      director.Pair(2, Some("N"), (Player("James Clark Maxwell", 0), Player("Albert Einstein", 2))),
+      director.Pair(1, Some("E"), (Player("Tristan", 1), Player("Isolde", 3))),
+      director.Pair(2, Some("E"), (Player("Romeo", 1), Player("Juliet", 3)))
     )
     val travelers: List[Traveler] = List(
       Traveler(1, List(Play(1, 1, PlayResult(Right(110))), Play(2, 2, PlayResult(Right(100)))), None),
@@ -327,12 +327,12 @@ class EventSpec extends AnyFlatSpec with should.Matchers {
   it should "work for incomplete travelers 1" in {
 
     val pairs = List(
-      director.Pair(1, Some("N"), (Player("tweedledum"), Player("tweedledee"))),
-      director.Pair(2, Some("N"), (Player("James Clark Maxwell"), Player("Albert Einstein"))),
-      director.Pair(3, Some("N"), (Player("Rosie"), Player("Ashenden"))),
-      director.Pair(1, Some("E"), (Player("Tristan"), Player("Isolde"))),
-      director.Pair(2, Some("E"), (Player("Romeo"), Player("Juliet"))),
-      director.Pair(3, Some("E"), (Player("David"), Player("Dora")))
+      director.Pair(1, Some("N"), (Player("tweedledum", 0), Player("tweedledee", 2))),
+      director.Pair(2, Some("N"), (Player("James Clark Maxwell", 0), Player("Albert Einstein", 2))),
+      director.Pair(3, Some("N"), (Player("Rosie", 0), Player("Ashenden", 2))),
+      director.Pair(1, Some("E"), (Player("Tristan", 1), Player("Isolde", 3))),
+      director.Pair(2, Some("E"), (Player("Romeo", 1), Player("Juliet", 3))),
+      director.Pair(3, Some("E"), (Player("David", 1), Player("Dora", 3)))
     )
     val travelers: List[Traveler] = List(
       Traveler(1, List(Play(1, 1, PlayResult(Right(100))), Play(2, 2, PlayResult(Right(100))), Play(3, 3, PlayResult(Right(100)))), None),
@@ -355,10 +355,10 @@ class EventSpec extends AnyFlatSpec with should.Matchers {
   ignore should "work for incomplete travelers 2" in {
 
     val pairs = List(
-      director.Pair(1, Some("N"), (Player("tweedledum"), Player("tweedledee"))),
-      director.Pair(2, Some("N"), (Player("James Clark Maxwell"), Player("Albert Einstein"))),
-      director.Pair(1, Some("E"), (Player("Tristan"), Player("Isolde"))),
-      director.Pair(2, Some("E"), (Player("Romeo"), Player("Juliet")))
+      director.Pair(1, Some("N"), (Player("tweedledum", 0), Player("tweedledee", 2))),
+      director.Pair(2, Some("N"), (Player("James Clark Maxwell", 0), Player("Albert Einstein", 2))),
+      director.Pair(1, Some("E"), (Player("Tristan", 1), Player("Isolde", 3))),
+      director.Pair(2, Some("E"), (Player("Romeo", 1), Player("Juliet", 3)))
     )
     val travelers: List[Traveler] = List(
       Traveler(1, List(Play(1, 1, PlayResult(Right(110))), Play(2, 2, PlayResult(Right(100))), Play(3, 3, PlayResult(Right(50)))), None),

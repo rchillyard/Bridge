@@ -6,16 +6,23 @@ package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.pbn.{DealValue, Game, PBN, PBNParser}
 import org.scalatest.concurrent.TimeLimitedTests
-import org.scalatest.time.{Seconds, Span}
 import org.scalatest.flatspec
 import org.scalatest.matchers.should
+import org.scalatest.time.{Seconds, Span}
 
 import scala.io.Source
 
+/**
+  * Quick spot-check against a real club-session PBN (Winchester Bridge Club, 2026.07.09),
+  * whose `OptimumResultTable` entries were computed by a real double-dummy solver
+  * (bridgewebs.com), not by this codebase. Deliberately narrow in scope (first three
+  * boards, South declaring NT only, mirroring [[AnalysisSpec]]'s filter) to get a fast
+  * read on agreement without the long runtimes seen on the westwood/LEXINGTON fixtures.
+  */
 //noinspection ScalaStyle
-class AnalysisSpec extends flatspec.AnyFlatSpec with should.Matchers with TimeLimitedTests {
+class WinchesterSpec extends flatspec.AnyFlatSpec with should.Matchers with TimeLimitedTests {
 
-  val timeLimit = Span(25, Seconds)
+  val timeLimit = Span(90, Seconds)
 
   /** Assert only on the makes field, ignoring tricks depth. */
   private def assertMakes(result: DDResult, expected: Boolean): Unit =
@@ -24,55 +31,30 @@ class AnalysisSpec extends flatspec.AnyFlatSpec with should.Matchers with TimeLi
       case DDResult.Partial(makes, _) => makes shouldBe expected
       case DDResult.Inconclusive => fail(s"Expected makes=$expected but got Inconclusive")
 
-  State.count = 0
-  private val so = Option(getClass.getResourceAsStream("westwood_20190625_1.pbn")) map (Source.fromInputStream(_))
+  private val so = Option(getClass.getResourceAsStream("/WinchesterJuly2026.pbn")) map (Source.fromInputStream(_))
   private val py: Option[PBN] = for (s <- so; p <- PBNParser.parsePBN(s).toOption) yield p
   private val pbn: PBN = py.get
 
-  behavior of "double dummy analysis"
-  it should "analyze deal 0" in {
-    val game = pbn.head
-    analyzeMakableContracts(game)
+  behavior of "double dummy analysis against Winchester club results"
+
+  it should "analyze board 1" in {
+    analyzeMakableContracts(pbn.head)
   }
 
-  it should "analyze deal 1" in {
-    val game = pbn(1)
-    analyzeMakableContracts(game)
+  it should "analyze board 2" in {
+    analyzeMakableContracts(pbn(1))
   }
 
-  it should "analyze deal 2" in {
-    val game = pbn(2)
-    analyzeMakableContracts(game)
+  it should "analyze board 3" in {
+    analyzeMakableContracts(pbn(2))
   }
 
-  it should "analyze deal 3" in {
-    val game = pbn(3)
-    analyzeMakableContracts(game)
+  it should "analyze board 7" in {
+    analyzeMakableContracts(pbn(6))
   }
 
-  it should "analyze deal 4" in {
-    val game = pbn(4)
-    analyzeMakableContracts(game)
-  }
-
-  it should "analyze deal 5" in {
-    val game = pbn(5)
-    analyzeMakableContracts(game)
-  }
-
-  it should "analyze deal 6" in {
-    val game = pbn(6)
-    analyzeMakableContracts(game)
-  }
-
-  it should "analyze deal 7" in {
-    val game = pbn.last
-    analyzeMakableContracts(game)
-  }
-
-  it should "analyze deal 16" in {
-    val game = pbn(15)
-    analyzeMakableContracts(game)
+  it should "analyze board 12" in {
+    analyzeMakableContracts(pbn(11))
   }
 
   private def analyzeMakableContracts(game: Game): Unit = {

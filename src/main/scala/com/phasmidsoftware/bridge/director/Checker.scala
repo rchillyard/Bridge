@@ -53,10 +53,6 @@ object Checker {
 
   private def positive(dir: Boolean): Checker = JPredicate.when[ScoreVul]("")(_.score > 0 == dir)
 
-  private def atLeast(min: Int): Checker = JPredicate.when[ScoreVul](s"score >= $min")(_.score >= min)
-
-  private def atMost(max: Int): Checker = JPredicate.when[ScoreVul](s"score <= $max")(_.score <= max)
-
   private lazy val Passout: Checker = JPredicate.when("pass out")(z => z.score == 0)
   // CONSIDER we shouldn't have to guess at the direction
   lazy val Partial: Checker = (for (x <- Seq(true, false); y <- Seq(false, true)) yield partialChecker(x, y)) reduce ((a, b) => a `orElse` b)

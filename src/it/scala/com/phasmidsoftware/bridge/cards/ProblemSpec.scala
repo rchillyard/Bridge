@@ -13,6 +13,13 @@ import scala.io.Source
 //noinspection ScalaStyle
 class ProblemSpec extends AnyFlatSpec with should.Matchers {
 
+  /** Assert only on the makes field, ignoring tricks depth. */
+  private def assertMakes(result: DDResult, expected: Boolean): Unit =
+    result match
+      case DDResult.Exact(makes, _) => makes shouldBe expected
+      case DDResult.Partial(makes, _) => makes shouldBe expected
+      case DDResult.Inconclusive => fail(s"Expected makes=$expected but got Inconclusive")
+
   State.count = 0
   private val so = Option(getClass.getResourceAsStream("westwood_20190625_1.pbn")) map (Source.fromInputStream(_))
   private val py: Option[PBN] = for (s <- so; p <- PBNParser.parsePBN(s).toOption) yield p
@@ -53,7 +60,7 @@ class ProblemSpec extends AnyFlatSpec with should.Matchers {
           case _ => false -> false
         }
         println(s"analyzeDoubleDummy: tricks=$tricks, declarer=$l, leader=$leader, mode=$mode, reuseDeeper=$reuse, depthTranches=$depthT")
-        Whist(deal, leader).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0, reuseDeeper = reuse, depthTranches = depthT) shouldBe Some(true)
+        assertMakes(Whist(deal, leader).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0), true)
     }
   }
 }

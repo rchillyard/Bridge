@@ -5,7 +5,7 @@ package com.phasmidsoftware.bridge.director
 
 import scala.io.Source
 import scala.language.postfixOps
-import scala.util._
+import scala.util.*
 import scala.util.matching.Regex
 import scala.util.parsing.combinator.JavaTokenParsers
 
@@ -43,7 +43,7 @@ class RecapParser(delimiter: String = "") extends JavaTokenParsers {
 
   // XXX player parser yields a Player object and is at least one character that is neither & nor a newline char
   def player: Parser[Player] = """\s*\w[^\r\n&]*""".r ^^
-    (s => Player(s.trim))
+    (s => Player(s.trim, -1)) // TODO do this properly
 
   // XXX travelers, each terminated by a endOfLine
   def travelers: Parser[Seq[Traveler]] = rep(traveler)

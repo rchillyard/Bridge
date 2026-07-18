@@ -118,10 +118,9 @@ case class Trick(index: Int, plays: Seq[CardPlay], maybePrior: Option[Trick]) ex
   def evaluate: Double = _evaluate
 
   override def toString: String =
-    s"T$index ${leader.map(_.toString).getOrElse("")} ${plays.map(_.asCard).mkString("{", ", ", "}")}"
-
+    s"T$index ${leader.map(_.toString).getOrElse("")} ${plays.mkString("{", ", ", "}")}"
   /**
-    * Refactor this
+    * Refactor this recursive method.
     */
   lazy val history: Seq[Trick] = maybePrior match {
     case None => Seq(this)
@@ -163,7 +162,8 @@ case class Trick(index: Int, plays: Seq[CardPlay], maybePrior: Option[Trick]) ex
     *         (1) the current trick if we are following;
     *         (2) a new trick if we are leading.
     */
-  def enumerateSubsequentPlays(whist: Whist): Seq[Trick] = enumerateSubsequentPlays(whist.deal, whist.openingLeader, whist.strain) //.invariant(ts => ts.nonEmpty)
+  def enumerateSubsequentPlays(whist: Whist): Seq[Trick] =
+    enumerateSubsequentPlays(whist.deal, whist.openingLeader, whist.strain) //.invariant(ts => ts.nonEmpty)
 
   /**
     * Determine the number of remaining moves that are required to build up sufficient tricks.
@@ -175,7 +175,12 @@ case class Trick(index: Int, plays: Seq[CardPlay], maybePrior: Option[Trick]) ex
     */
   def sufficientMovesRemaining(moves: Int, directionNS: Boolean, neededTricks: Int, tricks: Tricks): Boolean = {
     val requiredMoves = (neededTricks - (if (directionNS) tricks.ns else tricks.ew)) * Deal.CardsPerTrick
-    moves >= requiredMoves || (declaringSideCanWin(directionNS) && (plays.size >= requiredMoves - moves))
+    // NOTE: the `moves > 0` guard is required: declaringSideCanWin is a heuristic proxy based on
+    // who led the last completed trick, and without this guard it can report "still sufficient"
+    // even when moves == 0 (the deal is exhausted, no cards remain anywhere) -- masking an
+    // already-decided position as undecided, which then falls through to a raw (unbounded)
+    // heuristic leaf value instead of a proven result.
+    moves >= requiredMoves || (moves > 0 && declaringSideCanWin(directionNS) && (plays.size >= requiredMoves - moves))
   }
 
   /**
@@ -207,7 +212,7 @@ case class Trick(index: Int, plays: Seq[CardPlay], maybePrior: Option[Trick]) ex
     * @param strain the trump suit, if any.
     * @return a list of Tricks.
     */
-  private def enumerateSubsequentPlays(deal: Deal, leader: Int, strain: Option[Suit]) = // if (deal.nCards<4) List(forcedPlay(deal, leader)) else
+  def enumerateSubsequentPlays(deal: Deal, leader: Int, strain: Option[Suit]): Seq[Trick] =
     winner match {
       case Some(Winner(p, true)) =>
         enumerateLeads(deal, p.hand, strain) // XXX enumerate leads, given a complete trick with an actual winner
@@ -218,7 +223,8 @@ case class Trick(index: Int, plays: Seq[CardPlay], maybePrior: Option[Trick]) ex
           enumerateLeads(deal, leader, strain) // XXX: enumerate leads, starting from the null trick.
     }
 
-  private def enumerateLeads(deal: Deal, leader: Int, strain: Option[Suit]) = for (q <- chooseLeads(deal, leader, strain)) yield Trick(index + 1, Seq(q), Some(this))
+  private def enumerateLeads(deal: Deal, leader: Int, strain: Option[Suit]) =
+    for (q <- chooseLeads(deal, leader, strain)) yield Trick(index + 1, Seq(q), Some(this))
 
   private def leadStrategy(s: Suit, h: Holding, strain: Option[Suit]): Strategy = h.nCards match {
     case 0 => Invalid
@@ -245,7 +251,8 @@ case class Trick(index: Int, plays: Seq[CardPlay], maybePrior: Option[Trick]) ex
     *
     * @return the total number of cards played.
     */
-  lazy val cardsPlayed: Int = Math.max((index - 1) * Deal.CardsPerTrick + size, 0)
+  lazy val cardsPlayed: Int =
+    Math.max((index - 1) * Deal.CardsPerTrick + size, 0)
 
   def output(output: Output, xo: Option[Deal] = None): Output =
     (output :+ s"T$index ") :+ (if (plays.nonEmpty) plays.last.output(output.copy, xo) else output.copy :+ "")

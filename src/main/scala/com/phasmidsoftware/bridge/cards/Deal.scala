@@ -4,6 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards
 
+import com.phasmidsoftware.bridge.cards.DDResult
 import com.phasmidsoftware.bridge.cards.Rank.ranks
 import com.phasmidsoftware.bridge.cards.Suit.suits
 import com.phasmidsoftware.gambit.util.{Output, Outputable, Shuffle}
@@ -70,7 +71,8 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     * @param cardPlay the card play.
     * @return a new Playable.
     */
-  def play(cardPlay: CardPlay): Deal = Deal(title, hands map (_.play(cardPlay)))
+  def play(cardPlay: CardPlay): Deal =
+    Deal(title, hands map (_.play(cardPlay)))
 
   /**
     * Evaluate the N and S hands heuristically.
@@ -86,6 +88,51 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     * @return true if this Deal is valid.
     */
   def validate: Boolean = hands.forall(_.validate) && allCards
+
+  /**
+    * Analyzes a sequence of bridge contracts using double-dummy analysis.
+    * This method evaluates each contract in the provided list and determines
+    * whether the declarer can fulfill the specified contract under ideal play.
+    *
+    * @param max             The maximum number of contracts to analyze. 
+    *                        If max is less than or equal to 0, all contracts in the list are analyzed.
+    *
+    * @param contractDetails A sequence of tuples representing the contracts to analyze.
+    *                        Each tuple contains the following values:
+    *                        - The index of the player who leads the play.
+    *                        - An optional value representing the strain (suit or notrump) of the contract.
+    *                        - The number of tricks the declarer needs to succeed in the contract.
+    *                        - The index of the player who is the declarer for this contract.
+    *
+    * @param board           The index or number of the board being analyzed.
+    * @return A sequence of Options containing Booleans. Each Option corresponds to a contract's result:
+    *         - `Some(true)` if the declarer can meet the contract.
+    *         - `Some(false)` if the contract cannot be met.
+    *         - `None` if the analysis fails or no result is found for a specific contract.
+    */
+  def analyzeContracts(board: Int, contractDetails: Seq[(Int, Option[Suit], Int, Int)], max: Int = 0): Seq[DDResult] = {
+    val work = if max > 0 then contractDetails.take(max) else contractDetails
+    work map {
+      case (leader, strain, tricks, declarer) =>
+        this.analyzeContract(board, leader, strain, tricks, declarer)
+    }
+  }
+
+  /**
+    * Analyzes the outcome of a given bridge contract using double-dummy analysis.
+    *
+    * @param board    The board number being analyzed.
+    * @param leader   The index of the player on opening lead.
+    * @param strain   The trump strain, or `None` for notrump.
+    * @param tricks   The number of tricks the declarer needs.
+    * @param declarer The index of the declarer.
+    * @return A [[DDResult]]: [[DDResult.Exact]], [[DDResult.Partial]], or [[DDResult.Inconclusive]].
+    */
+  def analyzeContract(board: Int, leader: Int, strain: Option[Suit], tricks: Int, declarer: Int): DDResult = {
+    val result = Whist(this, leader, strain).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0)
+    println(s"analyzeDoubleDummy: board=$board result=$result")
+    result
+  }
 
   /**
     * @return the number of cards remaining in this Deal.
@@ -292,7 +339,7 @@ object Deal {
     val cards = for {
       hand <- hands
       if hand.cards.size == cardsPerHand
-      (suit, holding) <- hand.holdings
+      (_, holding) <- hand.holdings
       sequence <- holding.sequences
       card <- sequence.cards
     } yield card
@@ -307,6 +354,4 @@ object Deal {
     for ((d, i) <- boards.zipWithIndex) writer.append(d.asPBN(map, i + 1))
     writer.flush()
   }
-
-  private val logger = org.slf4j.LoggerFactory.getLogger(getClass)
 }

@@ -41,7 +41,7 @@ class CardSpec extends AnyFlatSpec with should.Matchers {
   }
 
   it should "implement compare" in {
-    implicitly[Ordered[Rank]](Deuce).compare(Trey) shouldBe -1
+    implicitly[Ordered[Rank]](using Deuce).compare(Trey) shouldBe -1
   }
 
   it should "sort in order" in {
@@ -73,7 +73,7 @@ class CardSpec extends AnyFlatSpec with should.Matchers {
   }
 
   it should "implement compare" in {
-    implicitly[Ordered[Suit]](Clubs).compare(Spades) shouldBe -3
+    implicitly[Ordered[Suit]](using Clubs).compare(Spades) shouldBe -3
   }
 
   it should "parse string" in {
@@ -141,7 +141,7 @@ class CardSpec extends AnyFlatSpec with should.Matchers {
   }
 
   it should "implement compare" in {
-    implicitly[Ordered[Card]](Card(Spades, "A")).compare(Card(Spades, "K")) shouldBe 1
+    implicitly[Ordered[Card]](using Card(Spades, "A")).compare(Card(Spades, "K")) shouldBe 1
   }
 
   it should "sort in proper order" in {
