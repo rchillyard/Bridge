@@ -94,4 +94,34 @@ class SuitMaskSpec extends flatspec.AnyFlatSpec with should.Matchers {
   it should "return no classes when the hand is void in this suit" in {
     SuitMask.equivalenceClasses(SuitMask.empty, SuitMask.rank(5)) shouldBe Nil
   }
+
+  behavior of "SuitMask.compact"
+
+  it should "map the whole universe onto a dense 0-based run, preserving relative order" in {
+    // universe = ranks 3,7,9,12 (four live cards); mask = the same four cards (the whole universe)
+    val universe = List(3, 7, 9, 12).foldLeft(SuitMask.empty)((m, r) => m.union(SuitMask.rank(r)))
+    SuitMask.compact(universe, universe) shouldBe List(0, 1, 2, 3).foldLeft(SuitMask.empty)((m, r) => m.union(SuitMask.rank(r)))
+  }
+
+  it should "map a subset of the universe to the canonical positions of just those ranks" in {
+    // universe = 3,7,9,12 (canonical positions 0,1,2,3 respectively); mask = just 7 and 12
+    val universe = List(3, 7, 9, 12).foldLeft(SuitMask.empty)((m, r) => m.union(SuitMask.rank(r)))
+    val mask = SuitMask.rank(7).union(SuitMask.rank(12))
+    SuitMask.compact(mask, universe) shouldBe SuitMask.rank(1).union(SuitMask.rank(3))
+  }
+
+  it should "give the same canonical result for two differently-absolute but same-shaped suits" in {
+    // "9-7-5-3 with everything else gone" and "A-K-Q-J with everything else gone" are the
+    // same shape: four consecutive live ranks, hand holds the top two of them.
+    val universeLow = List(3, 5, 7, 9).foldLeft(SuitMask.empty)((m, r) => m.union(SuitMask.rank(r)))
+    val handLow = SuitMask.rank(7).union(SuitMask.rank(9))
+    val universeHigh = List(9, 10, 11, 12).foldLeft(SuitMask.empty)((m, r) => m.union(SuitMask.rank(r)))
+    val handHigh = SuitMask.rank(11).union(SuitMask.rank(12))
+    SuitMask.compact(handLow, universeLow) shouldBe SuitMask.compact(handHigh, universeHigh)
+  }
+
+  it should "handle a singleton universe" in {
+    val universe = SuitMask.rank(6)
+    SuitMask.compact(universe, universe) shouldBe SuitMask.rank(0)
+  }
 }

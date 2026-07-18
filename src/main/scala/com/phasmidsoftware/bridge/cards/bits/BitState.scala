@@ -298,3 +298,50 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
       deal.hand(2).bits | (extra2 << 52),
       deal.hand(3).bits | (extra3 << 52)
     )
+
+  /**
+    * Rank-reduced transposition-table key: an EXPERIMENTAL, opt-in alternative to
+    * [[evaluateKey]] (see `BitAnalysis`'s `useCanonicalKey` parameter), not yet the
+    * default. Each suit's four hand-masks are compacted (`SuitMask.compact`/
+    * `DealBits.canonicalSuitMasks`) to preserve only the RELATIVE order of that suit's
+    * currently-live cards, not their absolute rank -- so two positions with the same
+    * shape but different absolute cards can share a transposition-table entry, the same
+    * "rank reduction" real double-dummy solvers use.
+    *
+    * Only used BETWEEN TRICKS (`trickPlays.isEmpty`); falls back to the plain
+    * [[evaluateKey]] whenever a trick is in progress. This restriction is load-bearing,
+    * not a simplification to relax later without re-deriving the argument below:
+    *
+    * `followSuitScore` (and the search generally) compares a live candidate's rank
+    * against the trick's provisional winner's rank -- an ALREADY-PLAYED card -- via
+    * `p.rank > winner.rank`, in the same absolute rank space. If only the *live* cards
+    * were compacted while an in-progress play's rank stayed absolute, two genuinely
+    * different positions could collide: e.g. a lead at absolute rank 6, with exactly one
+    * remaining live card in that suit -- at absolute rank 10 in position S1 (beats the
+    * lead) vs. rank 3 in position S2 (doesn't). Both compact to "one live card, canonical
+    * position 0," so with the trick-slot rank left at the identical absolute value (6) in
+    * both, the two keys would match -- a false merge, the same class of bug `evaluateKey`
+    * itself was fixed twice for (see this class's doc). Restricting to between-tricks
+    * removes the bug class entirely: at that point there is no absolute already-played
+    * rank in the current trick for the compacted cards to be inconsistent with -- the
+    * only other state (`leader`, `tricks.ns`) is preserved exactly as `evaluateKey`
+    * already does.
+    */
+  def evaluateCanonicalKey: CacheKey =
+    if trickPlays.nonEmpty then evaluateKey
+    else
+      val extra0 = (leader.toLong << 8) | tricks.ns.toLong // trickPlays.size and slot bits are always 0 here
+      // Computed once per suit (4 suits total), not once per hand: each hand's canonical
+      // mask for a suit depends on that suit's whole live-card universe, shared work.
+      val canonicalPerSuit: IndexedSeq[IndexedSeq[SuitMask]] = (0 until 4).map(deal.canonicalSuitMasks)
+      def canonicalHandBits(handIndex: Int): Long =
+        (0 until 4).foldLeft(0L) { (acc, suitIndex) =>
+          acc | (canonicalPerSuit(suitIndex)(handIndex).bits.toLong << (suitIndex * SuitMask.RanksPerSuit))
+        }
+
+      CacheKey(
+        canonicalHandBits(0) | (extra0 << 52),
+        canonicalHandBits(1),
+        canonicalHandBits(2),
+        canonicalHandBits(3)
+      )

@@ -70,6 +70,20 @@ case class DealBits(hands: IndexedSeq[HandBits]):
   def equivalenceClasses(handIndex: Int, suitIndex: Int): List[SuitMask] =
     SuitMask.equivalenceClasses(hands(handIndex).suitMask(suitIndex), opponentMask(handIndex, suitIndex))
 
+  /** The union of all four hands' live cards in one suit -- every card still in play there. */
+  def suitUniverse(suitIndex: Int): SuitMask =
+    hands.map(_.suitMask(suitIndex)).reduce(_.union(_))
+
+  /**
+    * The four hands' masks in `suitIndex`, rank-reduced (see [[SuitMask.compact]]) against
+    * that suit's own universe: only the relative order of that suit's currently-live cards
+    * is preserved, not their absolute rank. Used only by `BitState.evaluateCanonicalKey`,
+    * and only between tricks -- see that method's doc for why.
+    */
+  def canonicalSuitMasks(suitIndex: Int): IndexedSeq[SuitMask] =
+    val universe = suitUniverse(suitIndex)
+    hands.map(h => SuitMask.compact(h.suitMask(suitIndex), universe))
+
 object DealBits:
   /** The partner of a hand, under the `handIndex % 2` seating convention. */
   def partner(handIndex: Int): Int = (handIndex + 2) % 4

@@ -84,3 +84,24 @@ object SuitMask:
       if cls != 0 then classes = SuitMask(cls) :: classes
       gaps &= ~run
     classes.reverse
+
+  /**
+    * Rank reduction: remaps `mask`'s set bits (assumed a subset of `universe`) to their
+    * rank-order position within `universe` -- the highest bit in `universe` maps to the
+    * highest resulting bit (`universe.size - 1`), the next-highest to `universe.size - 2`,
+    * and so on down to the lowest, which maps to 0.
+    *
+    * What matters strategically about a suit is the RELATIVE order of its currently-live
+    * cards, not their absolute rank: a suit holding 9-7-5-3 with every higher and lower
+    * card already gone is strategically identical to one holding A-K-Q-J with the same
+    * distribution across hands. This is a pure bit-remapping recomputed fresh from
+    * whichever cards are live at the point it's called -- no history or incremental
+    * bookkeeping -- the same philosophy as [[equivalenceClasses]].
+    *
+    * Deliberately NOT safe to use while a trick is in progress: see
+    * `BitState.evaluateCanonicalKey`'s doc for why (a card already played to the current
+    * trick has an absolute rank that this compaction does not, and cannot, account for).
+    */
+  def compact(mask: SuitMask, universe: SuitMask): SuitMask =
+    val canonicalPositionOf: Map[Int, Int] = universe.ranks.reverse.zipWithIndex.toMap
+    mask.ranks.foldLeft(SuitMask.empty)((acc, r) => acc.setRank(canonicalPositionOf(r)))

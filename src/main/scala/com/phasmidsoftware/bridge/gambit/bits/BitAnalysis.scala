@@ -26,7 +26,8 @@ object BitAnalysis:
                            neededTricks: Int,
                            directionNS: Boolean,
                            depth: Int,
-                           maxNodes: Int
+                           maxNodes: Int,
+                           useCanonicalKey: Boolean
                          ): DDResult =
     given gameTC: BitWhistGame = new BitWhistGame
     given stateTC: BitWhistState = new BitWhistState(neededTricks, directionNS)
@@ -37,20 +38,27 @@ object BitAnalysis:
       me = if directionNS then 0 else 1,
       depth = depth
     ).withMaxNodes(maxNodes)
-      .withKeyFn(s => s.evaluateKey)
+      .withKeyFn(s => if useCanonicalKey then s.evaluateCanonicalKey else s.evaluateKey)
       .withAspirationWindow(AlphaBetaWindow(-BridgeConfig.aspirationWindow, BridgeConfig.aspirationWindow))
 
     val initialState = BitState(deal, strain, openingLeader, Nil, Tricks.zero)
     runPlayer(player, directionNS, depth, initialState)
 
-  /** Convenience overload accepting a real `Deal`/`Suit`, converting at the boundary. */
+  /**
+    * Convenience overload accepting a real `Deal`/`Suit`, converting at the boundary.
+    *
+    * @param useCanonicalKey EXPERIMENTAL, defaults to `false` (the trusted, unchanged path).
+    *                        See `BitState.evaluateCanonicalKey`'s doc for what this does and
+    *                        why it's opt-in, not the default, for now.
+    */
   def analyzeDoubleDummy(
                            deal: Deal,
                            openingLeader: Int,
                            strain: Option[Suit],
                            neededTricks: Int,
                            directionNS: Boolean,
-                           maxNodes: Int = BridgeConfig.bitboardNodesPerIteration
+                           maxNodes: Int = BridgeConfig.bitboardNodesPerIteration,
+                           useCanonicalKey: Boolean = false
                          ): DDResult =
     analyzeDoubleDummy(
       BitConversions.toDealBits(deal),
@@ -59,7 +67,8 @@ object BitAnalysis:
       neededTricks,
       directionNS,
       depth = math.min(Deal.CardsPerDeal, deal.nCards),
-      maxNodes = maxNodes
+      maxNodes = maxNodes,
+      useCanonicalKey = useCanonicalKey
     )
 
   private def runPlayer(
