@@ -53,6 +53,26 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
   private def ledSuit: Int = trickPlays.head.suitIndex
 
   /**
+    * A candidate play paired with its already-computed move-ordering score. Two distinct
+    * reasons this is a dedicated case class rather than a `(TrickPlay, Int)`/`(TrickPlay,
+    * SuitMask)` tuple, found via profiling a real search:
+    *
+    *   - A generic tuple's fields box to `Object`/`Integer` regardless of their static type
+    *     (`SuitMask` is an opaque `Int`, so a `(TrickPlay, SuitMask)` pair boxes its second
+    *     field on every equivalence class, at every node in the whole search) -- the same
+    *     class of cost `CacheKey` had before it became a dedicated case class.
+    *   - `score` is computed once, here, rather than inside a `sortBy` comparator: `sortBy`
+    *     doesn't cache its key function's result, so `sortBy(p => -expensiveScore(p))`
+    *     recomputes `expensiveScore` on every pairwise comparison -- O(b log b) calls for
+    *     `b` candidates, not O(b) -- the same latent cost found (and fixed, in Gambit's
+    *     `orderedMoves`) while investigating a since-reverted, much more expensive
+    *     experimental heuristic. `leadScore`/`followSuitScore`/`discardScore` are cheap
+    *     enough that this was never the dominant cost, but there's no reason to pay it
+    *     twice over (boxing AND recomputation) when avoiding both is this direct.
+    */
+  private case class ScoredPlay(play: TrickPlay, score: Int)
+
+  /**
     * Legal moves from this state: one representative `TrickPlay` per equivalence class,
     * per [[SuitMask.equivalenceClasses]]. Must-follow-suit if not void in the led suit;
     * otherwise any card from any other suit (discard or ruff) is legal.
@@ -75,19 +95,22 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
   def legalPlays: Seq[TrickPlay] =
     val player = currentPlayer
 
-    def classesInSuit(suitIndex: Int): Seq[(TrickPlay, SuitMask)] =
-      deal.equivalenceClasses(player, suitIndex).map(cls => TrickPlay(player, suitIndex, cls.topRank) -> cls)
+    def classesInSuit(suitIndex: Int, score: (TrickPlay, SuitMask) => Int): Seq[ScoredPlay] =
+      deal.equivalenceClasses(player, suitIndex).map { cls =>
+        val p = TrickPlay(player, suitIndex, cls.topRank)
+        ScoredPlay(p, score(p, cls))
+      }
 
     if trickPlays.isEmpty then
-      (0 until 4).filter(s => deal.hand(player).suitMask(s).nonEmpty).flatMap(classesInSuit)
-        .sortBy((p, cls) => -leadScore(p, cls)).map(_._1)
+      (0 until 4).filter(s => deal.hand(player).suitMask(s).nonEmpty).flatMap(classesInSuit(_, leadScore))
+        .sortBy(-_.score).map(_.play)
     else
       val suit = ledSuit
       if deal.hand(player).suitMask(suit).nonEmpty then
-        classesInSuit(suit).sortBy((p, cls) => -followSuitScore(p, cls)).map(_._1)
+        classesInSuit(suit, followSuitScore).sortBy(-_.score).map(_.play)
       else
-        (0 until 4).filterNot(_ == suit).filter(s => deal.hand(player).suitMask(s).nonEmpty).flatMap(classesInSuit)
-          .sortBy((p, _) => -discardScore(p)).map(_._1)
+        (0 until 4).filterNot(_ == suit).filter(s => deal.hand(player).suitMask(s).nonEmpty)
+          .flatMap(classesInSuit(_, (p, _) => discardScore(p))).sortBy(-_.score).map(_.play)
 
   /**
     * Move-ordering score for an opening lead of `p` from an equivalence class `cls`; higher
@@ -133,14 +156,16 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
     val canBeat = p.rank > winner.rank
     val winnerIsHonor = winner.rank >= SuitMask.RanksPerSuit - 5
 
-    val (considerWinning, preferHighWin) = trickPlays.size match
+    // considerWinning/preferHighWin computed as two separate values, not a tuple: a
+    // (Boolean, Boolean) pair here would allocate fresh on every call, at every node --
+    // found via profiling (see legalPlays' ScoredPlay doc for the same lesson elsewhere).
+    val considerWinning = trickPlays.size match
       case 1 => // 2nd hand: Cover only if the led card is an honor or we hold a real sequence
         val ledIsHonor = trickPlays.head.rank >= SuitMask.RanksPerSuit - 5
-        (ledIsHonor || cls.size >= 2, false)
-      case 2 => // 3rd hand: Duck if partner's winning; else WinIt (non-honor) or Finesse (honor)
-        if partnerWinning then (false, false) else (true, !winnerIsHonor)
-      case _ => // 4th/last hand (size == 3): always Cover
-        (true, false)
+        ledIsHonor || cls.size >= 2
+      case 2 => !partnerWinning // 3rd hand: Duck if partner's winning
+      case _ => true // 4th/last hand (size == 3): always Cover
+    val preferHighWin = trickPlays.size == 2 && !partnerWinning && !winnerIsHonor // 3rd hand, WinIt case
 
     if canBeat && considerWinning then
       if preferHighWin then p.rank else winner.rank - p.rank // WinIt: highest; Cover/Finesse: cheapest sufficient
