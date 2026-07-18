@@ -416,6 +416,7 @@ sbt "runMain com.phasmidsoftware.bridge.cards.doubleDummySolver path/to/file.pbn
 ```
 
 Arguments:
+
 - `path/to/file.pbn` — path to a PBN file
 - `0` — zero-based index of the game within the file to analyze
 
@@ -443,6 +444,7 @@ The canonical test case is a three-card automatic squeeze:
 - West: 98♠, 4♦ (inert)
 
 At notrump (or a club contract), South leads A♣. North pitches K♥. East is squeezed:
+
 - If East pitches Q♠: North's J♠ becomes good → NS makes 3
 - If East pitches A♥: South's 2♥ becomes good → NS makes 3
 
