@@ -1,6 +1,6 @@
 # Bridge Double-Dummy Solver — Design Document
 
-*Reflects the state of the project as of version 1.1.4.*
+*Reflects the state of the project as of version 1.1.5.*
 
 ## Overview
 
@@ -939,23 +939,45 @@ document turned out to be only partly right (see "Known Open Gap" above),
 that's a reminder to treat these the same way: directional guidance, not
 commitments.
 
-1. **Rank reduction / cross-position suit canonicalization.** A suit's
+1. **Rank reduction / cross-position suit canonicalization — attempted,
+   2026-07-18; implemented as opt-in, not yet the default.** A suit's
    *relative* structure (which of the 13 ranks are alive and who holds them,
    independent of the absolute ranks) is often shared across otherwise
-   distinct positions. Real double-dummy solvers (DDS/GIB) exploit this
-   heavily; this codebase doesn't yet, beyond the exact-position
-   transposition table. Scoped in the original project plan as a stretch
-   goal; not started.
-   **Estimated saving**: potentially the largest of anything on this list,
-   and the one item that could change the *shape* of the performance curve
-   rather than just its constant factor — real solvers reach sub-second full
-   deals partly through this technique. Honestly speculative without a
-   prototype: plausibly anywhere from a small constant-factor win (if few
-   positions in a typical search actually share structure) to an
-   order-of-magnitude-plus reduction in effective node count on hard
-   positions (if sharing is common, as DDS/GIB's results suggest). Also the
-   biggest engineering lift of anything here — a genuinely new project, not
-   a tuning pass.
+   distinct positions. `BitState.evaluateCanonicalKey` (opt-in via
+   `BitAnalysis`'s `useCanonicalKey` parameter) canonicalizes each suit's
+   rank-space before hashing, so two positions with the same shape but
+   different absolute cards can share a transposition-table entry.
+
+   A dedicated design review found a real soundness bug in the first draft
+   before any code was written: canonicalizing only the remaining
+   (not-yet-played) cards while leaving trick-in-progress play ranks
+   absolute can false-merge two positions with different true values — the
+   same class of bug `evaluateKey` itself was fixed twice for (see
+   "Correctness Fixes Along the Way"). Fixed by restricting the canonical
+   key to *between* tricks only, falling back to the plain `evaluateKey`
+   whenever a trick is in progress — the standard restriction real
+   double-dummy solvers apply too, and one that removes the bug class
+   entirely rather than patching around it. Verified via a targeted
+   regression test hand-constructing that exact collision shape, plus the
+   existing dual-engine cross-validation extended to run with the canonical
+   key across every existing small end position (including the three-card
+   automatic squeeze that previously exposed a real `evaluateKey` bug).
+
+   **Measured result, not speculative**: correctness held everywhere tested,
+   but performance is genuinely mixed, not a uniform win. On a known
+   eleven-card stress case, both keys reach the same correct `Exact`
+   answer, but the canonical key is ~31% *slower*. On a known twelve-card
+   case, the default key is still stuck at an unproven `Partial` guess,
+   while the canonical key fully resolves it to a proven `Exact` result —
+   the same true answer previously reachable only with roughly double the
+   memory budget — but taking over 5x longer to get there. A real-deal case
+   (Winchester board 12) got deeper but still didn't fully resolve, at
+   ~4.4x the time. So: real capability gains on some hard cases (proving
+   things that couldn't be proven before, at a smaller memory footprint),
+   real added cost with no payoff on others, consistent with this being
+   flagged up front as the most speculative item on this list. Left
+   opt-in; promoting it to the default is a separate, not-yet-made decision
+   that would need more evidence than three data points.
 2. **Ruff rank-selection heuristic** (`discardScore` currently always prefers
    the lowest trump, with no model of being over-ruffed, promoting a
    partner's or opponent's trump honor, or setting up a second ruff).
