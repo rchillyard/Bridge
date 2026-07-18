@@ -1,5 +1,7 @@
 # Bridge Double-Dummy Solver — Design Document
 
+*Reflects the state of the project as of version 1.1.4.*
+
 ## Overview
 
 This document describes the design of the double-dummy solver for the Bridge
