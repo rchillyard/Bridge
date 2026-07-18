@@ -643,12 +643,9 @@ motivated by it:
 - Running the full `IT` suite for what appears to be the first time (per the
   above, it was never wired into sbt before this work) surfaced 25 failures
   in specs that predate this project (`ProblemSpec`, `WinchesterSpec`,
-  `WhistPBNSpec`, `AnalysisSpec`) — some match previously-flagged
-  known-bad cases (e.g. a suspected fixture error on Winchester board 1;
-  boards 3/7 already flagged as slow/non-terminating), others (`AnalysisSpec`/
-  `WhistPBNSpec` failing on nearly every deal) don't have a prior baseline to
-  compare against, since this command could not run before. Not yet
-  investigated further — parked deliberately, not swept under the rug.
+  `WhistPBNSpec`, `AnalysisSpec`). Initially parked deliberately rather than
+  swept under the rug — since resolved; see "Real-Deal Integration Specs
+  Rewritten" below for the two real bugs found and the full fix.
 
 ### Empirical Performance Finding
 
@@ -660,16 +657,272 @@ handles the identical 5× budget in **~14 seconds**, heap never exceeding
 result, not a design argument: the bit engine genuinely does not retain
 `Deal`/`Hand`/`Holding` objects the way the object-graph engine does.
 
-### Known Open Gap
+### Known Open Gap — Update, 2026-07-18: mostly resolved, and not for the reason first suspected
 
-On the ten/eleven/twelve-card synthetic end positions in `BitAnalysisITSpec`,
-the bit engine converges to *less* search depth than the object-graph engine
-on the identical position and target — a `Partial` result where the old
-engine reaches `Exact`, or a shallower `Partial` than the old engine's. Not
-yet root-caused. The leading suspect is the deliberate simplification noted
-above: no `Strategy`-based move ordering, so the bit engine's search explores
-its (equally legal) candidate moves in a less efficient order and does more
-work to reach the same conclusion. This is a hypothesis, not a diagnosis.
+The ten/eleven/twelve-card synthetic end positions in `BitAnalysisITSpec`
+originally all disagreed with the object-graph engine — the bit engine
+converged to less depth and landed on a wrong `Partial` guess on all three.
+Two rounds of investigation, in order:
+
+**Round 1 — move ordering (see "Move Ordering", below).** Porting the
+object-graph engine's `Strategy` system to the bit engine, as this section
+originally predicted, fixed the ten-card case outright and measurably
+improved depth elsewhere (`WinchesterBoard1Spec`'s "needing 2 tricks" case:
+depth 5 → 7). It did **not** fix the eleven- or twelve-card cases — same wrong
+answers, same depths, before and after.
+
+**Round 2 — node budget and TT size (see "Bit-Engine-Specific Tuning",
+below).** Both remaining cases turned out to be pure node-budget/TT-capacity
+problems, not search-quality problems at all: given a big enough transposition
+table *and* enough nodes, both resolve to a fully-proven `Exact` result that
+agrees with the object-graph engine. The eleven-card case now resolves at the
+project's actual (conservative) settings. The twelve-card case still doesn't
+— it needs a bigger table/budget than was judged worth the memory margin (see
+below) — but this is now a known, quantified, deliberately-accepted tradeoff,
+not an open question about *why* it disagrees.
+
+So: move ordering was a real, useful fix, but it was solving a different
+problem than the one causing most of this particular gap. The original
+hypothesis in this section ("no `Strategy`-based ordering... a hypothesis,
+not a diagnosis") is a good example of a plausible-sounding explanation that
+turned out to be only partially right — worth remembering next time a
+performance gap shows up with an equally plausible-sounding single cause.
+
+## Move Ordering
+
+`BitState.legalPlays` now ports the object-graph engine's `Strategy` system
+(`Cover`/`Duck`/`Finesse`/`Ruff`/`Discard`/`LeadTopOfSequence`/etc., in
+`Holding`/`Trick`) as a move-ordering score — `leadScore`/`followSuitScore`/
+`discardScore` — feeding Gambit's move-ordering machinery a pre-sorted
+candidate list instead of an arbitrary one. This is **ordering only**: the
+full set of legal equivalence-class representatives is still returned, just
+reordered. Three pieces, added incrementally:
+
+- **Initial port**: suit/rank preference for leads, a simplified cover/duck
+  rule for following suit (no trick-position distinction yet), and a
+  ruff-preferred/lowest-card-first rule for discards.
+- **Trick-position distinction**: `followSuitScore` was refined to mirror
+  `Holding.getStrategyForFollowingSuit`'s actual per-position logic — 2nd hand
+  only tries to win if the led card is an honor or a real sequence is held
+  (else always ducks, "second hand low"); 3rd hand ducks if partner's already
+  winning, else plays to win outright with the highest card if the card to
+  beat isn't an honor, or finesses (cheapest sufficient card) if it is; 4th
+  hand always covers as cheaply as possible.
+- **Discard suit selection**: `discardScore` gained a coarse "keep length
+  with dummy/declarer" proxy — comparing this hand's remaining length in a
+  candidate suit against the *other* partnership's (`DealBits.opponentMask`)
+  — since the old engine's own `Strategy` system never modelled this either
+  (`Hand.discardOrRuff` only ever compared candidates by rank).
+
+**Deliberately not ported**: the object-graph engine's discard/ruff behaviour
+actually *restricts* to a single (lowest) candidate per suit, not just
+reorders — this engine still offers every equivalence-class representative,
+just ordered worst-first, preserving the "strictly more, never fewer, legal
+candidates" property discussed under "On Branching" below. Adopting that
+restriction would be the first place this engine trades soundness for speed;
+declined for the same reason as the 4-and-2 question.
+
+**Measured effect** (see "Known Open Gap" above for the fuller story): fixed
+the ten-card `BitAnalysisITSpec` case outright, improved `WinchesterBoard1Spec`
+depth (5 → 7 tricks at the same node budget), did not move the eleven/twelve-
+card cases (those turned out to be budget/TT-size problems, not ordering
+problems). Two related move-ordering ideas were identified but not
+implemented — see "Not Yet Implemented" below.
+
+---
+
+## Bit-Engine-Specific Tuning
+
+### Transposition-table size and node budget
+
+The bit engine now has its own, larger TT size and node budget
+(`bridge.bitboard.transposition-table.max-size` = 3,000,000,
+`bridge.bitboard.nodes-per-iteration` = 5,000,000 — `BridgeConfig.
+bitboardTtMaxSize`/`bitboardNodesPerIteration`), separate from the
+object-graph engine's unchanged, much smaller defaults (800,000 / 1,000,000),
+which the object-graph engine cannot tolerate at these sizes.
+
+These specific numbers were **chosen empirically, not increased on general
+principle**. The investigation (prompted by a direct question: "we should be
+able to handle a higher budget, since memory used per state is a lot less
+than the object model") found something non-obvious: raising the node budget
+*alone*, with the TT still capped at the object-graph engine's size, did
+almost nothing — a full table stops caching, and the search thrashes without
+transposition reuse no matter how many more nodes it's allowed. **TT size is
+the actual lever; node budget only matters once the table is sized to
+match.** Measurements:
+
+| TT size | Node budget | Eleven-card case | Twelve-card case | Peak heap |
+|---|---|---|---|---|
+| 800,000 (default) | 10,000,000 | `Partial` (unproven, stuck) | `Partial` (unproven, stuck) | — |
+| 3,000,000 | 5,000,000 | `Exact(true,11)` — proven | `Partial` (unproven) | ~2.4GB |
+| 8,000,000 | 10,000,000 | `Exact(true,11)` | `Exact(true,12)` — proven | ~5.1GB |
+
+The conservative row (3,000,000 / 5,000,000) was adopted as the actual
+default: it resolves the eleven-card case fully and costs a comfortable
+memory margin (~2.4GB of an 8GB heap). The more aggressive row resolves both
+known cases, but at roughly double the memory (~5.1GB of 8GB) for the sake of
+one specific known-hard case — judged not worth halving the remaining safety
+margin for. This is a real, deliberate, documented tradeoff, not a compromise
+made for lack of trying the bigger numbers.
+
+### LRU eviction (Gambit)
+
+Separately, `FlatTTCache` (Gambit) previously refused every new entry once
+the table reached its size cap — whichever nodes happened to be computed
+first in a search occupied the table for the rest of that iteration, even
+though later entries (often deeper into a promising line, once move ordering
+has done its job) are frequently more valuable to keep. It's now backed by
+`java.util.LinkedHashMap` in access-order mode, evicting the
+least-recently-touched entry on overflow instead. Zero correctness risk (the
+TT is a pure cache — a miss just means recomputing, never a wrong answer),
+verified via a dedicated eviction-order test. Directly relevant to the
+conservative TT-size choice above: better eviction quality is what lets a
+smaller table go further.
+
+---
+
+## Boxing and Allocation Fixes
+
+Several rounds of JFR profiling (`jfr view hot-methods` / manually tallying
+`jdk.ObjectAllocationSample` by class — the `allocation-by-class` view
+doesn't work against IntelliJ's own recordings, but the raw event query
+does) found the same shape of problem repeatedly: a generic tuple or
+collection boxes a field that a dedicated case class wouldn't, at a point in
+the code executed once per node or once per candidate move — cheap-looking
+in isolation, expensive multiplied across the whole search tree.
+
+- **`CacheKey`** (Bridge): was `(Long, Long, Long, Long)`; every transposition-
+  table probe/store boxed all four fields. Now a dedicated case class.
+  Measured: ~15.7s → ~12.5s on the same benchmark test.
+- **`FlatTTCache`'s backing `HashMap`** (Gambit): started at default capacity
+  and repeatedly resized toward its target size (`HashMap.growTable` was the
+  single largest hot-methods entry, 11.76%). Now pre-sized up front when a
+  real bound is given.
+- **`orderedMoves`'s sort itself** (Gambit): `sortBy((_, next) =>
+  state.heuristic(next))` doesn't cache its key function's result — the
+  comparator recomputes the heuristic on every pairwise comparison, so
+  sorting `b` successors cost O(b log b) heuristic evaluations, not O(b).
+  Fixed by decorating each successor with its heuristic value once, up
+  front, before sorting.
+- **`orderedMoves`'s successor pairing** (Gambit): even after the fix above,
+  the decorated `(M, S, Double)` tuple still boxed its `Double` field on
+  every successor — computing a value once and boxing it once are different
+  costs, and fixing the first doesn't fix the second. Replaced with a
+  dedicated `ScoredSuccessor` case class.
+- **`legalPlays`' equivalence-class pairing** (Bridge): `classesInSuit`
+  returned `Seq[(TrickPlay, SuitMask)]` — `SuitMask` is an opaque `Int`, and
+  a generic tuple boxes it regardless of its static type, on every
+  equivalence class, at every node. Replaced with a dedicated `ScoredPlay`
+  case class that also folds in the same once-not-per-comparison fix as
+  `orderedMoves` (the class doc calls out both reasons explicitly).
+  Follow-up fix in the same pass: `followSuitScore` was itself allocating a
+  fresh `(Boolean, Boolean)` tuple per call via a match returning a pair;
+  split into two independent values.
+
+All verified via before/after re-profiles of the same test
+(`WinchesterSpec`'s board 1), not just reasoned about: `boxToInteger`/
+`boxToDouble` were the two hottest methods in the original profile (Robin's
+own IntelliJ snapshot) and are gone entirely from the hot-methods list after
+the `ScoredPlay` fix; a `Tuple3` then appeared (from `orderedMoves`, on
+Gambit 1.2.4, which predated its own fix) and disappeared after
+`ScoredSuccessor` landed. What remains — a small `Tuple2` — traces to
+`orderedMoves`'s own final unwrap back to its declared `Seq[(M, S)]` return
+type, an O(b) cost now (once per successor) rather than the O(b log b) it
+was multiplied to before either fix. Both `maximizingSearch` and
+`minimizingSearch` (its only callers) discard the move and use only the
+successor state, suggesting that final unwrap — and the move field
+entirely — might not be needed at all; not pursued, flagged as a possible
+further simplification needing its own verification.
+
+---
+
+## Real-Deal Integration Specs Rewritten
+
+`AnalysisSpec`, `WhistPBNSpec`, `ProblemSpec`, and `WinchesterSpec` — the
+four specs that produced 25 failures the first time the `IT` suite was ever
+run (see "Test Infrastructure" above) — were rewritten to call `BitAnalysis`
+instead of `Whist`, since none of them had ever been exercised against the
+bit engine, and the old engine visibly struggles on real full deals anyway.
+
+**Two real, pre-existing bugs found and fixed along the way, unrelated to
+either engine's search quality:**
+
+- `WhistPBNSpec` asserted `expected = false` on every declarer/strain/trick
+  combination checked, even though `tricks` is parsed directly from
+  `OptimumResultTable` — i.e. it IS the documented double-dummy optimum, so
+  the correct expectation was always `true` (matching the other three
+  specs' identical convention for the same kind of check). This alone
+  explains most of that file's original failures.
+- `ProblemSpec`'s three "modes" computed a `reuse`/`depthTranches` pair that
+  was printed but never actually passed to `analyzeDoubleDummy` — dead
+  parameters from the `depthTranches`/`reuseDeeper` API this document's
+  Transposition Table section already noted as removed. All three modes
+  tested the exact same thing three times over; collapsed to one test.
+
+**Exact vs. Partial, properly distinguished.** All four specs now use
+`assertProvenMakes` + `pendingUntilFixed` (the same pattern already
+established by `WinchesterBoard1Spec`/`WinchesterBoard12Spec`) instead of the
+original `assertMakes`, which treated an unproven `Partial` guess the same as
+a proven `Exact` result for pass/fail purposes. On a full 52-card deal,
+neither engine gets remotely close to a proof within a realistic budget
+(observed depths as shallow as 6 of 52 plies) — grading an unproven guess as
+a failure was testing a question neither engine could actually answer yet,
+independent of which engine was used.
+
+**Fixture corrections** (Robin's own work, not code): the Westwood fixture
+was spot-checked and confirmed correct (first four deals); the Winchester
+fixture had several wrong `OptimumResultTable` entries, corrected, with the
+file trimmed down to exactly the five boards actually tested (1, 2, 3, 7,
+12) — which shifted `WinchesterSpec`'s hardcoded board-7/12 array indices and
+had to be fixed alongside the trim; LEXINGTON's entries were also found
+wrong and corrected.
+
+**Result**: with corrected ground truth and the Exact/Partial fix, Winchester
+boards 1 and 3 now fully resolve to `Exact(true,13)` — a genuine, complete,
+proven double-dummy result on a real deal, the first anywhere in this
+project outside a small synthetic endgame. Boards 2, 7, and 12 (including
+one, board 7, whose unproven guess is currently wrong) remain honestly
+`Partial`/pending — not failures, since they were never proven either way.
+Westwood (9 deals) and the corrected LEXINGTON (8 deals) are all still
+`Partial`/pending at current settings — harder for the search to resolve
+within budget than Winchester's, apparently, not a bug.
+
+---
+
+## Attempted and Reverted: a Richer Non-Terminal Heuristic
+
+`BitState.heuristic` was, until this attempt, purely tricks-banked-so-far —
+the "deliberate simplification" this document already flagged, since a
+proven `Exact` result is never affected by the heuristic (only move-ordering
+quality and unproven `Partial` estimates are). A bit-native port of the
+object-graph engine's genuine card-potential evaluation (`Deal.evaluate`/
+`Holding.evaluate` — each equivalence class contributes `size * 0.5^priority`,
+`priority` being how many still-live cards outrank its top card) was
+implemented, with a rigorously-bounded scale derivation (worst case 13 tricks
++ 26 card-potential = 39, replacing the trick-count-only bound of 13) to keep
+it safe for the aspiration window.
+
+**Reverted the same day.** Verified correctness-neutral, but empirically:
+zero change to the eleven/twelve-card gap (identical wrong answers, identical
+depths — this was before the budget/TT-size root cause above was found), and
+a severe slowdown (an isolated benchmark that normally takes ~11s didn't
+finish in 5+ minutes and had to be killed). Root cause: at the time, Gambit's
+`orderedMoves` still recomputed the heuristic once per comparison during
+sorting (see "Boxing and Allocation Fixes" above) — an O(b log b) multiplier
+on top of a heuristic that was already far more expensive than the O(1)
+trick-count subtraction it replaced. The code is preserved, unwired, in
+`CardPotentialHeuristic.scala`, clearly labelled, in case it's worth
+revisiting.
+
+**Worth noting explicitly**: the recomputation bug this heuristic ran into
+is now fixed (both the O(b log b)-calls problem and the Tuple boxing
+problem, see above) — meaning a retry today would not pay that multiplier.
+The heuristic's own per-call cost (equivalence-class walks across four
+suits, four hands) would still need to be reduced or the results would still
+likely be too slow, but the gap between "hopeless" and "worth trying" is
+probably smaller now than when it was first attempted. See "Not Yet
+Implemented" below.
 
 ---
 
@@ -677,66 +930,120 @@ work to reach the same conclusion. This is a hypothesis, not a diagnosis.
 
 ### Not Yet Implemented
 
-1. **`Strategy`-based move ordering for the bit engine.** The single most
-   likely candidate to close the known depth gap above, and — see the next
-   section — also the safe way to capture the branching-factor intuition
-   behind the question that prompted this write-up. Purely a heuristic
-   (affects ordering, not legality), so it carries no correctness risk.
-2. **Rank reduction / cross-position suit canonicalization.** A suit's
+Status as of 2026-07-18. Estimates below are deliberately calibrated, not
+optimistic — most are ranges reflecting real uncertainty, not point figures,
+since none of this has been prototyped. Where a prior estimate in this
+document turned out to be only partly right (see "Known Open Gap" above),
+that's a reminder to treat these the same way: directional guidance, not
+commitments.
+
+1. **Rank reduction / cross-position suit canonicalization.** A suit's
    *relative* structure (which of the 13 ranks are alive and who holds them,
    independent of the absolute ranks) is often shared across otherwise
    distinct positions. Real double-dummy solvers (DDS/GIB) exploit this
-   heavily; this codebase doesn't yet, beyond the exact-position transposition
-   table. Scoped in the original project plan as a stretch goal; not started.
-3. **Systematic profiling — done, 2026-07-17.** JFR (`jfr view hot-methods` /
-   `allocation-by-class`) against `BitAnalysis` (`WinchesterBoard12Spec`'s
-   new-engine tests) found the transposition-table key — `CacheKey`, a plain
-   `(Long, Long, Long, Long)` tuple — boxing every field to `Object` on every
-   probe/store (`Tuple4$.apply`, `Product4.productElement`, `java.lang.Long`
-   boxing all showed up as measurable costs). Fixed by making `CacheKey` a
-   dedicated case class instead of a tuple; the same test went from ~15.7s to
-   ~12.5s. The single biggest hot-methods entry, though (11.76%,
-   `HashMap.growTable`), is in Gambit's `FlatTTCache` — its `mutable.HashMap`
-   starts at default capacity and repeatedly resizes toward
-   `BridgeConfig.ttMaxSize` (800,000 default) — not fixed yet, since it needs
-   a Gambit change and thus another Gambit release; see "Pre-size
-   `FlatTTCache`'s HashMap" as a queued follow-up. Re-profiling after that
-   fix, and periodically after future changes, is cheap and worth repeating.
-4. **Parallel/multi-threaded search.** Not attempted at all. A modern
-   multi-core machine could plausibly give a near-linear win via a shared-TT
-   parallel search (e.g. Lazy-SMP style, as used in strong chess engines),
-   entirely orthogonal to every optimization above.
-5. **Root-causing the known gaps above** — the ten/eleven/twelve-card
-   depth disagreement, and the 25 IT-suite failures in pre-existing specs —
-   both flagged, neither investigated.
-6. **The object-graph engine's own "next structural fix"** (mutable
-   `Deal`/play-unplay, noted in this doc's original "Memory" section) is now
-   effectively moot: the bit engine already solves that exact allocation
-   problem via a different representation, so there's no remaining reason to
-   pursue it in the old engine.
+   heavily; this codebase doesn't yet, beyond the exact-position
+   transposition table. Scoped in the original project plan as a stretch
+   goal; not started.
+   **Estimated saving**: potentially the largest of anything on this list,
+   and the one item that could change the *shape* of the performance curve
+   rather than just its constant factor — real solvers reach sub-second full
+   deals partly through this technique. Honestly speculative without a
+   prototype: plausibly anywhere from a small constant-factor win (if few
+   positions in a typical search actually share structure) to an
+   order-of-magnitude-plus reduction in effective node count on hard
+   positions (if sharing is common, as DDS/GIB's results suggest). Also the
+   biggest engineering lift of anything here — a genuinely new project, not
+   a tuning pass.
+2. **Ruff rank-selection heuristic** (`discardScore` currently always prefers
+   the lowest trump, with no model of being over-ruffed, promoting a
+   partner's or opponent's trump honor, or setting up a second ruff).
+   Ordering-only, same safety profile as the move-ordering work already
+   done.
+   **Estimated saving**: smaller and narrower than the move-ordering work
+   already landed — it only affects positions where ruffing choices actually
+   matter (trump contracts with more than one live trump to choose from),
+   not every position. Plausibly a modest, single-digit-percentage reduction
+   in node count on ruffing-heavy hands; unlikely to close a specific known
+   gap the way the trick-position fix closed the ten-card case, since
+   nothing currently flags a gap traceable to this specifically.
+3. **Discard suit-selection heuristic — done** (the "keep length with
+   dummy/declarer" proxy, see "Move Ordering" above). Listed here in the
+   original version of this document as future work; implemented since.
+4. **Revisit the reverted card-potential heuristic** (see "Attempted and
+   Reverted" above) now that the O(b log b) recomputation bug it collided
+   with is fixed. Would need the heuristic's own per-call cost reduced too
+   (e.g. precompute each suit's live-card mask once per node and share it
+   across all four hands, rather than recomputing it once per hand as the
+   reverted version did) before it's worth re-testing.
+   **Estimated saving**: unknown in either direction until retried — this is
+   explicitly a "worth checking again, circumstances changed" item, not a
+   confident prediction. If it works, the upside is the same as originally
+   intended: better move ordering across the board, and more accurate
+   (though still unproven) `Partial` guesses on hard positions — plausibly
+   relevant to the still-open twelve-card gap and the still-`Partial`
+   Westwood/LEXINGTON real deals. If it still doesn't pay for its own cost
+   even after both fixes, that's a fast, cheap experiment to run (re-wire it,
+   re-profile, compare), not a big investment.
+5. **Parallel/multi-threaded search.** Not attempted, not scoped at all.
+   **Estimated saving**: a well-implemented shared-TT parallel search (e.g.
+   Lazy-SMP, as used in strong chess engines) could plausibly give a
+   near-linear win in *usable node budget per unit wall-clock time* with
+   core count on a modern multi-core machine — e.g. roughly 3-6x on a
+   typical 4-8 core machine, allowing for synchronization/TT-contention
+   overhead eating into the naive linear number. Entirely orthogonal to
+   every other item here (stacks multiplicatively with rank reduction, a
+   cheaper heuristic, etc.), but a substantial, separate engineering effort
+   (thread-safe `TTCache`, work-splitting, no existing scaffolding at all).
+6. **`orderedMoves`'s final tuple unwrap** (see "Boxing and Allocation
+   Fixes" above) — both its only callers discard the move and use only the
+   successor state, suggesting the unwrap-to-`(M,S)` step, and possibly the
+   move field of `ScoredSuccessor` entirely, isn't needed.
+   **Estimated saving**: small — this is now an O(b), not O(b log b), cost,
+   so the remaining upside is bounded to whatever fraction of allocation
+   this one `Tuple2` per successor represents (a few percent at most, based
+   on the last profile). Cheap to verify if ever done; not worth doing
+   speculatively.
+7. **The 25 original IT-suite failures — resolved**, not just investigated:
+   all four specs rewritten to test the bit engine with a proper
+   Exact/Partial distinction (see "Real-Deal Integration Specs Rewritten"
+   above), two real bugs fixed, fixtures corrected. Listed here in the
+   original version of this document as still-open; closed since.
+8. **The object-graph engine's own "next structural fix"** (mutable
+   `Deal`/play-unplay, noted in this document's original "Memory" section)
+   remains effectively moot: the bit engine already solves that exact
+   allocation problem via a different representation.
 
 ### Performance Prediction
 
-The honest answer is that sub-second full-52-card analysis is not close, and
-there is no single remaining change likely to get there — DDS/GIB reach that
-speed through years of accumulated technique (rank reduction across all four
-suits at once, a tuned move-ordering system, and in modern versions parallel
-search plus small-suit-combination lookup tables), of which this project has
-so far implemented one piece (equivalence classes) well, plus the standard
-alpha-beta/TT/aspiration-window/iterative-deepening machinery. What's been
-measured is a large **constant-factor** win — the memory/time comparison
-above is roughly two orders of magnitude — not a change in the underlying
-exponential blow-up with deal size.
+The honest answer is still that sub-second full-52-card analysis is not
+close. What's changed since this section was first written is that the
+predicted quick win (move ordering) has actually been tried, and it
+partially confirmed and partially corrected the original prediction: it did
+shrink proof time on some hard positions as expected (the ten-card
+`BitAnalysisITSpec` case, `WinchesterBoard1Spec`'s depth improvement), but it
+did **not** close the eleven/twelve-card gap the way this section predicted
+— that turned out to be a node-budget/TT-size problem, not a move-ordering
+problem (see "Known Open Gap"). Both things can be true at once: move
+ordering was worth doing, and it wasn't the single fix this section implied
+it might be.
 
-A calibrated expectation, not a promise: restoring move ordering (item 1
-above) should noticeably shrink the time to *prove* (`Exact`, not `Partial`)
-harder end positions — plausibly from minutes down to single-digit seconds
-for the currently-problematic ten-to-thirteen-card cases — because alpha-beta
-efficiency is dominated by whether the first move tried at each node is
-already the best one. Getting a full 52-card deal to `Exact` in real time
-almost certainly still needs rank reduction and/or parallel search on top of
-that; that's a project of comparable size to what's already been done here,
-not a tuning pass.
+What's actually closed the ten/eleven-card gap and produced the first two
+fully-proven real-deal results (Winchester boards 1 and 3) is a combination
+of three things together — move ordering, a bit-engine-specific TT size/node
+budget chosen empirically, and the LRU eviction and boxing fixes that made a
+given memory budget go further. None of these change the underlying
+exponential blow-up with deal size; they're all constant-factor (if a large
+one — the memory/time comparison for the bit engine vs. the object-graph
+engine is roughly two orders of magnitude) or capacity (bigger effective TT)
+improvements, not structural ones.
+
+Rank reduction and/or parallel search remain the candidates for something
+structural — see their entries in "Not Yet Implemented" above for calibrated
+(and explicitly uncertain) estimates. Absent those, getting a full 52-card
+deal to `Exact` in real time is not expected soon: the twelve-card synthetic
+case already needs roughly double the memory margin this project judged
+worth spending, and a real deal is a much harder search than any of the
+synthetic end positions tested so far.
 
 ### On Branching: the 4-and-2 Question
 
@@ -775,11 +1082,18 @@ system already does in the object-graph engine — `Cover`/`Finesse`/
 expressed as an ordering, never as a legality restriction). If the guess is
 right, as it usually is, alpha-beta prunes the sibling branches away for
 free, at zero correctness cost. If it's occasionally wrong, the search just
-does the same work it would do today — nothing is lost. This is also,
-concretely, item 1 in "Not Yet Implemented" above: porting `Strategy`-based
-ordering to the bit engine would likely address this concern and the known
-ten/eleven/twelve-card depth gap at the same time, since both stem from the
-same missing piece.
+does the same work it would do today — nothing is lost.
+
+**Update**: this recommendation has since been implemented (see "Move
+Ordering" above) — `leadScore`/`followSuitScore`/`discardScore` are exactly
+this, "usually right" preferences expressed as ordering, never as legality.
+It measurably helped (the ten-card case, `WinchesterBoard1Spec`'s depth), but
+it did *not* turn out to be the same missing piece behind the eleven/twelve-
+card gap, which the original version of this paragraph predicted — that gap
+was a node-budget/TT-size problem instead (see "Known Open Gap"). The
+recommendation itself — capture "usually right" as ordering, not pruning —
+still stands regardless; it was the specific prediction about which gap it
+would close that was only partly right.
 
 A true forward-pruning mode is worth keeping in mind as a distinct, explicit,
 opt-in future option (e.g. a new `DDResult` variant that's clearly labeled
