@@ -81,8 +81,8 @@ case class DealBits(hands: IndexedSeq[HandBits]):
     * and only between tricks -- see that method's doc for why.
     */
   def canonicalSuitMasks(suitIndex: Int): IndexedSeq[SuitMask] =
-    val universe = suitUniverse(suitIndex)
-    hands.map(h => SuitMask.compact(h.suitMask(suitIndex), universe))
+    val compactor = SuitMask.compactor(suitUniverse(suitIndex))
+    hands.map(h => compactor(h.suitMask(suitIndex)))
 
 object DealBits:
   /** The partner of a hand, under the `handIndex % 2` seating convention. */

@@ -48,8 +48,16 @@ object BitAnalysis:
     * Convenience overload accepting a real `Deal`/`Suit`, converting at the boundary.
     *
     * @param useCanonicalKey EXPERIMENTAL, defaults to `false` (the trusted, unchanged path).
-    *                        See `BitState.evaluateCanonicalKey`'s doc for what this does and
-    *                        why it's opt-in, not the default, for now.
+    *                        Measured (2026-07-18, after fixing `SuitMask.compact`'s per-hand
+    *                        redundancy) to help substantially on a few TT-heavy stress
+    *                        positions (eleven/twelve-card endings, deep Winchester board 12
+    *                        searches) but to cost ~1.9x overall across the broader, more
+    *                        typical real-deal IT battery (`ProblemSpec`/`AnalysisSpec`/
+    *                        `WhistPBNSpec`/`WinchesterSpec`/`WinchesterBoard1Spec`/
+    *                        `WinchesterBoard12Spec`: 369s -> 687s) -- most of those are
+    *                        shallow searches on full 52-card deals where canonicalization's
+    *                        per-node cost isn't earned back. NOT a good default as-is; see
+    *                        `BitState.evaluateCanonicalKey`'s doc for the mechanism itself.
     */
   def analyzeDoubleDummy(
                            deal: Deal,

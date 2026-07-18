@@ -5,26 +5,27 @@ import org.scalatest.flatspec
 import org.scalatest.matchers.should
 
 /**
-  * Open question on board 1 of `WinchesterJuly2026.pbn`
+  * Board 1 of `WinchesterJuly2026.pbn`
   * (`[Deal "N:J3.975.QT764.AJ5 KQ62.JT2.KJ3.832 T94.A64.95.T9764 A875.KQ83.A82.KQ"]`):
   *
   * its `OptimumResultTable` says `N NT 1` / `S NT 1` (NS makes only 1 trick in NT), but Robin's
-  * spot check against an online double-dummy solver says 2 -- and that's the more plausible
+  * spot check against an online double-dummy solver said 2 -- and that's the more plausible
   * answer on its face: NS holds two lone aces (North's club ace, South's heart ace), and a lone
-  * ace is essentially an unstoppable notrump winner absent a squeeze. This looks like a likely
+  * ace is essentially an unstoppable notrump winner absent a squeeze. This looked like a likely
   * error in the PBN fixture itself, not a solver disagreement.
   *
-  * Neither engine can currently PROVE this either way: board 1 is a full 52-card deal, and as of
-  * this writing neither engine resolves a full deal to `Exact` within the 1,000,000-node-per-
-  * iteration budget (old engine reached 5 tricks deep, the new bitboard engine 3, before
-  * returning an unproven `Partial` guess) -- see the wider "search doesn't complete on real
-  * deals" finding this whole bitboard project is aimed at. `Partial` guesses are known to be
-  * unreliable (that's the reason this file exists), so they don't confirm or refute the "2
-  * tricks" claim either way.
+  * **Update, 2026-07-18**: the new bitboard engine now PROVES it. With the rank-reduction
+  * `SuitMask.compactor` fix landed (see `doc/DoubleDummyDesign.md`'s "Not Yet Implemented" #1),
+  * this full 52-card deal resolves to `Exact(true,13)` for "NS makes 2 tricks in NT" under the
+  * project's normal (default) settings -- confirming Robin's spot check over the fixture's
+  * claimed "1". The fixture's `OptimumResultTable` entry itself is Robin's own call to correct,
+  * not this file's -- left as-is here since this spec only tests what the solver can prove, not
+  * the PBN file's contents.
   *
-  * These tests are pending until an engine actually proves (`DDResult.Exact`) whether NS makes
-  * 2 tricks in NT here -- at which point `pendingUntilFixed` will fail loudly, as a prompt to
-  * replace it with a real assertion.
+  * The complementary "NOT 3 tricks" question is NOT yet provable at the project's shipped
+  * settings (`useCanonicalKey` defaults to `false`; the new engine still returns an unproven
+  * `Partial(false,7)` here) -- that assertion stays `pendingUntilFixed`. The old engine's two
+  * tests remain unproven too (old engine reached 5 tricks deep before its node budget ran out).
   */
 //noinspection ScalaStyle
 class WinchesterBoard1Spec extends flatspec.AnyFlatSpec with should.Matchers {
@@ -54,7 +55,7 @@ class WinchesterBoard1Spec extends flatspec.AnyFlatSpec with should.Matchers {
     assertProvenMakes(result, false)
   }
 
-  it should "have NS proven to make 2 tricks in NT, per the NEW bitboard engine" in pendingUntilFixed {
+  it should "have NS proven to make 2 tricks in NT, per the NEW bitboard engine" in {
     val result = BitAnalysis.analyzeDoubleDummy(deal, Hand.next(0), None, 2, directionNS = true)
     println(s"NEW engine, NS needing 2 tricks in NT: $result")
     assertProvenMakes(result, true)

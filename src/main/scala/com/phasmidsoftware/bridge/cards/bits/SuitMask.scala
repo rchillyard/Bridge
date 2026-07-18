@@ -102,6 +102,20 @@ object SuitMask:
     * `BitState.evaluateCanonicalKey`'s doc for why (a card already played to the current
     * trick has an absolute rank that this compaction does not, and cannot, account for).
     */
-  def compact(mask: SuitMask, universe: SuitMask): SuitMask =
-    val canonicalPositionOf: Map[Int, Int] = universe.ranks.reverse.zipWithIndex.toMap
-    mask.ranks.foldLeft(SuitMask.empty)((acc, r) => acc.setRank(canonicalPositionOf(r)))
+  def compact(mask: SuitMask, universe: SuitMask): SuitMask = compactor(universe)(mask)
+
+  /**
+    * Precomputes the rank-order mapping for `universe` as a reusable function.
+    *
+    * The mapping depends only on `universe`, not on any particular hand, so when
+    * compacting several hands' masks against the SAME universe (the common case:
+    * see `DealBits.canonicalSuitMasks`, which does this once per suit for all 4
+    * hands), callers should build the compactor once and reuse it, rather than
+    * calling `compact` separately per hand and rebuilding the mapping each time.
+    * The mapping itself is a plain `Array[Int]` indexed by absolute rank, not a
+    * generic `Map`, to avoid boxing and hashing overhead on this hot path.
+    */
+  def compactor(universe: SuitMask): SuitMask => SuitMask =
+    val canonicalPositionOf = new Array[Int](RanksPerSuit)
+    universe.ranks.reverse.zipWithIndex.foreach((r, i) => canonicalPositionOf(r) = i)
+    (mask: SuitMask) => mask.ranks.foldLeft(SuitMask.empty)((acc, r) => acc.setRank(canonicalPositionOf(r)))

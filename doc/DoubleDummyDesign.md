@@ -978,6 +978,90 @@ commitments.
    flagged up front as the most speculative item on this list. Left
    opt-in; promoting it to the default is a separate, not-yet-made decision
    that would need more evidence than three data points.
+
+   **Follow-up, same day — a real inefficiency found and fixed, prompted by
+   a direct question ("aren't we doing more work than necessary?").**
+   `SuitMask.compact` rebuilt its entire rank-order mapping (a boxed
+   `Map[Int,Int]`, via list-reverse/zip/toMap) from scratch on every one of
+   the 4 per-hand calls inside `DealBits.canonicalSuitMasks`, even though
+   that mapping depends only on the shared suit `universe`, identical
+   across all 4 hands — the same "recompute a per-suit quantity once per
+   hand" mistake already made once before this session (see "Attempted and
+   Reverted" above). Fixed with `SuitMask.compactor(universe)`: builds the
+   mapping once, as a plain `Array[Int]` (not a boxed `Map`), and returns a
+   reusable function applied to each hand. Purely a performance change,
+   verified behavior-identical by the full existing test suite (45 tests,
+   unchanged). Re-measured on the same three cases: the canonical key's
+   overhead roughly halved in every case (eleven-card: was 1.3x slower than
+   the default key, now actually *faster*; twelve-card: 5.4x → 2.6x;
+   Winchester board 12: 4.4x → 2.0x) — real, but incomplete: canonicalization
+   still does genuine per-node work that the default key doesn't.
+
+   **Promotion attempt, same day — tried, reverted.** With the overhead
+   roughly halved, tried promoting `useCanonicalKey` to `true` as
+   `BitAnalysis`'s default. Correctness held (no new failures beyond the
+   pre-existing benign `pendingUntilFixed`-unexpectedly-passed pattern —
+   see `WinchesterBoard1Spec`, below, one *more* such case even resolved).
+   But measured across the broader, more typical real-deal IT battery
+   (`ProblemSpec`/`AnalysisSpec`/`WhistPBNSpec`/`WinchesterSpec`/
+   `WinchesterBoard1Spec`/`WinchesterBoard12Spec` together), the total run
+   time went from 369s to 687s — **~1.9x slower overall**, not faster. The
+   three stress cases above are pathological, TT-heavy positions where
+   canonicalization earns back its cost; most of the broader battery is
+   shallow searches on full 52-card deals (depth ~6 of 52) where it doesn't.
+   Reverted to `useCanonicalKey = false` as the default; the finding itself
+   is recorded in the parameter's own doc comment in `BitAnalysis.scala` so
+   this exact promotion isn't retried without re-deriving the same answer.
+   A smarter trigger (e.g. only canonicalizing past some minimum
+   remaining-card count) might do better, but that's a further design
+   change, not this one-line experiment.
+
+   One concrete win did fall out of the promotion attempt regardless: with
+   the canonical key active, `WinchesterBoard1Spec`'s new-engine "NS makes 2
+   tricks in NT" case resolved to a proven `Exact(true,13)` — and this
+   result turned out to hold under the *shipped* default too (`useCanonicalKey
+   = false`), so it's no longer a `pendingUntilFixed` guess: see that spec
+   for the corrected assertion. It confirms Robin's own spot-check
+   suspicion that the PBN fixture's claimed "1 trick" was wrong.
+
+   **This is a "this implementation didn't clear the bar" result, not
+   evidence that rank reduction itself is a bad idea** — real double-dummy
+   solvers (DDS, GIB) use exactly this technique successfully, but a much
+   thicker version of it than what's implemented here:
+
+   - **They maintain relative ranks incrementally; we recompute from
+     scratch.** `SuitMask.compact`'s own doc comment says so explicitly:
+     "no history or incremental bookkeeping... recomputed fresh," the same
+     philosophy as `equivalenceClasses`. Every between-tricks node here
+     redoes the full rank-order remap for up to 13 slots per suit. DDS
+     instead carries relative ranks as a running invariant of its state,
+     updated by a small, local promotion step on each card play — O(1)
+     amortized maintenance, not O(suit size) recomputation per node. The
+     `compactor` fix above only reduced the constant factor on that
+     per-node recomputation; it didn't remove the fact that it happens at
+     all, and that's the real gap versus an incremental design.
+   - **Canonicalization is foundational for them, bolted on for us.** DDS's
+     state representation and endgame/quick-trick lookup tables are built
+     around relative ranks from the ground up. Here it's an alternate
+     `withKeyFn` layered on an otherwise-unchanged alpha-beta+TT search that
+     wasn't designed around it — the payoff is limited to "does this one TT
+     get more hits," not "does the whole search get cheaper to represent."
+   - **It's normally paired with suit-symmetry reduction, explicitly out of
+     scope here** (see "Design"/"Explicitly out of scope for this pass"
+     above) — treating non-trump suits as interchangeable in notrump, and
+     hand symmetry. Within-suit rank reduction alone captures a fraction of
+     what the combined technique gives production solvers.
+
+   A genuinely incremental version — rank reduction maintained as part of
+   the state itself, updated on play/unplay rather than rederived at every
+   node — would plausibly change this outcome, but that's a much bigger,
+   structural rewrite, closer in kind to the object-graph engine's own
+   still-outstanding "next structural fix" (mutable play/unplay) than to a
+   quick follow-up. Not obviously worth it ahead of clearer-payoff items
+   still open on this list (parallel search, in particular). Same lesson as
+   "Attempted and Reverted" above: the idea can be sound while a cheap,
+   additive, non-incremental implementation of it still isn't worth
+   keeping.
 2. **Ruff rank-selection heuristic** (`discardScore` currently always prefers
    the lowest trump, with no model of being over-ruffed, promoting a
    partner's or opponent's trump honor, or setting up a second ruff).
