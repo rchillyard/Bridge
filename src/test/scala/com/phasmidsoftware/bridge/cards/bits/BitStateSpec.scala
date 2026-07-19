@@ -64,4 +64,55 @@ class BitStateSpec extends flatspec.AnyFlatSpec with should.Matchers {
     low.evaluateKey should not be high.evaluateKey // different absolute ranks: the plain key tells them apart
     low.evaluateCanonicalKey shouldBe high.evaluateCanonicalKey // same shape: the canonical key unifies them
   }
+
+  behavior of "BitState.evaluateKey (transposition reuse across an equivalence-class ordering choice)"
+
+  it should "reach the identical key whichever of two equivalent cards N plays first, across two tricks" in {
+    // N (hand 0) holds ranks 9 and 7 of suit 0 -- adjacent live ranks with nothing (no rank 8)
+    // held by ANY hand, so they're a genuine equivalence class of size 2: it should never
+    // matter which one N plays first. E/S/W (hands 1/2/3) hold exactly one suit-0 card each
+    // (ranks 2/3/4, all beaten by either of N's cards) plus one spare card in suit 1 -- both
+    // tricks are fully forced for them (trick 1: follow suit with their only suit-0 card;
+    // trick 2: discard their only remaining card, having no choice either way). Every hand
+    // also keeps one untouched spare card in suit 2, so the compared end states aren't
+    // trivially all-empty.
+    def dealFor(nFirst: Int, nSecond: Int): DealBits = DealBits(
+      HandBits.empty.setCard(0, nFirst).setCard(0, nSecond).setCard(2, 0),
+      HandBits.empty.setCard(0, 2).setCard(1, 5).setCard(2, 1),
+      HandBits.empty.setCard(0, 3).setCard(1, 6).setCard(2, 2),
+      HandBits.empty.setCard(0, 4).setCard(1, 7).setCard(2, 3)
+    )
+
+    def playBothTricks(nFirst: Int, nSecond: Int): BitState =
+      val initial = BitState(dealFor(nFirst, nSecond), strain = None, leader = 0, trickPlays = Nil, tricks = Tricks.zero)
+      // Trick 1: N leads a suit-0 card; E/S/W follow suit with their only suit-0 card.
+      val afterTrick1 = Seq(
+        TrickPlay(0, 0, nFirst),
+        TrickPlay(1, 0, 2),
+        TrickPlay(2, 0, 3),
+        TrickPlay(3, 0, 4)
+      ).foldLeft(initial)((s, p) => s.play(p))
+      afterTrick1.trickPlays shouldBe empty // trick 1 completed
+      afterTrick1.leader shouldBe 0 // N's suit-0 card beats 2/3/4 either way: N wins and leads again
+      afterTrick1.tricks.ns shouldBe 1 // N (NS) won trick 1
+      // Trick 2: N leads its remaining (forced) suit-0 card; E/S/W are void in suit 0 and
+      // discard their only remaining card (suit 1) -- forced, not a real choice.
+      val afterTrick2 = Seq(
+        TrickPlay(0, 0, nSecond),
+        TrickPlay(1, 1, 5),
+        TrickPlay(2, 1, 6),
+        TrickPlay(3, 1, 7)
+      ).foldLeft(afterTrick1)((s, p) => s.play(p))
+      afterTrick2.trickPlays shouldBe empty // trick 2 completed
+      afterTrick2.leader shouldBe 0 // N's suit-0 card is the only one following suit: N wins again
+      afterTrick2.tricks.ns shouldBe 2 // N (NS) won both tricks
+      afterTrick2
+
+    val nineFirst = playBothTricks(nFirst = 9, nSecond = 7)
+    val sevenFirst = playBothTricks(nFirst = 7, nSecond = 9)
+
+    nineFirst.deal shouldBe sevenFirst.deal // same cards gone from every hand, regardless of order
+    nineFirst.evaluateKey shouldBe sevenFirst.evaluateKey
+    nineFirst.evaluateCanonicalKey shouldBe sevenFirst.evaluateCanonicalKey
+  }
 }

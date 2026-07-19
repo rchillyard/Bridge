@@ -5,6 +5,7 @@
 package com.phasmidsoftware.bridge.cards.bits
 
 import com.phasmidsoftware.bridge.cards.{BridgeConfig, CacheKey, Tricks}
+import com.phasmidsoftware.gambit.util.LazyLogger
 
 /**
   * A double-dummy search state expressed entirely in bitboard terms -- no `Deal`/`Hand`/
@@ -101,16 +102,24 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
         ScoredPlay(p, score(p, cls))
       }.toSeq
 
-    if trickPlays.isEmpty then
-      (0 until 4).filter(s => deal.hand(player).suitMask(s).nonEmpty).flatMap(classesInSuit(_, leadScore))
-        .sortBy(-_.score).map(_.play)
-    else
-      val suit = ledSuit
-      if deal.hand(player).suitMask(suit).nonEmpty then
-        classesInSuit(suit, followSuitScore).sortBy(-_.score).map(_.play)
+    val result =
+      if trickPlays.isEmpty then
+        (0 until 4).filter(s => deal.hand(player).suitMask(s).nonEmpty).flatMap(classesInSuit(_, leadScore))
+          .sortBy(-_.score).map(_.play)
       else
-        (0 until 4).filterNot(_ == suit).filter(s => deal.hand(player).suitMask(s).nonEmpty)
-          .flatMap(classesInSuit(_, (p, _) => discardScore(p))).sortBy(-_.score).map(_.play)
+        val suit = ledSuit
+        if deal.hand(player).suitMask(suit).nonEmpty then
+          classesInSuit(suit, followSuitScore).sortBy(-_.score).map(_.play)
+        else
+          (0 until 4).filterNot(_ == suit).filter(s => deal.hand(player).suitMask(s).nonEmpty)
+            .flatMap(classesInSuit(_, (p, _) => discardScore(p))).sortBy(-_.score).map(_.play)
+    // TRACE-only: the branching factor at this node -- how many candidate plays (equivalence-
+    // class representatives, not raw cards) `legalPlays` returned here. Off by default (and
+    // effectively free when off: LazyLogger guards on isTraceEnabled before building the
+    // string); enable via logback for `com.phasmidsoftware.bridge.cards.bits.BitState` to get
+    // a per-node branching-factor trace for diagnosing tree size.
+    BitState.logger.trace(s"legalPlays: player=$player, trickPlays.size=${trickPlays.size}, branching=${result.size}")
+    result
 
   /**
     * Move-ordering score for an opening lead of `p` from an equivalence class `cls`; higher
@@ -345,3 +354,6 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
         canonicalHandBits(2),
         canonicalHandBits(3)
       )
+
+object BitState:
+  private val logger = LazyLogger(getClass)
