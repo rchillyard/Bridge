@@ -52,23 +52,45 @@ case class DealBits(hands: IndexedSeq[HandBits]):
   def play(handIndex: Int, suitIndex: Int, r: Int): DealBits =
     DealBits(hands.updated(handIndex, hands(handIndex).clearCard(suitIndex, r)))
 
+  /** Unions the live cards of whichever hands match `side` (`handIndex % 2`) in one suit --
+    * a single loop shared by `sideMask`/`opponentMask` below, instead of each chaining its own
+    * `filter`/`map`/`reduce` (three allocated closures, plus boxing during `Range` iteration,
+    * per call -- profiled as a real hot-path allocation source, feeding `equivalenceClasses`). */
+  private def unionWhere(suitIndex: Int, side: Int): SuitMask =
+    var acc = SuitMask.empty
+    var i = 0
+    while i < hands.length do
+      if i % 2 == side then acc = acc.union(hands(i).suitMask(suitIndex))
+      i += 1
+    acc
+
   /** The union of both partners' live cards in one suit -- "my side," for equivalence purposes. */
-  def sideMask(handIndex: Int, suitIndex: Int): SuitMask =
-    val side = handIndex % 2
-    hands.indices.filter(_ % 2 == side).map(hands(_).suitMask(suitIndex)).reduce(_.union(_))
+  def sideMask(handIndex: Int, suitIndex: Int): SuitMask = unionWhere(suitIndex, handIndex % 2)
 
   /** The union of the OTHER partnership's live cards in one suit -- this is what breaks equivalence. */
-  def opponentMask(handIndex: Int, suitIndex: Int): SuitMask =
-    val side = handIndex % 2
-    hands.indices.filterNot(_ % 2 == side).map(hands(_).suitMask(suitIndex)).reduce(_.union(_))
+  def opponentMask(handIndex: Int, suitIndex: Int): SuitMask = unionWhere(suitIndex, 1 - handIndex % 2)
 
   /**
     * The equivalence classes of `handIndex`'s cards in `suitIndex`, per
     * [[SuitMask.equivalenceClasses]]: partner's cards never split a class, only a
     * still-live opponent card does.
     */
-  def equivalenceClasses(handIndex: Int, suitIndex: Int): List[SuitMask] =
+  def equivalenceClasses(handIndex: Int, suitIndex: Int): Array[SuitMask] =
     SuitMask.equivalenceClasses(hands(handIndex).suitMask(suitIndex), opponentMask(handIndex, suitIndex))
+
+  /** The union of all four hands' live cards in one suit -- every card still in play there. */
+  def suitUniverse(suitIndex: Int): SuitMask =
+    hands.map(_.suitMask(suitIndex)).reduce(_.union(_))
+
+  /**
+    * The four hands' masks in `suitIndex`, rank-reduced (see [[SuitMask.compact]]) against
+    * that suit's own universe: only the relative order of that suit's currently-live cards
+    * is preserved, not their absolute rank. Used only by `BitState.evaluateCanonicalKey`,
+    * and only between tricks -- see that method's doc for why.
+    */
+  def canonicalSuitMasks(suitIndex: Int): IndexedSeq[SuitMask] =
+    val compactor = SuitMask.compactor(suitUniverse(suitIndex))
+    hands.map(h => compactor(h.suitMask(suitIndex)))
 
 object DealBits:
   /** The partner of a hand, under the `handIndex % 2` seating convention. */

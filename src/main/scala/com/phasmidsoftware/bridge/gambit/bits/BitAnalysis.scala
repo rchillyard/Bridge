@@ -26,31 +26,47 @@ object BitAnalysis:
                            neededTricks: Int,
                            directionNS: Boolean,
                            depth: Int,
-                           maxNodes: Int
+                           maxNodes: Int,
+                           useCanonicalKey: Boolean
                          ): DDResult =
     given gameTC: BitWhistGame = new BitWhistGame
     given stateTC: BitWhistState = new BitWhistState(neededTricks, directionNS)
     given GState[BitState, BitState] = stateTC
-    given TTCache[CacheKey] = FlatTTCache(maxSize = BridgeConfig.ttMaxSize)
+    given TTCache[CacheKey] = FlatTTCache(maxSize = BridgeConfig.bitboardTtMaxSize)
 
     val player = new AlphaBetaPlayer[BitState, BitState, TrickPlay, Int, CacheKey](
       me = if directionNS then 0 else 1,
       depth = depth
     ).withMaxNodes(maxNodes)
-      .withKeyFn(s => s.evaluateKey)
+      .withKeyFn(s => if useCanonicalKey then s.evaluateCanonicalKey else s.evaluateKey)
       .withAspirationWindow(AlphaBetaWindow(-BridgeConfig.aspirationWindow, BridgeConfig.aspirationWindow))
 
     val initialState = BitState(deal, strain, openingLeader, Nil, Tricks.zero)
     runPlayer(player, directionNS, depth, initialState)
 
-  /** Convenience overload accepting a real `Deal`/`Suit`, converting at the boundary. */
+  /**
+    * Convenience overload accepting a real `Deal`/`Suit`, converting at the boundary.
+    *
+    * @param useCanonicalKey EXPERIMENTAL, defaults to `false` (the trusted, unchanged path).
+    *                        Measured (2026-07-18, after fixing `SuitMask.compact`'s per-hand
+    *                        redundancy) to help substantially on a few TT-heavy stress
+    *                        positions (eleven/twelve-card endings, deep Winchester board 12
+    *                        searches) but to cost ~1.9x overall across the broader, more
+    *                        typical real-deal IT battery (`ProblemSpec`/`AnalysisSpec`/
+    *                        `WhistPBNSpec`/`WinchesterSpec`/`WinchesterBoard1Spec`/
+    *                        `WinchesterBoard12Spec`: 369s -> 687s) -- most of those are
+    *                        shallow searches on full 52-card deals where canonicalization's
+    *                        per-node cost isn't earned back. NOT a good default as-is; see
+    *                        `BitState.evaluateCanonicalKey`'s doc for the mechanism itself.
+    */
   def analyzeDoubleDummy(
                            deal: Deal,
                            openingLeader: Int,
                            strain: Option[Suit],
                            neededTricks: Int,
                            directionNS: Boolean,
-                           maxNodes: Int = BridgeConfig.nodesPerIteration
+                           maxNodes: Int = BridgeConfig.bitboardNodesPerIteration,
+                           useCanonicalKey: Boolean = false
                          ): DDResult =
     analyzeDoubleDummy(
       BitConversions.toDealBits(deal),
@@ -59,7 +75,8 @@ object BitAnalysis:
       neededTricks,
       directionNS,
       depth = math.min(Deal.CardsPerDeal, deal.nCards),
-      maxNodes = maxNodes
+      maxNodes = maxNodes,
+      useCanonicalKey = useCanonicalKey
     )
 
   private def runPlayer(

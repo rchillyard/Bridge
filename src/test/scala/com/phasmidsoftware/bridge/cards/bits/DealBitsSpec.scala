@@ -55,7 +55,7 @@ class DealBitsSpec extends flatspec.AnyFlatSpec with should.Matchers {
       handWithRanks(11), // S (N's partner) holds K -- sits between A and Q
       handWithRanks() // W void
     ))
-    deal.equivalenceClasses(0, 0) shouldBe List(SuitMask.rank(12).union(SuitMask.rank(10)))
+    deal.equivalenceClasses(0, 0).toList shouldBe List(SuitMask.rank(12).union(SuitMask.rank(10)))
   }
 
   it should "split a hand's cards separated by an opponent's card" in {
@@ -66,6 +66,43 @@ class DealBitsSpec extends flatspec.AnyFlatSpec with should.Matchers {
       handWithRanks()
     ))
     deal.equivalenceClasses(0, 0).toSet shouldBe Set(SuitMask.rank(12), SuitMask.rank(10))
+  }
+
+  behavior of "DealBits.suitUniverse"
+
+  it should "union all four hands' live cards in one suit" in {
+    val deal = DealBits(IndexedSeq(
+      handWithRanks(12), // N
+      handWithRanks(11), // E
+      handWithRanks(9), // S
+      handWithRanks(8) // W
+    ))
+    deal.suitUniverse(0) shouldBe SuitMask.rank(12).union(SuitMask.rank(11)).union(SuitMask.rank(9)).union(SuitMask.rank(8))
+  }
+
+  behavior of "DealBits.canonicalSuitMasks"
+
+  it should "compact each hand's mask against the shared suit universe" in {
+    // N holds A(12), Q(10); E holds K(11); S and W void in this suit.
+    // Universe = {10,11,12} -> canonical positions 10->0, 11->1, 12->2.
+    val deal = DealBits(IndexedSeq(
+      handWithRanks(12, 10),
+      handWithRanks(11),
+      handWithRanks(),
+      handWithRanks()
+    ))
+    val canonical = deal.canonicalSuitMasks(0)
+    canonical(0) shouldBe SuitMask.rank(2).union(SuitMask.rank(0)) // N: A,Q -> canonical top and bottom
+    canonical(1) shouldBe SuitMask.rank(1) // E: K -> canonical middle
+    canonical(2) shouldBe SuitMask.empty
+    canonical(3) shouldBe SuitMask.empty
+  }
+
+  it should "produce identical canonical masks for two differently-absolute but same-shaped deals" in {
+    // Same shape in both: N holds the top two live cards, E holds the bottom one.
+    val dealLow = DealBits(IndexedSeq(handWithRanks(8, 9), handWithRanks(7), handWithRanks(), handWithRanks()))
+    val dealHigh = DealBits(IndexedSeq(handWithRanks(11, 12), handWithRanks(10), handWithRanks(), handWithRanks()))
+    dealLow.canonicalSuitMasks(0) shouldBe dealHigh.canonicalSuitMasks(0)
   }
 
   behavior of "DealBits.partner"
