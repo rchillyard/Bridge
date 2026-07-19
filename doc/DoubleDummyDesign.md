@@ -839,6 +839,48 @@ successor state, suggesting that final unwrap — and the move field
 entirely — might not be needed at all; not pursued, flagged as a possible
 further simplification needing its own verification.
 
+### Follow-up round, 2026-07-18 — a fresh profile after the rank-reduction work
+
+A new profile (`WinchesterSpec`'s board 1 again, same test as above) showed
+`boxToInteger`/`boxToDouble` back as the top two hottest execution-sample
+methods — apparently contradicting "gone entirely" above. Checked against a
+profile from earlier the same day (well before any of today's changes): the
+same pattern was already there, so this isn't a regression from the
+rank-reduction work — it's three real, previously-untraced call sites that
+happen to produce the identical symptom the earlier fixes already solved
+for other call sites:
+
+- **`SuitMask.equivalenceClasses`** (Bridge) — **fixed.** Returned
+  `List[SuitMask]`; `SuitMask` is `opaque type SuitMask = Int`, and a generic
+  `List` boxes its elements regardless — the same category of bug as
+  `CacheKey`/`ScoredPlay` above, just never applied to this method's own
+  return type, despite being called once per suit, per hand, per node. Now
+  returns `Array[SuitMask]` (a genuine primitive array), built with a single
+  pre-sized buffer instead of `List` cons cells. `DealBits.equivalenceClasses`
+  and callers (`BitState.classesInSuit`, `CardPotentialHeuristic.cardPotential`)
+  updated accordingly; verified behavior-identical by the full test suite
+  (404 tests, `equivalenceClasses`' own spec assertions adapted from
+  `shouldBe List(...)` to `.toList shouldBe List(...)`).
+- **`DealBits.sideMask`/`opponentMask`** (Bridge) — **fixed.** Each built its
+  own `hands.indices.filterNot(...).map(...).reduce(...)` chain — three
+  allocated closures plus `Range` iteration boxing every `Int` index, per
+  call, to OR together at most 2 of 4 known hand masks. Confirmed in the
+  allocation profile too: a `DealBits$$Lambda` sample traced straight to
+  `opponentMask`, called from `equivalenceClasses`. Replaced with one shared
+  `unionWhere(suitIndex, side)` — a plain `while` loop over the 4 hand
+  indices, zero closures, zero boxing — used by both methods.
+- **Gambit's `FlatTTCache.probe`** — **documented only, not fixed.** Boxes a
+  `Double` via `Some(entry.value)` on every cache hit. Unlike the two fixes
+  above, this isn't a private-method container choice: `Option[Double]` is
+  `TTCache`'s own public `probe` signature, shared by every implementation
+  (`FlatTTCache`, the tranched variant) and every caller in
+  `AlphaBetaPlayer`. Removing the boxing would mean redesigning that return
+  type (e.g. a sentinel value instead of `Option`) across the trait, both
+  implementations, and the call site — a public-API change to a shared
+  library other projects may depend on, not a contained tweak like the two
+  above. Deliberately left as a known, low-priority, documented gap rather
+  than attempted, given the expected payoff here was already small.
+
 ---
 
 ## Real-Deal Integration Specs Rewritten

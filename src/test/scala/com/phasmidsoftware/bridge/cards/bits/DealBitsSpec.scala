@@ -55,7 +55,7 @@ class DealBitsSpec extends flatspec.AnyFlatSpec with should.Matchers {
       handWithRanks(11), // S (N's partner) holds K -- sits between A and Q
       handWithRanks() // W void
     ))
-    deal.equivalenceClasses(0, 0) shouldBe List(SuitMask.rank(12).union(SuitMask.rank(10)))
+    deal.equivalenceClasses(0, 0).toList shouldBe List(SuitMask.rank(12).union(SuitMask.rank(10)))
   }
 
   it should "split a hand's cards separated by an opponent's card" in {

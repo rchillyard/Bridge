@@ -51,7 +51,7 @@ class SuitMaskSpec extends flatspec.AnyFlatSpec with should.Matchers {
     // hand holds A(12), K(11), Q(10); opponents hold nothing in this suit
     val hand = SuitMask.rank(12).union(SuitMask.rank(11)).union(SuitMask.rank(10))
     val opponents = SuitMask.empty
-    SuitMask.equivalenceClasses(hand, opponents) shouldBe List(hand)
+    SuitMask.equivalenceClasses(hand, opponents).toList shouldBe List(hand)
   }
 
   it should "NOT split a class when the intervening card belongs to partner (not passed as opponentBits)" in {
@@ -59,7 +59,7 @@ class SuitMaskSpec extends flatspec.AnyFlatSpec with should.Matchers {
     // NOT be included in opponentBits -- callers pass only the opposing side's mask.
     val hand = SuitMask.rank(12).union(SuitMask.rank(10))
     val opponents = SuitMask.empty // partner's K is deliberately absent here
-    SuitMask.equivalenceClasses(hand, opponents) shouldBe List(hand)
+    SuitMask.equivalenceClasses(hand, opponents).toList shouldBe List(hand)
   }
 
   it should "split a class when an opponent card lies between two of the hand's cards" in {
@@ -76,7 +76,7 @@ class SuitMaskSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val beforeOpponents = SuitMask.rank(11)
     val afterOpponents = SuitMask.empty
     SuitMask.equivalenceClasses(hand, beforeOpponents).toSet shouldBe Set(SuitMask.rank(12), SuitMask.rank(10))
-    SuitMask.equivalenceClasses(hand, afterOpponents) shouldBe List(hand)
+    SuitMask.equivalenceClasses(hand, afterOpponents).toList shouldBe List(hand)
   }
 
   it should "produce one class per opponent-free interval for a longer holding" in {
@@ -92,7 +92,7 @@ class SuitMaskSpec extends flatspec.AnyFlatSpec with should.Matchers {
   }
 
   it should "return no classes when the hand is void in this suit" in {
-    SuitMask.equivalenceClasses(SuitMask.empty, SuitMask.rank(5)) shouldBe Nil
+    SuitMask.equivalenceClasses(SuitMask.empty, SuitMask.rank(5)) shouldBe empty
   }
 
   behavior of "SuitMask.compact"

@@ -99,7 +99,7 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
       deal.equivalenceClasses(player, suitIndex).map { cls =>
         val p = TrickPlay(player, suitIndex, cls.topRank)
         ScoredPlay(p, score(p, cls))
-      }
+      }.toSeq
 
     if trickPlays.isEmpty then
       (0 until 4).filter(s => deal.hand(player).suitMask(s).nonEmpty).flatMap(classesInSuit(_, leadScore))

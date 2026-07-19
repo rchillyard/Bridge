@@ -74,16 +74,22 @@ object SuitMask:
     * bits inside one opponent-free interval); its `topBit` is the natural
     * representative move to search, treating the rest as an isomorphic subgame.
     */
-  def equivalenceClasses(handBits: SuitMask, opponentBits: SuitMask): List[SuitMask] =
+  def equivalenceClasses(handBits: SuitMask, opponentBits: SuitMask): Array[SuitMask] =
     var gaps = (~opponentBits.bits) & AllBits
-    var classes = List.empty[SuitMask]
+    // Array[SuitMask] (opaque = Int), not List[SuitMask]: a generic List always boxes its
+    // elements into java.lang.Integer, profiled as a real hot-path cost -- this is called
+    // once per suit, per hand, per node. RanksPerSuit is a safe upper bound on class count.
+    val buf = new Array[Int](RanksPerSuit)
+    var n = 0
     while gaps != 0 do
       val low = gaps & -gaps
       val run = (gaps ^ (gaps + low)) & gaps
       val cls = run & handBits.bits
-      if cls != 0 then classes = SuitMask(cls) :: classes
+      if cls != 0 then
+        buf(n) = cls
+        n += 1
       gaps &= ~run
-    classes.reverse
+    if n == buf.length then buf else buf.take(n)
 
   /**
     * Rank reduction: remaps `mask`'s set bits (assumed a subset of `universe`) to their
