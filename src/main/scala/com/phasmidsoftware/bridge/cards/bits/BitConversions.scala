@@ -19,9 +19,9 @@ object BitConversions:
   def toStrainIndex(strain: Option[Suit]): Option[Int] = strain.map(suitIndex)
 
   def toDealBits(deal: Deal): DealBits =
-    DealBits((0 until 4).map { h =>
+    def handBitsFor(h: Int): HandBits =
       val hand = deal.holdings(h)
       hand.foldLeft(HandBits.empty) { case (acc, (suit, holding)) =>
         holding.cards.foldLeft(acc)((a, c) => a.setCard(suitIndex(suit), SuitMask.RanksPerSuit - 1 - c.rank.priority))
       }
-    })
+    DealBits(handBitsFor(0), handBitsFor(1), handBitsFor(2), handBitsFor(3))

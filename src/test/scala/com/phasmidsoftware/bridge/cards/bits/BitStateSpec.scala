@@ -29,7 +29,7 @@ class BitStateSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
     def stateWithRemainingRank(rank: Int): BitState =
       BitState(
-        deal = DealBits(IndexedSeq(HandBits.empty, handWithRanks(0, rank), HandBits.empty, HandBits.empty)),
+        deal = DealBits(HandBits.empty, handWithRanks(0, rank), HandBits.empty, HandBits.empty),
         strain = None,
         leader = 0,
         trickPlays = Seq(lead),
@@ -51,7 +51,7 @@ class BitStateSpec extends flatspec.AnyFlatSpec with should.Matchers {
     def stateWithRanks(topTwoAndBottom: (Int, Int, Int)): BitState =
       val (top, second, bottom) = topTwoAndBottom
       BitState(
-        deal = DealBits(IndexedSeq(handWithRanks(0, top, second), handWithRanks(0, bottom), HandBits.empty, HandBits.empty)),
+        deal = DealBits(handWithRanks(0, top, second), handWithRanks(0, bottom), HandBits.empty, HandBits.empty),
         strain = None,
         leader = 0,
         trickPlays = Nil,

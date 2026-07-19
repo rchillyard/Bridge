@@ -271,7 +271,7 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
   def heuristic: Double = (tricks.ns - tricks.ew).toDouble * BridgeConfig.heuristicScale
 
   /**
-    * A transposition-table key. `deal.hands` (each a `HandBits`) already uses only bits
+    * A transposition-table key. Each hand's `HandBits` already uses only bits
     * 0-51 of its `Long` (`suitIndex*13 + rank` maxes out at 3*13+12 = 51), leaving bits
     * 52-63 free -- used here for state that isn't otherwise determined by which cards
     * remain in each hand, but that still affects the game-theoretic value of the position:
