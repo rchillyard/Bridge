@@ -661,7 +661,7 @@ handles the identical 5× budget in **~14 seconds**, heap never exceeding
 result, not a design argument: the bit engine genuinely does not retain
 `Deal`/`Hand`/`Holding` objects the way the object-graph engine does.
 
-### Known Open Gap — Update, 2026-07-18: mostly resolved, and not for the reason first suspected
+### Known Open Gap — Update, 2026-07-20: fully resolved, and not for the reason first suspected
 
 The ten/eleven/twelve-card synthetic end positions in `BitAnalysisITSpec`
 originally all disagreed with the object-graph engine — the bit engine
@@ -680,17 +680,29 @@ below).** Both remaining cases turned out to be pure node-budget/TT-capacity
 problems, not search-quality problems at all: given a big enough transposition
 table *and* enough nodes, both resolve to a fully-proven `Exact` result that
 agrees with the object-graph engine. The eleven-card case now resolves at the
-project's actual (conservative) settings. The twelve-card case still doesn't
-— it needs a bigger table/budget than was judged worth the memory margin (see
-below) — but this is now a known, quantified, deliberately-accepted tradeoff,
-not an open question about *why* it disagrees.
+project's actual (conservative) settings. The twelve-card case still didn't
+at that point — it needed a bigger table/budget than was judged worth the
+memory margin (see below) — a known, quantified, deliberately-accepted
+tradeoff, not an open question about *why* it disagrees.
 
-So: move ordering was a real, useful fix, but it was solving a different
-problem than the one causing most of this particular gap. The original
-hypothesis in this section ("no `Strategy`-based ordering... a hypothesis,
-not a diagnosis") is a good example of a plausible-sounding explanation that
-turned out to be only partially right — worth remembering next time a
-performance gap shows up with an equally plausible-sounding single cause.
+**Round 3 — the opening-lead priority scale, 2026-07-20 (see "Move Ordering",
+below).** Unlike round 1's general move-ordering pass, this one closed the
+twelve-card case outright, at the project's unchanged default settings — no
+bigger TT/budget needed after all. Both the eleven- and twelve-card cases are
+now resolved at the shipped defaults; only the thirteen-card and full-52-card
+cases remain open, and for the ordinary reason (deal size, not a specific
+diagnosed gap).
+
+So: move ordering was a real, useful fix both times, but round 1 solved a
+different problem than the one causing most of the eleven/twelve-card gap,
+and it took a much more targeted round of move-ordering work (not just
+"port the old Strategy system," but a deliberately-designed priority scale
+for the single highest-branching decision, leading) to actually close it.
+The original hypothesis in this section ("no `Strategy`-based ordering... a
+hypothesis, not a diagnosis") is a good example of a plausible-sounding
+explanation that turned out to be only partially right on the first pass —
+worth remembering next time a performance gap shows up with an equally
+plausible-sounding single cause.
 
 ## Move Ordering
 
@@ -1289,8 +1301,9 @@ commitments.
    confident prediction. If it works, the upside is the same as originally
    intended: better move ordering across the board, and more accurate
    (though still unproven) `Partial` guesses on hard positions — plausibly
-   relevant to the still-open twelve-card gap and the still-`Partial`
-   Westwood/LEXINGTON real deals. If it still doesn't pay for its own cost
+   relevant to the still-`Partial` Westwood/LEXINGTON real deals (the
+   twelve-card gap this used to reference is closed — see "Known Open Gap"
+   above). If it still doesn't pay for its own cost
    even after both fixes, that's a fast, cheap experiment to run (re-wire it,
    re-profile, compare), not a big investment.
 5. **Parallel/multi-threaded search.** Not attempted, not scoped at all.
@@ -1349,10 +1362,13 @@ improvements, not structural ones.
 Rank reduction and/or parallel search remain the candidates for something
 structural — see their entries in "Not Yet Implemented" above for calibrated
 (and explicitly uncertain) estimates. Absent those, getting a full 52-card
-deal to `Exact` in real time is not expected soon: the twelve-card synthetic
-case already needs roughly double the memory margin this project judged
-worth spending, and a real deal is a much harder search than any of the
-synthetic end positions tested so far.
+deal to `Exact` in real time is not expected soon: all four synthetic
+end positions tested so far (ten through thirteen cards) now resolve at
+the project's default settings (see "Known Open Gap"), but a real deal is a
+much harder search than any of them — Westwood and the corrected LEXINGTON
+(9 and 8 real deals respectively) are still `Partial`/pending at current
+settings, and full 52-card analysis doesn't get remotely close to a proof
+within a realistic budget (see "Real-Deal Integration Specs Rewritten").
 
 ### On Branching: the 4-and-2 Question
 

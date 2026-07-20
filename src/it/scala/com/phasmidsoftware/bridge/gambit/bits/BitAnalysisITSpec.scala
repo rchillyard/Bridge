@@ -16,12 +16,13 @@ import org.scalatest.matchers.should
   * That diagnosis was only partly right (see `doc/DoubleDummyDesign.md`'s "Known Open Gap"):
   * move ordering fixed the ten-card case outright, and the eleven-card case turned out to be
   * a transposition-table size / node-budget problem, since resolved by the bit engine's own
-  * (larger) TT/budget tuning. Only the twelve-card case remains open, and for a different,
-  * quantified reason: it needs a bigger TT/node budget than was judged worth the memory
-  * margin (see `doc/DoubleDummyDesign.md`'s "Bit-Engine-Specific Tuning") -- a deliberate,
-  * accepted tradeoff, not an unexplained gap. Marked `pendingUntilFixed` below rather than
-  * left as a plain failing assertion, since the reason it's still open is understood and
-  * documented, not a mystery to keep surfacing on every `sbt IT/test` run.
+  * (larger) TT/budget tuning. The twelve-card case remained open longer still, needing a
+  * bigger TT/node budget than was judged worth the memory margin -- a deliberate, accepted
+  * tradeoff, not an unexplained gap.
+  *
+  * **Update, 2026-07-20**: the twelve-card case is now resolved too, at the shipped default
+  * budget, no bigger TT/margin needed -- the opening-lead priority scale added to
+  * `BitState.leadScore` (see `doc/DoubleDummyDesign.md`'s "Move Ordering") closed it.
   */
 //noinspection ScalaStyle
 class BitAnalysisITSpec extends flatspec.AnyFlatSpec with should.Matchers {
@@ -61,7 +62,7 @@ class BitAnalysisITSpec extends flatspec.AnyFlatSpec with should.Matchers {
       List("95", "AK3", "97", "KT95"))))
   }
 
-  it should "agree with Whist.analyzeDoubleDummy across every target on the twelve-card end position" in pendingUntilFixed {
+  it should "agree with Whist.analyzeDoubleDummy across every target on the twelve-card end position" in {
     crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(
       List("AQJ876", "96", "AJ", "32"),
       List("KT32", "QJT5", "KT", "J6"),
