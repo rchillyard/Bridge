@@ -1,6 +1,6 @@
 # Bridge Double-Dummy Solver — Design Document
 
-*Reflects the state of the project as of version 1.1.5.*
+*Reflects the state of the project as of version 1.1.6.*
 
 ## Overview
 
@@ -661,7 +661,7 @@ handles the identical 5× budget in **~14 seconds**, heap never exceeding
 result, not a design argument: the bit engine genuinely does not retain
 `Deal`/`Hand`/`Holding` objects the way the object-graph engine does.
 
-### Known Open Gap — Update, 2026-07-18: mostly resolved, and not for the reason first suspected
+### Known Open Gap — Update, 2026-07-20: fully resolved, and not for the reason first suspected
 
 The ten/eleven/twelve-card synthetic end positions in `BitAnalysisITSpec`
 originally all disagreed with the object-graph engine — the bit engine
@@ -680,17 +680,29 @@ below).** Both remaining cases turned out to be pure node-budget/TT-capacity
 problems, not search-quality problems at all: given a big enough transposition
 table *and* enough nodes, both resolve to a fully-proven `Exact` result that
 agrees with the object-graph engine. The eleven-card case now resolves at the
-project's actual (conservative) settings. The twelve-card case still doesn't
-— it needs a bigger table/budget than was judged worth the memory margin (see
-below) — but this is now a known, quantified, deliberately-accepted tradeoff,
-not an open question about *why* it disagrees.
+project's actual (conservative) settings. The twelve-card case still didn't
+at that point — it needed a bigger table/budget than was judged worth the
+memory margin (see below) — a known, quantified, deliberately-accepted
+tradeoff, not an open question about *why* it disagrees.
 
-So: move ordering was a real, useful fix, but it was solving a different
-problem than the one causing most of this particular gap. The original
-hypothesis in this section ("no `Strategy`-based ordering... a hypothesis,
-not a diagnosis") is a good example of a plausible-sounding explanation that
-turned out to be only partially right — worth remembering next time a
-performance gap shows up with an equally plausible-sounding single cause.
+**Round 3 — the opening-lead priority scale, 2026-07-20 (see "Move Ordering",
+below).** Unlike round 1's general move-ordering pass, this one closed the
+twelve-card case outright, at the project's unchanged default settings — no
+bigger TT/budget needed after all. Both the eleven- and twelve-card cases are
+now resolved at the shipped defaults; only the thirteen-card and full-52-card
+cases remain open, and for the ordinary reason (deal size, not a specific
+diagnosed gap).
+
+So: move ordering was a real, useful fix both times, but round 1 solved a
+different problem than the one causing most of the eleven/twelve-card gap,
+and it took a much more targeted round of move-ordering work (not just
+"port the old Strategy system," but a deliberately-designed priority scale
+for the single highest-branching decision, leading) to actually close it.
+The original hypothesis in this section ("no `Strategy`-based ordering... a
+hypothesis, not a diagnosis") is a good example of a plausible-sounding
+explanation that turned out to be only partially right on the first pass —
+worth remembering next time a performance gap shows up with an equally
+plausible-sounding single cause.
 
 ## Move Ordering
 
@@ -732,6 +744,64 @@ depth (5 → 7 tricks at the same node budget), did not move the eleven/twelve-
 card cases (those turned out to be budget/TT-size problems, not ordering
 problems). Two related move-ordering ideas were identified but not
 implemented — see "Not Yet Implemented" below.
+
+### Opening-lead priority scale (2026-07-20)
+
+`leadScore` was, until this point, the least-developed of the three scoring
+functions — "suit/rank preference," never refined the way `followSuitScore`
+was. Prompted directly: leading is now the confirmed highest-branching
+decision (mean branching 2.96 vs 1.4-1.65 elsewhere — see "Branching Factor
+and Pruning Efficiency" below), so it's the one place better ordering has
+the most leverage, and it hadn't been revisited since the initial port. Adds
+a priority scale of tactical lead conventions, translated for double-dummy
+(the whole partnership's actual holding is known, not inferred from bidding
+or signals — so a convention whose real-bridge purpose is *signalling*,
+like fourth-best, doesn't obviously carry over; one whose purpose is a
+genuine tactical property does, and is worth porting):
+
+1. **Singleton lead** in a plain suit, suit contracts only — aiming to set
+   up a ruff. The bit engine's counterpart to the object-graph engine's
+   `Stiff` strategy (`Trick.leadStrategy`), never ported before now.
+2. **Pseudo-sequence lead**, plain suits only: my hand and partner's hand,
+   combined, hold a run of equivalent cards spanning both hands (e.g. my K
+   plus partner's QJ) — lead the class of my own cards below that run (the
+   low spot cards, not the honor), hoping to trap a short holding of
+   whatever's missing in the seat playing right after this lead.
+3. **The same idea tolerating a gap** ("the basic idea of finessing"): the
+   combined run may have a missing card, as long as it's held by the seat
+   playing immediately after this lead (the seat a finesse plays through)
+   rather than the seat playing after partner. Implemented as the exact
+   same combined-run computation as the no-gap case, just with a narrower
+   "opponent" mask — only the far seat's cards break the run, the same way
+   partner's never do for the ordinary `equivalenceClasses` computation.
+4. **Trump lead**: the two opponent hands' trump lengths are unequal, and
+   the shorter-trump hand is also shorter than the longer-trump hand in
+   some plain suit — the classic risk of the short-trump hand scoring extra
+   tricks by ruffing the long-trump hand's losers there; leading trumps
+   first strips that ruffing potential.
+
+A fifth category — **doubleton leads**, favorable when third hand holds two
+winners in the suit or one winner plus a trump winner (with 2+ trumps) —
+was deliberately left out: successful doubleton leads are comparatively
+rare, and since this is move-ordering only (it can never affect
+correctness, only search efficiency), the gap is safe to leave open.
+
+Verified with 5 new hand-built regression tests (one per rule, including
+both directions of the gap-tolerance case) plus the full existing suite
+(410 tests) unaffected — expected, since this only changes which order
+legal moves are tried, never which moves are legal or what they resolve to.
+Re-measured on the three known stress cases: mixed on the default key (flat
+on the eleven-card case, modestly better on Winchester board 12, slower in
+wall-clock terms on the twelve-card case) but a real qualitative gain there
+regardless — the twelve-card default-key search now reaches `Partial
+(true,8)` instead of the long-standing `Partial(false,7)`, one trick
+deeper and now pointing toward the actually-correct answer (`Exact(true,12)`
+was already proven at a larger TT/budget, see "Bit-Engine-Specific Tuning"
+above), not away from it. The canonical-key column improved substantially
+in two of three cases (twelve-card ~34% faster, Winchester ~47% faster).
+Kept despite the mixed wall-clock picture: correctness is unaffected either
+way, and the deeper/better-informed partial result on a long-standing known
+gap is a genuine win independent of the clock.
 
 ---
 
@@ -784,6 +854,58 @@ verified via a dedicated eviction-order test. Directly relevant to the
 conservative TT-size choice above: better eviction quality is what lets a
 smaller table go further.
 
+## Branching Factor and Pruning Efficiency
+
+Prompted by a direct question -- "are we covering too many nodes in the
+tree?" -- rather than just reasoning about it, `BitState.legalPlays` gained
+a TRACE-level log line (see `LazyLogger.trace`, added to Gambit 1.2.6 for
+this) recording, at every node, the player, how many tricks have been
+played so far (`tricksPlayed`), the position within the current trick
+(`trickPlays.size`), and the branching factor actually returned
+(`branching`). Off by default and free when off (`LazyLogger` guards on
+`isTraceEnabled` before building the string); enable it for
+`com.phasmidsoftware.bridge.cards.bits.BitState$` via logback to reproduce
+this kind of measurement on a real search.
+
+**Measured** (2026-07-19) on a real search -- the nine-card end position
+(see `BitAnalysisITSpec`), target 5 of 9 tricks, `Exact(false,9)`, full
+iterative-deepening run to depth 36 -- 335,042 nodes visited in total:
+
+- **Mean branching factor: 1.76** (max 7). Over half of all nodes (54.6%)
+  have `branching=1` -- a fully forced play, no real choice.
+- **By position within the trick**: leading is by far the widest decision
+  (mean 2.96 -- choosing across all 4 suits' equivalence classes at once);
+  second hand is the narrowest (mean 1.38, matching the old "second hand
+  low" bridge heuristic -- that position is usually the most forced);
+  third and fourth hand sit in between (1.65, 1.62).
+- **By depth (tricks already played)**: branching is *not* monotonically
+  decreasing from the start -- it actually peaks around tricks 1-2 (mean
+  ~2.3, on a small sample) before declining steadily to 1.0 by the final
+  trick, where everyone is down to forced last cards. Node count itself
+  peaks in the middle tricks (3-6), tapering at both ends.
+- **Pruning factor**: comparing the actual 335,042 nodes visited against
+  the naive unpruned estimate for the same depth and the same measured
+  mean branching factor (`1.76^36 ≈ 6.9×10^8`) gives a pruning factor of
+  roughly **2,000x** -- alpha-beta, the aspiration window, and the TT
+  together are doing substantial real work, not just trimming at the
+  margins. If anything this understates the true pruning: the 335,042
+  figure is cumulative across every iterative-deepening pass (depth 4,
+  then 8, then 12, ... up to 36), so shallow nodes near the root are
+  recounted on every pass; a single flat pass to depth 36 would be a
+  fairer comparison and would show an even larger factor.
+
+**Caveats, so this isn't over-read later**: one modest synthetic 9-card
+position, one target, not the harder eleven/twelve-card cases or a real
+52-card deal -- the pruning factor isn't a universal constant and would
+vary with position and target. The 2,000x figure is also the *combined*
+effect of alpha-beta + aspiration window + TT together, not decomposed
+into each mechanism's individual contribution (isolating that would mean
+rerunning with the TT disabled, or the aspiration window widened to
+±∞, and comparing node counts -- not done here, flagged as a possible
+follow-up if ever useful). Bottom line from this investigation: nothing
+here looks pathological -- no runaway branching, and the equivalence-class
+reduction and search machinery are visibly doing their job.
+
 ---
 
 ## Boxing and Allocation Fixes
@@ -795,6 +917,17 @@ does) found the same shape of problem repeatedly: a generic tuple or
 collection boxes a field that a dedicated case class wouldn't, at a point in
 the code executed once per node or once per candidate move — cheap-looking
 in isolation, expensive multiplied across the whole search tree.
+
+**Standard profiling procedure**, used for every round below: `WinchesterSpec`
+(`sbt "IT/testOnly com.phasmidsoftware.bridge.cards.WinchesterSpec"`, all 5
+Winchester boards, board 1 in particular) with a JFR recording temporarily
+added to `build.sbt`'s `IT / javaOptions` --
+`-XX:StartFlightRecording=filename=<path>,settings=profile,dumponexit=true`
+-- then reverted afterward; this flag is never left in the checked-in
+`build.sbt`. `jfr print --events jdk.ObjectAllocationSample <file>` and
+`--events jdk.ExecutionSample` give the raw events to tally by class/method.
+Rerun this after any change that touches `BitState`'s hot path, even a small
+one, to confirm no new boxing or allocation regression crept in.
 
 - **`CacheKey`** (Bridge): was `(Long, Long, Long, Long)`; every transposition-
   table probe/store boxed all four fields. Now a dedicated case class.
@@ -880,6 +1013,69 @@ for other call sites:
   library other projects may depend on, not a contained tweak like the two
   above. Deliberately left as a known, low-priority, documented gap rather
   than attempted, given the expected payoff here was already small.
+
+### Follow-up, 2026-07-19 — `DealBits`' own representation
+
+Prompted by a direct question: with the object-graph engine's copy-chain
+problem solved, has *this* engine's own immutable representation become a
+bottleneck, and should any of it go mutable? Answer: no — `DealBits`
+copying a `Long` per hand is nothing like the old engine rebuilding a
+`Map`/`Sequence` graph, so there's no case for mutability. But there was
+one more live instance of the exact boxing pattern already fixed twice
+above: `DealBits.hands` was `IndexedSeq[HandBits]` — a generic collection
+over `opaque type HandBits = Long` — so every `DealBits.play` call (i.e.
+every move applied anywhere in the search) boxed a `Long` via
+`hands.updated(...)`. Confirmed directly in a profile: all 461 sampled
+`java.lang.Long` allocations traced to that one line.
+
+**Fixed**: replaced `hands: IndexedSeq[HandBits]` with four named fields
+(`hand0`..`hand3`) — the same choice already made for `CacheKey` over a
+generic tuple, for a type whose size is fixed at exactly four and never
+varies. `hand`/`play`/`unionWhere`/`suitUniverse`/`canonicalSuitMasks` and
+the one conversion site (`BitConversions.toDealBits`) updated accordingly.
+Verified behavior-identical by the full test suite (404 tests).
+
+**Re-profiled**: `java.lang.Long` allocation samples dropped from 461 to
+**0**. `DealBits` itself now allocates as one flat object (four inline
+longs) instead of a case class wrapping a separate `IndexedSeq`/`Vector`
+plus four boxed `Long`s.
+
+**Re-benchmarked** (same three stress cases as the rank-reduction round
+above, `useCanonicalKey` false → true), after waiting out an unrelated
+period of heavy CPU contention on the machine that made an initial run
+unusable:
+
+| Case | before this fix | after this fix |
+|---|---|---|
+| eleven-card | 11.2s → 8.1s | 12.8s → 7.8s |
+| twelve-card | 11.0s → 21.4s | 11.1s → 25.9s |
+| Winchester board 12 | 14.5s → 18.9s | 15.3s → 27.3s |
+
+Roughly flat to modestly worse, not a clear win — within normal run-to-run
+noise, and consistent with expectations going in: this removes one boxed
+`Long` per move, a smaller allocation than the closures-plus-`Range`-boxing
+the `sideMask`/`opponentMask` fix removed, so it's a smaller fraction of
+each node's total cost. The allocation elimination itself is real and
+unambiguous (measured, not assumed); the wall-clock effect just isn't
+large enough to separate from noise at this scale. Kept anyway: it's a
+straightforward, low-risk fix in the same family as the others, verified
+correct, even without a clean timing win to point to.
+
+### Follow-up, 2026-07-20 — routine re-check after a minor `legalPlays` edit
+
+A small, purely stylistic edit to `classesInSuit` (binding
+`deal.equivalenceClasses(player, suitIndex)` to a local `val` before mapping,
+instead of chaining directly -- no behavior change) was re-profiled anyway,
+per the standard procedure above, simply because it touches this hot path.
+Confirmed clean: `java.lang.Long` allocation samples remained at 0 (the
+`DealBits` fix still holding), `boxToLong`/`boxToInteger`/`boxToDouble`
+execution samples were 0 of 764 total (even lower than the small residual
+from Gambit's still-unfixed `FlatTTCache.probe` seen in earlier profiles --
+consistent with that being a low-frequency call site, not a new finding),
+and the allocation-by-class ranking matched the same shape as every prior
+profile in this section. Recorded here mainly as a demonstration that the
+routine check-after-any-hot-path-edit habit is cheap and worth keeping, not
+because anything was found.
 
 ---
 
@@ -1132,8 +1328,9 @@ commitments.
    confident prediction. If it works, the upside is the same as originally
    intended: better move ordering across the board, and more accurate
    (though still unproven) `Partial` guesses on hard positions — plausibly
-   relevant to the still-open twelve-card gap and the still-`Partial`
-   Westwood/LEXINGTON real deals. If it still doesn't pay for its own cost
+   relevant to the still-`Partial` Westwood/LEXINGTON real deals (the
+   twelve-card gap this used to reference is closed — see "Known Open Gap"
+   above). If it still doesn't pay for its own cost
    even after both fixes, that's a fast, cheap experiment to run (re-wire it,
    re-profile, compare), not a big investment.
 5. **Parallel/multi-threaded search.** Not attempted, not scoped at all.
@@ -1192,10 +1389,13 @@ improvements, not structural ones.
 Rank reduction and/or parallel search remain the candidates for something
 structural — see their entries in "Not Yet Implemented" above for calibrated
 (and explicitly uncertain) estimates. Absent those, getting a full 52-card
-deal to `Exact` in real time is not expected soon: the twelve-card synthetic
-case already needs roughly double the memory margin this project judged
-worth spending, and a real deal is a much harder search than any of the
-synthetic end positions tested so far.
+deal to `Exact` in real time is not expected soon: all four synthetic
+end positions tested so far (ten through thirteen cards) now resolve at
+the project's default settings (see "Known Open Gap"), but a real deal is a
+much harder search than any of them — Westwood and the corrected LEXINGTON
+(9 and 8 real deals respectively) are still `Partial`/pending at current
+settings, and full 52-card analysis doesn't get remotely close to a proof
+within a realistic budget (see "Real-Deal Integration Specs Rewritten").
 
 ### On Branching: the 4-and-2 Question
 

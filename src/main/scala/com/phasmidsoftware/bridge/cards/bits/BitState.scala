@@ -5,6 +5,7 @@
 package com.phasmidsoftware.bridge.cards.bits
 
 import com.phasmidsoftware.bridge.cards.{BridgeConfig, CacheKey, Tricks}
+import com.phasmidsoftware.gambit.util.LazyLogger
 
 /**
   * A double-dummy search state expressed entirely in bitboard terms -- no `Deal`/`Hand`/
@@ -95,38 +96,164 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
   def legalPlays: Seq[TrickPlay] =
     val player = currentPlayer
 
-    def classesInSuit(suitIndex: Int, score: (TrickPlay, SuitMask) => Int): Seq[ScoredPlay] =
-      deal.equivalenceClasses(player, suitIndex).map { cls =>
+    def classesInSuit(suitIndex: Int, score: (TrickPlay, SuitMask) => Int): Seq[ScoredPlay] = {
+      val suitMasks = deal.equivalenceClasses(player, suitIndex)
+      suitMasks.map { cls =>
         val p = TrickPlay(player, suitIndex, cls.topRank)
         ScoredPlay(p, score(p, cls))
       }.toSeq
+    }
 
-    if trickPlays.isEmpty then
-      (0 until 4).filter(s => deal.hand(player).suitMask(s).nonEmpty).flatMap(classesInSuit(_, leadScore))
-        .sortBy(-_.score).map(_.play)
-    else
-      val suit = ledSuit
-      if deal.hand(player).suitMask(suit).nonEmpty then
-        classesInSuit(suit, followSuitScore).sortBy(-_.score).map(_.play)
+    val result =
+      if trickPlays.isEmpty then
+        (0 until 4).filter(s => deal.hand(player).suitMask(s).nonEmpty).flatMap(classesInSuit(_, leadScore))
+          .sortBy(-_.score).map(_.play)
       else
-        (0 until 4).filterNot(_ == suit).filter(s => deal.hand(player).suitMask(s).nonEmpty)
-          .flatMap(classesInSuit(_, (p, _) => discardScore(p))).sortBy(-_.score).map(_.play)
+        val suit = ledSuit
+        if deal.hand(player).suitMask(suit).nonEmpty then
+          classesInSuit(suit, followSuitScore).sortBy(-_.score).map(_.play)
+        else
+          (0 until 4).filterNot(_ == suit).filter(s => deal.hand(player).suitMask(s).nonEmpty)
+            .flatMap(classesInSuit(_, (p, _) => discardScore(p))).sortBy(-_.score).map(_.play)
+    // TRACE-only: the branching factor at this node -- how many candidate plays (equivalence-
+    // class representatives, not raw cards) `legalPlays` returned here. Off by default (and
+    // effectively free when off: LazyLogger guards on isTraceEnabled before building the
+    // string); enable via logback for `com.phasmidsoftware.bridge.cards.bits.BitState` to get
+    // a per-node branching-factor trace for diagnosing tree size.
+    BitState.logger.trace(s"legalPlays: player=$player, tricksPlayed=${tricks.ns + tricks.ew}, trickPlays.size=${trickPlays.size}, branching=${result.size}")
+    result
 
   /**
     * Move-ordering score for an opening lead of `p` from an equivalence class `cls`; higher
-    * is tried first. Ported from `Trick.leadStrategy`/`Holding.getStrategyForFollowingSuit`'s
-    * `StandardOpeningLead`/`LeadTopOfSequence` case and `chooseLeads`' longest-suit-first sort:
-    * prefer a longer suit, and within a suit prefer leading a genuine (2+ card) sequence
-    * topped by an honor over a lone card. `cls.topRank` (this candidate's rank) is already
-    * the top of its run by construction (see `legalPlays`' class doc), so "lead top of
-    * sequence" falls out for free once a suit is chosen -- this only affects suit choice.
+    * is tried first. A priority scale of tactical lead conventions, translated for
+    * double-dummy analysis (where the whole partnership's actual holding is known, rather
+    * than inferred from bidding or a partner's signal -- so a convention whose real-bridge
+    * purpose is signalling, like fourth-best, doesn't obviously carry over; one whose
+    * purpose is a genuine tactical property does):
+    *
+    *   1. Singleton lead in a plain (non-trump) suit, in a suit contract, PROVIDED this
+    *      hand itself holds at least one trump -- with none, there's no ruff to set up.
+    *      The bit engine's move-ordering counterpart to the object-graph engine's `Stiff`
+    *      strategy (`Trick.leadStrategy`), which it never ported.
+    *   2. Pseudo-sequence lead, plain suits only, when I'm NOT the shorter partnership hand
+    *      in this suit (see rule 2b below for when I am): my hand and partner's hand,
+    *      combined, hold a run of equivalent cards spanning both hands -- e.g. my K plus
+    *      partner's QJ. Lead the class of MY OWN cards below that combined run (the low
+    *      spot cards, not the honor): classic "lead toward strength," hoping to trap a
+    *      short holding of whatever's missing (the ace, here) in the seat playing right
+    *      after this lead.
+    *   3. The same idea, tolerating a gap (rule 5, "the basic idea of finessing"): the
+    *      combined run may have a missing card, as long as it's held by the seat playing
+    *      immediately after this lead (`(handIndex+1)%4` -- the seat a finesse plays
+    *      through) rather than the seat playing after partner (`(handIndex+3)%4`, too late
+    *      to be trapped this way). Implemented as the SAME combined-run computation as
+    *      rule 2, just built with a narrower "opponent" mask (only the far seat's cards
+    *      break the run -- the near seat's cards don't, the same way partner's never do).
+    *   2b. Cash-to-unblock, plain suits only, when I AM the shorter partnership hand in this
+    *      suit: cash my own share of the combined run FIRST rather than leading low toward
+    *      it, even if that share is only a lone honor with nothing of my own backing it up
+    *      -- e.g. my bare K opposite partner's AQxx: cash the K before playing low, to avoid
+    *      the classic blocked-suit trap of stranding it with no way back to cash it. This is
+    *      purely about length asymmetry, not how much of the run is mine (contrast with
+    *      rule 2, which only fires when I'm NOT shorter) -- the two rules are mutually
+    *      exclusive per suit and share a priority tier for that reason.
+    *   4. Trump lead: the two opponent hands' trump lengths are unequal -- call the longer
+    *      one "declarer" and the shorter one "dummy," borrowing the usual bridge terms even
+    *      though this model has no actual declarer/dummy seat -- AND dummy is shorter than
+    *      declarer in some plain suit. That's the classic risk of the short-trump hand
+    *      scoring extra tricks by ruffing the long-trump hand's losers in that suit; leading
+    *      trumps first strips dummy's ruffing potential before it can be used.
+    *
+    *   A real fifth category -- doubleton leads, favorable when third hand holds two
+    *   winners in the suit, or one winner plus a trump winner with 2+ trumps -- is
+    *   deliberately NOT implemented yet. Successful doubleton leads are comparatively rare,
+    *   and this is move-ordering only (it can never affect correctness, only search
+    *   efficiency), so the gap is safe to leave open.
+    *
+    *   Falls back to the original suit-length + honor-sequence-bonus + rank scoring when
+    *   none of the above apply.
     */
   private def leadScore(p: TrickPlay, cls: SuitMask): Int =
-    val suitLength = deal.hand(p.handIndex).suitMask(p.suitIndex).size
-    val isRealSequence = cls.size >= 2
-    val isHonor = p.rank >= SuitMask.RanksPerSuit - 5 // top 5 ranks: T, J, Q, K, A
-    val sequenceBonus = if isRealSequence && isHonor then 100 else 0
-    suitLength * 10 + sequenceBonus + p.rank
+    val me = p.handIndex
+    val suit = p.suitIndex
+    val isPlainSuit = !strain.contains(suit)
+
+    def isSingletonPlainSuitLead: Boolean =
+      isPlainSuit && deal.hand(me).suitMask(suit).size == 1 &&
+        strain.exists(t => deal.hand(me).suitMask(t).nonEmpty) // no ruff to set up without a trump myself
+
+    // The partnership's combined run in `suit`, tolerating a gap held by the near seat
+    // (rule 5): only the far seat's cards (`(me+3)%4`) break the run, the same way
+    // `equivalenceClasses` already treats partner's cards as never breaking one.
+    def combinedRuns: Array[SuitMask] =
+      val sideBits = deal.sideMask(me, suit)
+      val farSeatBits = deal.hand((me + 3) % 4).suitMask(suit)
+      SuitMask.equivalenceClasses(sideBits, farSeatBits)
+
+    // Whether MY OWN length in `suit` is strictly shorter than partner's -- the trigger for
+    // preferring to cash my own share of a cross-hand run rather than lead low toward it (see
+    // `isCashHighToUnblock`'s doc). Equal or longer than partner leaves `isPseudoSequenceLead`
+    // in charge instead.
+    def iAmTheShorterHand: Boolean =
+      deal.hand(me).suitMask(suit).size < deal.hand(DealBits.partner(me)).suitMask(suit).size
+
+    // A run only counts as a tenace worth this special treatment if it's topped by an honor --
+    // otherwise a run of pure low spot cards spanning both hands (which happens whenever
+    // partner holds any touching low card) would qualify too, which isn't a real "cash it" or
+    // "lead toward it" consideration for either rule below.
+    def isHonorRun(run: SuitMask): Boolean = run.topRank >= SuitMask.RanksPerSuit - BitState.LeadFallbackHonorThreshold
+
+    def isPseudoSequenceLead: Boolean =
+      isPlainSuit && !iAmTheShorterHand && {
+        val myBits = deal.hand(me).suitMask(suit).bits
+        combinedRuns.exists { run =>
+          run.size >= 2 && isHonorRun(run) && (run.bits & myBits) != 0 && (run.bits & ~myBits) != 0 &&
+            cls.topRank < Integer.numberOfTrailingZeros(run.bits) // cls lies entirely below the run
+        }
+      }
+
+    /**
+      * Cash my own share of a cross-hand run first, rather than leading low toward it, when
+      * my hand is the SHORTER of the two -- e.g. Kx opposite partner's AQxx: cash the K (even
+      * though it's a lone honor with nothing of my own backing it up) before playing low,
+      * to avoid the classic blocked-suit trap of stranding it with no way back to cash it.
+      * This overrides `isPseudoSequenceLead` entirely when I'm the shorter hand -- it isn't
+      * about how much of the run is mine (a lone card still gets cashed first), only about
+      * the length asymmetry.
+      */
+    def isCashHighToUnblock: Boolean =
+      isPlainSuit && iAmTheShorterHand && {
+        val myBits = deal.hand(me).suitMask(suit).bits
+        combinedRuns.exists { run =>
+          run.size >= 2 && isHonorRun(run) && (run.bits & myBits) != 0 && (run.bits & ~myBits) != 0 &&
+            (cls.bits & run.bits) != 0 // cls is (part of) my own share of the run
+        }
+      }
+
+    def isTrumpLeadCandidate: Boolean =
+      strain.contains(suit) && {
+        val oppA = (me + 1) % 4
+        val oppB = (me + 3) % 4
+        val trumpA = deal.hand(oppA).suitMask(suit).size
+        val trumpB = deal.hand(oppB).suitMask(suit).size
+        trumpA != trumpB && {
+          val (declarer, dummy) = if trumpA > trumpB then (oppA, oppB) else (oppB, oppA)
+          (0 until 4).filterNot(_ == suit).exists { plainSuit =>
+            deal.hand(dummy).suitMask(plainSuit).size < deal.hand(declarer).suitMask(plainSuit).size
+          }
+        }
+      }
+
+    if isSingletonPlainSuitLead then BitState.LeadSingletonPriority + p.rank
+    else if isPseudoSequenceLead then BitState.LeadPseudoSequencePriority + p.rank
+    else if isCashHighToUnblock then BitState.LeadUnblockPriority + p.rank
+    else if isTrumpLeadCandidate then BitState.LeadTrumpPriority + p.rank
+    else
+      val suitLength = deal.hand(me).suitMask(suit).size
+      val isRealSequence = cls.size >= 2
+      val isHonor = p.rank >= SuitMask.RanksPerSuit - BitState.LeadFallbackHonorThreshold
+      val sequenceBonus = if isRealSequence && isHonor then BitState.LeadFallbackSequenceBonus else 0
+      suitLength * BitState.LeadFallbackSuitLengthWeight + sequenceBonus + p.rank
 
   /**
     * Move-ordering score for following suit; higher is tried first. Ported from
@@ -271,7 +398,7 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
   def heuristic: Double = (tricks.ns - tricks.ew).toDouble * BridgeConfig.heuristicScale
 
   /**
-    * A transposition-table key. `deal.hands` (each a `HandBits`) already uses only bits
+    * A transposition-table key. Each hand's `HandBits` already uses only bits
     * 0-51 of its `Long` (`suitIndex*13 + rank` maxes out at 3*13+12 = 51), leaving bits
     * 52-63 free -- used here for state that isn't otherwise determined by which cards
     * remain in each hand, but that still affects the game-theoretic value of the position:
@@ -345,3 +472,25 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
         canonicalHandBits(2),
         canonicalHandBits(3)
       )
+
+object BitState:
+  private val logger = LazyLogger(getClass)
+
+  /**
+    * The opening-lead priority scale (`leadScore`), gathered here so the relative weight of
+    * every consideration can be read off in one place rather than hunting through the method
+    * body. Each named tactical-rule priority outranks every lower one unconditionally, then
+    * falls back to the ordinary suit-length/sequence scoring below them all -- spaced 1000
+    * apart, comfortably wider than both the 0..12 rank tie-break added within a band and the
+    * fallback band's own worst case (`13 * LeadFallbackSuitLengthWeight +
+    * LeadFallbackSequenceBonus + 12` = 242), so bands can never bleed into each other.
+    */
+  private val LeadSingletonPriority = 5000 // rule 1: singleton lead, suit contracts only
+  private val LeadPseudoSequencePriority = 4000 // rules 2/3: lead toward a partnership tenace
+  private val LeadUnblockPriority = 4000 // rule 2b: cash my own share first when I'm the shorter
+  // hand -- same tier as LeadPseudoSequencePriority deliberately: the two are mutually
+  // exclusive (gated by which hand is shorter), never actually competing for the same lead.
+  private val LeadTrumpPriority = 3000 // rule 4: strip the short-trump hand's ruffing potential
+  private val LeadFallbackSuitLengthWeight = 10 // fallback: prefer a longer suit
+  private val LeadFallbackSequenceBonus = 100 // fallback: prefer topping a genuine own sequence
+  private val LeadFallbackHonorThreshold = 5 // fallback: top 5 ranks count as an honor (T,J,Q,K,A)

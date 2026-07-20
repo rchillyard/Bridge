@@ -2,7 +2,7 @@ organization := "com.phasmidsoftware"
 
 name := "Bridge"
 
-version := "1.1.5-SNAPSHOT"
+version := "1.1.6"
 
 scalaVersion := "3.7.4"
 
@@ -19,7 +19,7 @@ resolvers += Resolver.mavenLocal
 
 lazy val versionFlog    = "1.0.15"
 lazy val versionNumber  = "1.10.5"
-lazy val versionGambit  = "1.2.5"
+lazy val versionGambit  = "1.2.6"
 lazy val versionLogback = "1.5.38"
 lazy val versionConfig  = "1.4.9"
 

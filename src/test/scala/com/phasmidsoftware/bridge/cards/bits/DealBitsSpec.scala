@@ -18,12 +18,12 @@ class DealBitsSpec extends flatspec.AnyFlatSpec with should.Matchers {
   behavior of "DealBits.play"
 
   it should "clear exactly one card from exactly one hand, leaving the others untouched" in {
-    val deal = DealBits(IndexedSeq(
+    val deal = DealBits(
       handWithRanks(12, 8),
       handWithRanks(11),
       handWithRanks(10),
       handWithRanks(9)
-    ))
+    )
     val after = deal.play(0, 0, 12)
     after.hand(0).suitMask(0) shouldBe SuitMask.rank(8)
     after.hand(1) shouldBe deal.hand(1)
@@ -34,12 +34,12 @@ class DealBitsSpec extends flatspec.AnyFlatSpec with should.Matchers {
   behavior of "DealBits.sideMask / opponentMask"
 
   it should "combine a hand and its partner for sideMask, and the other pair for opponentMask" in {
-    val deal = DealBits(IndexedSeq(
+    val deal = DealBits(
       handWithRanks(12), // N
       handWithRanks(11), // E
       handWithRanks(9), // S (N's partner)
       handWithRanks(8) // W (E's partner)
-    ))
+    )
     deal.sideMask(0, 0) shouldBe SuitMask.rank(12).union(SuitMask.rank(9))
     deal.opponentMask(0, 0) shouldBe SuitMask.rank(11).union(SuitMask.rank(8))
     deal.sideMask(1, 0) shouldBe SuitMask.rank(11).union(SuitMask.rank(8))
@@ -49,34 +49,34 @@ class DealBitsSpec extends flatspec.AnyFlatSpec with should.Matchers {
   behavior of "DealBits.equivalenceClasses"
 
   it should "not split a hand's cards separated only by partner's card" in {
-    val deal = DealBits(IndexedSeq(
+    val deal = DealBits(
       handWithRanks(12, 10), // N holds A, Q
       handWithRanks(), // E void
       handWithRanks(11), // S (N's partner) holds K -- sits between A and Q
       handWithRanks() // W void
-    ))
+    )
     deal.equivalenceClasses(0, 0).toList shouldBe List(SuitMask.rank(12).union(SuitMask.rank(10)))
   }
 
   it should "split a hand's cards separated by an opponent's card" in {
-    val deal = DealBits(IndexedSeq(
+    val deal = DealBits(
       handWithRanks(12, 10), // N holds A, Q
       handWithRanks(11), // E (opponent) holds K -- sits between A and Q
       handWithRanks(),
       handWithRanks()
-    ))
+    )
     deal.equivalenceClasses(0, 0).toSet shouldBe Set(SuitMask.rank(12), SuitMask.rank(10))
   }
 
   behavior of "DealBits.suitUniverse"
 
   it should "union all four hands' live cards in one suit" in {
-    val deal = DealBits(IndexedSeq(
+    val deal = DealBits(
       handWithRanks(12), // N
       handWithRanks(11), // E
       handWithRanks(9), // S
       handWithRanks(8) // W
-    ))
+    )
     deal.suitUniverse(0) shouldBe SuitMask.rank(12).union(SuitMask.rank(11)).union(SuitMask.rank(9)).union(SuitMask.rank(8))
   }
 
@@ -85,12 +85,12 @@ class DealBitsSpec extends flatspec.AnyFlatSpec with should.Matchers {
   it should "compact each hand's mask against the shared suit universe" in {
     // N holds A(12), Q(10); E holds K(11); S and W void in this suit.
     // Universe = {10,11,12} -> canonical positions 10->0, 11->1, 12->2.
-    val deal = DealBits(IndexedSeq(
+    val deal = DealBits(
       handWithRanks(12, 10),
       handWithRanks(11),
       handWithRanks(),
       handWithRanks()
-    ))
+    )
     val canonical = deal.canonicalSuitMasks(0)
     canonical(0) shouldBe SuitMask.rank(2).union(SuitMask.rank(0)) // N: A,Q -> canonical top and bottom
     canonical(1) shouldBe SuitMask.rank(1) // E: K -> canonical middle
@@ -100,8 +100,8 @@ class DealBitsSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   it should "produce identical canonical masks for two differently-absolute but same-shaped deals" in {
     // Same shape in both: N holds the top two live cards, E holds the bottom one.
-    val dealLow = DealBits(IndexedSeq(handWithRanks(8, 9), handWithRanks(7), handWithRanks(), handWithRanks()))
-    val dealHigh = DealBits(IndexedSeq(handWithRanks(11, 12), handWithRanks(10), handWithRanks(), handWithRanks()))
+    val dealLow = DealBits(handWithRanks(8, 9), handWithRanks(7), handWithRanks(), handWithRanks())
+    val dealHigh = DealBits(handWithRanks(11, 12), handWithRanks(10), handWithRanks(), handWithRanks())
     dealLow.canonicalSuitMasks(0) shouldBe dealHigh.canonicalSuitMasks(0)
   }
 

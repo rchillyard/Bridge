@@ -11,12 +11,18 @@ import org.scalatest.matchers.should
   * position that's expensive enough (minutes; one IDE run against the ten-card position
   * ran out of memory) that it doesn't belong in the default `sbt test` run.
   *
-  * Three of these (ten, eleven, twelve cards) are known, real disagreements, not yet root
-  * caused -- the new engine converges to less depth than the old engine on the same
-  * position and target (suspected cause: the new engine's lack of Strategy-based move
-  * ordering, a documented simplification of the bitboard rewrite). Left as plain failing
-  * assertions rather than `pendingUntilFixed`/`ignore`, so `sbt IT/test` reports them
-  * honestly.
+  * **Update, 2026-07-19**: all three of ten, eleven, and twelve cards were originally known,
+  * real disagreements here, blamed on the new engine's lack of Strategy-based move ordering.
+  * That diagnosis was only partly right (see `doc/DoubleDummyDesign.md`'s "Known Open Gap"):
+  * move ordering fixed the ten-card case outright, and the eleven-card case turned out to be
+  * a transposition-table size / node-budget problem, since resolved by the bit engine's own
+  * (larger) TT/budget tuning. The twelve-card case remained open longer still, needing a
+  * bigger TT/node budget than was judged worth the memory margin -- a deliberate, accepted
+  * tradeoff, not an unexplained gap.
+  *
+  * **Update, 2026-07-20**: the twelve-card case is now resolved too, at the shipped default
+  * budget, no bigger TT/margin needed -- the opening-lead priority scale added to
+  * `BitState.leadScore` (see `doc/DoubleDummyDesign.md`'s "Move Ordering") closed it.
   */
 //noinspection ScalaStyle
 class BitAnalysisITSpec extends flatspec.AnyFlatSpec with should.Matchers {
@@ -33,7 +39,7 @@ class BitAnalysisITSpec extends flatspec.AnyFlatSpec with should.Matchers {
     for (neededTricks <- 1 to maxTricks) {
       val oldResult = Whist(target, leader, strain).analyzeDoubleDummy(neededTricks, directionNS = true)
       val newResult = BitAnalysis.analyzeDoubleDummy(target, leader, strain, neededTricks, directionNS = true)
-      withClue(s"neededTricks=$neededTricks: old=$oldResult, new=$newResult: ") {
+      withClue(s"(clue): neededTricks=$neededTricks: old=$oldResult, new=$newResult: ") {
         makesOf(newResult) shouldBe makesOf(oldResult)
       }
     }
