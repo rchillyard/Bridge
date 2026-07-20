@@ -1,6 +1,6 @@
 # Bridge Double-Dummy Solver — Design Document
 
-*Reflects the state of the project as of version 1.1.5.*
+*Reflects the state of the project as of version 1.1.6.*
 
 ## Overview
 
@@ -783,6 +783,58 @@ TT is a pure cache — a miss just means recomputing, never a wrong answer),
 verified via a dedicated eviction-order test. Directly relevant to the
 conservative TT-size choice above: better eviction quality is what lets a
 smaller table go further.
+
+## Branching Factor and Pruning Efficiency
+
+Prompted by a direct question -- "are we covering too many nodes in the
+tree?" -- rather than just reasoning about it, `BitState.legalPlays` gained
+a TRACE-level log line (see `LazyLogger.trace`, added to Gambit 1.2.6 for
+this) recording, at every node, the player, how many tricks have been
+played so far (`tricksPlayed`), the position within the current trick
+(`trickPlays.size`), and the branching factor actually returned
+(`branching`). Off by default and free when off (`LazyLogger` guards on
+`isTraceEnabled` before building the string); enable it for
+`com.phasmidsoftware.bridge.cards.bits.BitState$` via logback to reproduce
+this kind of measurement on a real search.
+
+**Measured** (2026-07-19) on a real search -- the nine-card end position
+(see `BitAnalysisITSpec`), target 5 of 9 tricks, `Exact(false,9)`, full
+iterative-deepening run to depth 36 -- 335,042 nodes visited in total:
+
+- **Mean branching factor: 1.76** (max 7). Over half of all nodes (54.6%)
+  have `branching=1` -- a fully forced play, no real choice.
+- **By position within the trick**: leading is by far the widest decision
+  (mean 2.96 -- choosing across all 4 suits' equivalence classes at once);
+  second hand is the narrowest (mean 1.38, matching the old "second hand
+  low" bridge heuristic -- that position is usually the most forced);
+  third and fourth hand sit in between (1.65, 1.62).
+- **By depth (tricks already played)**: branching is *not* monotonically
+  decreasing from the start -- it actually peaks around tricks 1-2 (mean
+  ~2.3, on a small sample) before declining steadily to 1.0 by the final
+  trick, where everyone is down to forced last cards. Node count itself
+  peaks in the middle tricks (3-6), tapering at both ends.
+- **Pruning factor**: comparing the actual 335,042 nodes visited against
+  the naive unpruned estimate for the same depth and the same measured
+  mean branching factor (`1.76^36 ≈ 6.9×10^8`) gives a pruning factor of
+  roughly **2,000x** -- alpha-beta, the aspiration window, and the TT
+  together are doing substantial real work, not just trimming at the
+  margins. If anything this understates the true pruning: the 335,042
+  figure is cumulative across every iterative-deepening pass (depth 4,
+  then 8, then 12, ... up to 36), so shallow nodes near the root are
+  recounted on every pass; a single flat pass to depth 36 would be a
+  fairer comparison and would show an even larger factor.
+
+**Caveats, so this isn't over-read later**: one modest synthetic 9-card
+position, one target, not the harder eleven/twelve-card cases or a real
+52-card deal -- the pruning factor isn't a universal constant and would
+vary with position and target. The 2,000x figure is also the *combined*
+effect of alpha-beta + aspiration window + TT together, not decomposed
+into each mechanism's individual contribution (isolating that would mean
+rerunning with the TT disabled, or the aspiration window widened to
+±∞, and comparing node counts -- not done here, flagged as a possible
+follow-up if ever useful). Bottom line from this investigation: nothing
+here looks pathological -- no runaway branching, and the equivalence-class
+reduction and search machinery are visibly doing their job.
 
 ---
 

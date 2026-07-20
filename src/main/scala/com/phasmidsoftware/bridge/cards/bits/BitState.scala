@@ -118,7 +118,7 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
     // effectively free when off: LazyLogger guards on isTraceEnabled before building the
     // string); enable via logback for `com.phasmidsoftware.bridge.cards.bits.BitState` to get
     // a per-node branching-factor trace for diagnosing tree size.
-    BitState.logger.trace(s"legalPlays: player=$player, trickPlays.size=${trickPlays.size}, branching=${result.size}")
+    BitState.logger.trace(s"legalPlays: player=$player, tricksPlayed=${tricks.ns + tricks.ew}, trickPlays.size=${trickPlays.size}, branching=${result.size}")
     result
 
   /**
