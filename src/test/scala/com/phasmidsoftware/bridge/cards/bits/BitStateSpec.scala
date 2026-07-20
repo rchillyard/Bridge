@@ -115,4 +115,79 @@ class BitStateSpec extends flatspec.AnyFlatSpec with should.Matchers {
     nineFirst.evaluateKey shouldBe sevenFirst.evaluateKey
     nineFirst.evaluateCanonicalKey shouldBe sevenFirst.evaluateCanonicalKey
   }
+
+  behavior of "BitState.legalPlays (opening-lead priority scale)"
+
+  it should "lead a singleton in a plain suit ahead of a longer suit, in a suit contract" in {
+    // N holds a 3-card suit 0 (no structure) and a singleton in suit 1; trump is suit 2, so
+    // both suit 0 and suit 1 are plain. The singleton should be led first, regardless of the
+    // longer suit's length -- this is the Stiff rule the object-graph engine had and the bit
+    // engine never ported.
+    val n = HandBits.empty.setCard(0, 10).setCard(0, 8).setCard(0, 6).setCard(1, 5)
+    val state = BitState(
+      deal = DealBits(n, HandBits.empty, HandBits.empty, HandBits.empty),
+      strain = Some(2), leader = 0, trickPlays = Nil, tricks = Tricks.zero
+    )
+    state.legalPlays.head shouldBe TrickPlay(0, 1, 5)
+  }
+
+  it should "lead low from the pseudo-sequence side (K642 opposite partner's QJ), not the honor" in {
+    // N holds K + a low pair, separated (from N's own perspective) by W holding a mid card;
+    // partner (S) holds Q,J touching the K exactly (no gap). Notrump, so no trump exclusion.
+    // The combined N+S run {K,Q,J} spans both hands -- a genuine pseudo-sequence -- so N's low
+    // pair (below that run) should be led first, not the K itself.
+    val n = HandBits.empty.setCard(0, 11).setCard(0, 2).setCard(0, 0) // K, and a low pair
+    val e = HandBits.empty.setCard(0, 12) // the ace -- the "near seat" card the finesse plays through
+    val s = HandBits.empty.setCard(0, 10).setCard(0, 9) // partner: Q, J -- touches N's K exactly
+    val w = HandBits.empty.setCard(0, 6) // separates N's own K from N's own low pair
+    val state = BitState(
+      deal = DealBits(n, e, s, w),
+      strain = None, leader = 0, trickPlays = Nil, tricks = Tricks.zero
+    )
+    state.legalPlays.head shouldBe TrickPlay(0, 0, 2) // the low pair's representative, not the K (rank 11)
+  }
+
+  it should "still treat it as a pseudo-sequence when the gap card is held by the near seat" in {
+    // Same shape as above, but partner holds only J (not Q,J) -- a gap at Q. With the gap
+    // held by E (the near seat, (leader+1)%4 -- the seat a finesse plays through), the
+    // combined run should still bridge K...J, so N's low pair is still led first.
+    val n = HandBits.empty.setCard(0, 11).setCard(0, 2).setCard(0, 0) // K, and a low pair
+    val e = HandBits.empty.setCard(0, 10) // near seat holds the gap card (Q)
+    val s = HandBits.empty.setCard(0, 9) // partner: J only
+    val w = HandBits.empty.setCard(0, 6) // separates N's own K from N's own low pair
+    val state = BitState(
+      deal = DealBits(n, e, s, w),
+      strain = None, leader = 0, trickPlays = Nil, tricks = Tricks.zero
+    )
+    state.legalPlays.head shouldBe TrickPlay(0, 0, 2)
+  }
+
+  it should "NOT treat it as a pseudo-sequence when the gap card is held by the far seat" in {
+    // Same as above, but the gap card (Q) is held by W (the far seat, (leader+3)%4 -- too
+    // late for a finesse to play through it) instead of E. The run no longer bridges, so
+    // there's no pseudo-sequence bonus for N's low pair -- it falls back to ordinary scoring.
+    val n = HandBits.empty.setCard(0, 11).setCard(0, 2).setCard(0, 0) // K, and a low pair
+    val s = HandBits.empty.setCard(0, 9) // partner: J only
+    val w = HandBits.empty.setCard(0, 10).setCard(0, 6) // far seat holds the gap card (Q) AND the separator
+    val state = BitState(
+      deal = DealBits(n, HandBits.empty, s, w),
+      strain = None, leader = 0, trickPlays = Nil, tricks = Tricks.zero
+    )
+    state.legalPlays.head should not be TrickPlay(0, 0, 2)
+  }
+
+  it should "lead trumps when the opponents' trump lengths are unequal and the short side can ruff" in {
+    // Trump is suit 3. E (hand 1) holds 3 trumps and 3 cards in plain suit 0 (the "declarer"
+    // side, i.e. the longer-trump opponent, with length/losers in suit 0); W (hand 3) holds
+    // only 1 trump and is void in suit 0 (the "dummy" side, short in both -- ruffing
+    // potential). N should lead its only trump ahead of its unremarkable suit-1 holding.
+    val n = HandBits.empty.setCard(3, 9).setCard(1, 4).setCard(1, 2)
+    val e = HandBits.empty.setCard(3, 1).setCard(3, 3).setCard(3, 5).setCard(0, 2).setCard(0, 4).setCard(0, 6)
+    val w = HandBits.empty.setCard(3, 7)
+    val state = BitState(
+      deal = DealBits(n, e, HandBits.empty, w),
+      strain = Some(3), leader = 0, trickPlays = Nil, tricks = Tricks.zero
+    )
+    state.legalPlays.head shouldBe TrickPlay(0, 3, 9)
+  }
 }

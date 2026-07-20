@@ -123,19 +123,91 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
 
   /**
     * Move-ordering score for an opening lead of `p` from an equivalence class `cls`; higher
-    * is tried first. Ported from `Trick.leadStrategy`/`Holding.getStrategyForFollowingSuit`'s
-    * `StandardOpeningLead`/`LeadTopOfSequence` case and `chooseLeads`' longest-suit-first sort:
-    * prefer a longer suit, and within a suit prefer leading a genuine (2+ card) sequence
-    * topped by an honor over a lone card. `cls.topRank` (this candidate's rank) is already
-    * the top of its run by construction (see `legalPlays`' class doc), so "lead top of
-    * sequence" falls out for free once a suit is chosen -- this only affects suit choice.
+    * is tried first. A priority scale of tactical lead conventions, translated for
+    * double-dummy analysis (where the whole partnership's actual holding is known, rather
+    * than inferred from bidding or a partner's signal -- so a convention whose real-bridge
+    * purpose is signalling, like fourth-best, doesn't obviously carry over; one whose
+    * purpose is a genuine tactical property does):
+    *
+    *   1. Singleton lead in a plain (non-trump) suit, in a suit contract -- aiming to set
+    *      up a ruff. The bit engine's move-ordering counterpart to the object-graph
+    *      engine's `Stiff` strategy (`Trick.leadStrategy`), which it never ported.
+    *   2. Pseudo-sequence lead, plain suits only: my hand and partner's hand, combined,
+    *      hold a run of equivalent cards spanning both hands -- e.g. my K plus partner's
+    *      QJ. Lead the class of MY OWN cards below that combined run (the low spot cards,
+    *      not the honor): classic "lead toward strength," hoping to trap a short holding
+    *      of whatever's missing (the ace, here) in the seat playing right after this lead.
+    *   3. The same idea, tolerating a gap (rule 5, "the basic idea of finessing"): the
+    *      combined run may have a missing card, as long as it's held by the seat playing
+    *      immediately after this lead (`(handIndex+1)%4` -- the seat a finesse plays
+    *      through) rather than the seat playing after partner (`(handIndex+3)%4`, too late
+    *      to be trapped this way). Implemented as the SAME combined-run computation as
+    *      rule 2, just built with a narrower "opponent" mask (only the far seat's cards
+    *      break the run -- the near seat's cards don't, the same way partner's never do).
+    *   4. Trump lead: the two opponent hands' trump lengths are unequal -- call the longer
+    *      one "declarer" and the shorter one "dummy," borrowing the usual bridge terms even
+    *      though this model has no actual declarer/dummy seat -- AND dummy is shorter than
+    *      declarer in some plain suit. That's the classic risk of the short-trump hand
+    *      scoring extra tricks by ruffing the long-trump hand's losers in that suit; leading
+    *      trumps first strips dummy's ruffing potential before it can be used.
+    *
+    *   A real fifth category -- doubleton leads, favorable when third hand holds two
+    *   winners in the suit, or one winner plus a trump winner with 2+ trumps -- is
+    *   deliberately NOT implemented yet. Successful doubleton leads are comparatively rare,
+    *   and this is move-ordering only (it can never affect correctness, only search
+    *   efficiency), so the gap is safe to leave open.
+    *
+    *   Falls back to the original suit-length + honor-sequence-bonus + rank scoring when
+    *   none of the above apply.
     */
   private def leadScore(p: TrickPlay, cls: SuitMask): Int =
-    val suitLength = deal.hand(p.handIndex).suitMask(p.suitIndex).size
-    val isRealSequence = cls.size >= 2
-    val isHonor = p.rank >= SuitMask.RanksPerSuit - 5 // top 5 ranks: T, J, Q, K, A
-    val sequenceBonus = if isRealSequence && isHonor then 100 else 0
-    suitLength * 10 + sequenceBonus + p.rank
+    val me = p.handIndex
+    val suit = p.suitIndex
+    val isPlainSuit = !strain.contains(suit)
+
+    def isSingletonPlainSuitLead: Boolean =
+      strain.isDefined && isPlainSuit && deal.hand(me).suitMask(suit).size == 1
+
+    // The partnership's combined run in `suit`, tolerating a gap held by the near seat
+    // (rule 5): only the far seat's cards (`(me+3)%4`) break the run, the same way
+    // `equivalenceClasses` already treats partner's cards as never breaking one.
+    def combinedRuns: Array[SuitMask] =
+      val sideBits = deal.sideMask(me, suit)
+      val farSeatBits = deal.hand((me + 3) % 4).suitMask(suit)
+      SuitMask.equivalenceClasses(sideBits, farSeatBits)
+
+    def isPseudoSequenceLead: Boolean =
+      isPlainSuit && {
+        val myBits = deal.hand(me).suitMask(suit).bits
+        combinedRuns.exists { run =>
+          run.size >= 2 && (run.bits & myBits) != 0 && (run.bits & ~myBits) != 0 &&
+            cls.topRank < Integer.numberOfTrailingZeros(run.bits) // cls lies entirely below the run
+        }
+      }
+
+    def isTrumpLeadCandidate: Boolean =
+      strain.contains(suit) && {
+        val oppA = (me + 1) % 4
+        val oppB = (me + 3) % 4
+        val trumpA = deal.hand(oppA).suitMask(suit).size
+        val trumpB = deal.hand(oppB).suitMask(suit).size
+        trumpA != trumpB && {
+          val (declarer, dummy) = if trumpA > trumpB then (oppA, oppB) else (oppB, oppA)
+          (0 until 4).filterNot(_ == suit).exists { plainSuit =>
+            deal.hand(dummy).suitMask(plainSuit).size < deal.hand(declarer).suitMask(plainSuit).size
+          }
+        }
+      }
+
+    if isSingletonPlainSuitLead then 5000 + p.rank
+    else if isPseudoSequenceLead then 4000 + p.rank
+    else if isTrumpLeadCandidate then 3000 + p.rank
+    else
+      val suitLength = deal.hand(me).suitMask(suit).size
+      val isRealSequence = cls.size >= 2
+      val isHonor = p.rank >= SuitMask.RanksPerSuit - 5 // top 5 ranks: T, J, Q, K, A
+      val sequenceBonus = if isRealSequence && isHonor then 100 else 0
+      suitLength * 10 + sequenceBonus + p.rank
 
   /**
     * Move-ordering score for following suit; higher is tried first. Ported from

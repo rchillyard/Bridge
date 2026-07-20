@@ -733,6 +733,64 @@ card cases (those turned out to be budget/TT-size problems, not ordering
 problems). Two related move-ordering ideas were identified but not
 implemented — see "Not Yet Implemented" below.
 
+### Opening-lead priority scale (2026-07-20)
+
+`leadScore` was, until this point, the least-developed of the three scoring
+functions — "suit/rank preference," never refined the way `followSuitScore`
+was. Prompted directly: leading is now the confirmed highest-branching
+decision (mean branching 2.96 vs 1.4-1.65 elsewhere — see "Branching Factor
+and Pruning Efficiency" below), so it's the one place better ordering has
+the most leverage, and it hadn't been revisited since the initial port. Adds
+a priority scale of tactical lead conventions, translated for double-dummy
+(the whole partnership's actual holding is known, not inferred from bidding
+or signals — so a convention whose real-bridge purpose is *signalling*,
+like fourth-best, doesn't obviously carry over; one whose purpose is a
+genuine tactical property does, and is worth porting):
+
+1. **Singleton lead** in a plain suit, suit contracts only — aiming to set
+   up a ruff. The bit engine's counterpart to the object-graph engine's
+   `Stiff` strategy (`Trick.leadStrategy`), never ported before now.
+2. **Pseudo-sequence lead**, plain suits only: my hand and partner's hand,
+   combined, hold a run of equivalent cards spanning both hands (e.g. my K
+   plus partner's QJ) — lead the class of my own cards below that run (the
+   low spot cards, not the honor), hoping to trap a short holding of
+   whatever's missing in the seat playing right after this lead.
+3. **The same idea tolerating a gap** ("the basic idea of finessing"): the
+   combined run may have a missing card, as long as it's held by the seat
+   playing immediately after this lead (the seat a finesse plays through)
+   rather than the seat playing after partner. Implemented as the exact
+   same combined-run computation as the no-gap case, just with a narrower
+   "opponent" mask — only the far seat's cards break the run, the same way
+   partner's never do for the ordinary `equivalenceClasses` computation.
+4. **Trump lead**: the two opponent hands' trump lengths are unequal, and
+   the shorter-trump hand is also shorter than the longer-trump hand in
+   some plain suit — the classic risk of the short-trump hand scoring extra
+   tricks by ruffing the long-trump hand's losers there; leading trumps
+   first strips that ruffing potential.
+
+A fifth category — **doubleton leads**, favorable when third hand holds two
+winners in the suit or one winner plus a trump winner (with 2+ trumps) —
+was deliberately left out: successful doubleton leads are comparatively
+rare, and since this is move-ordering only (it can never affect
+correctness, only search efficiency), the gap is safe to leave open.
+
+Verified with 5 new hand-built regression tests (one per rule, including
+both directions of the gap-tolerance case) plus the full existing suite
+(410 tests) unaffected — expected, since this only changes which order
+legal moves are tried, never which moves are legal or what they resolve to.
+Re-measured on the three known stress cases: mixed on the default key (flat
+on the eleven-card case, modestly better on Winchester board 12, slower in
+wall-clock terms on the twelve-card case) but a real qualitative gain there
+regardless — the twelve-card default-key search now reaches `Partial
+(true,8)` instead of the long-standing `Partial(false,7)`, one trick
+deeper and now pointing toward the actually-correct answer (`Exact(true,12)`
+was already proven at a larger TT/budget, see "Bit-Engine-Specific Tuning"
+above), not away from it. The canonical-key column improved substantially
+in two of three cases (twelve-card ~34% faster, Winchester ~47% faster).
+Kept despite the mixed wall-clock picture: correctness is unaffected either
+way, and the deeper/better-informed partial result on a long-standing known
+gap is a genuine win independent of the clock.
+
 ---
 
 ## Bit-Engine-Specific Tuning
