@@ -133,11 +133,13 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
     *      hand itself holds at least one trump -- with none, there's no ruff to set up.
     *      The bit engine's move-ordering counterpart to the object-graph engine's `Stiff`
     *      strategy (`Trick.leadStrategy`), which it never ported.
-    *   2. Pseudo-sequence lead, plain suits only: my hand and partner's hand, combined,
-    *      hold a run of equivalent cards spanning both hands -- e.g. my K plus partner's
-    *      QJ. Lead the class of MY OWN cards below that combined run (the low spot cards,
-    *      not the honor): classic "lead toward strength," hoping to trap a short holding
-    *      of whatever's missing (the ace, here) in the seat playing right after this lead.
+    *   2. Pseudo-sequence lead, plain suits only, when I'm NOT the shorter partnership hand
+    *      in this suit (see rule 2b below for when I am): my hand and partner's hand,
+    *      combined, hold a run of equivalent cards spanning both hands -- e.g. my K plus
+    *      partner's QJ. Lead the class of MY OWN cards below that combined run (the low
+    *      spot cards, not the honor): classic "lead toward strength," hoping to trap a
+    *      short holding of whatever's missing (the ace, here) in the seat playing right
+    *      after this lead.
     *   3. The same idea, tolerating a gap (rule 5, "the basic idea of finessing"): the
     *      combined run may have a missing card, as long as it's held by the seat playing
     *      immediately after this lead (`(handIndex+1)%4` -- the seat a finesse plays
@@ -145,6 +147,14 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
     *      to be trapped this way). Implemented as the SAME combined-run computation as
     *      rule 2, just built with a narrower "opponent" mask (only the far seat's cards
     *      break the run -- the near seat's cards don't, the same way partner's never do).
+    *   2b. Cash-to-unblock, plain suits only, when I AM the shorter partnership hand in this
+    *      suit: cash my own share of the combined run FIRST rather than leading low toward
+    *      it, even if that share is only a lone honor with nothing of my own backing it up
+    *      -- e.g. my bare K opposite partner's AQxx: cash the K before playing low, to avoid
+    *      the classic blocked-suit trap of stranding it with no way back to cash it. This is
+    *      purely about length asymmetry, not how much of the run is mine (contrast with
+    *      rule 2, which only fires when I'm NOT shorter) -- the two rules are mutually
+    *      exclusive per suit and share a priority tier for that reason.
     *   4. Trump lead: the two opponent hands' trump lengths are unequal -- call the longer
     *      one "declarer" and the shorter one "dummy," borrowing the usual bridge terms even
     *      though this model has no actual declarer/dummy seat -- AND dummy is shorter than
@@ -178,12 +188,43 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
       val farSeatBits = deal.hand((me + 3) % 4).suitMask(suit)
       SuitMask.equivalenceClasses(sideBits, farSeatBits)
 
+    // Whether MY OWN length in `suit` is strictly shorter than partner's -- the trigger for
+    // preferring to cash my own share of a cross-hand run rather than lead low toward it (see
+    // `isCashHighToUnblock`'s doc). Equal or longer than partner leaves `isPseudoSequenceLead`
+    // in charge instead.
+    def iAmTheShorterHand: Boolean =
+      deal.hand(me).suitMask(suit).size < deal.hand(DealBits.partner(me)).suitMask(suit).size
+
+    // A run only counts as a tenace worth this special treatment if it's topped by an honor --
+    // otherwise a run of pure low spot cards spanning both hands (which happens whenever
+    // partner holds any touching low card) would qualify too, which isn't a real "cash it" or
+    // "lead toward it" consideration for either rule below.
+    def isHonorRun(run: SuitMask): Boolean = run.topRank >= SuitMask.RanksPerSuit - BitState.LeadFallbackHonorThreshold
+
     def isPseudoSequenceLead: Boolean =
-      isPlainSuit && {
+      isPlainSuit && !iAmTheShorterHand && {
         val myBits = deal.hand(me).suitMask(suit).bits
         combinedRuns.exists { run =>
-          run.size >= 2 && (run.bits & myBits) != 0 && (run.bits & ~myBits) != 0 &&
+          run.size >= 2 && isHonorRun(run) && (run.bits & myBits) != 0 && (run.bits & ~myBits) != 0 &&
             cls.topRank < Integer.numberOfTrailingZeros(run.bits) // cls lies entirely below the run
+        }
+      }
+
+    /**
+      * Cash my own share of a cross-hand run first, rather than leading low toward it, when
+      * my hand is the SHORTER of the two -- e.g. Kx opposite partner's AQxx: cash the K (even
+      * though it's a lone honor with nothing of my own backing it up) before playing low,
+      * to avoid the classic blocked-suit trap of stranding it with no way back to cash it.
+      * This overrides `isPseudoSequenceLead` entirely when I'm the shorter hand -- it isn't
+      * about how much of the run is mine (a lone card still gets cashed first), only about
+      * the length asymmetry.
+      */
+    def isCashHighToUnblock: Boolean =
+      isPlainSuit && iAmTheShorterHand && {
+        val myBits = deal.hand(me).suitMask(suit).bits
+        combinedRuns.exists { run =>
+          run.size >= 2 && isHonorRun(run) && (run.bits & myBits) != 0 && (run.bits & ~myBits) != 0 &&
+            (cls.bits & run.bits) != 0 // cls is (part of) my own share of the run
         }
       }
 
@@ -203,6 +244,7 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
 
     if isSingletonPlainSuitLead then BitState.LeadSingletonPriority + p.rank
     else if isPseudoSequenceLead then BitState.LeadPseudoSequencePriority + p.rank
+    else if isCashHighToUnblock then BitState.LeadUnblockPriority + p.rank
     else if isTrumpLeadCandidate then BitState.LeadTrumpPriority + p.rank
     else
       val suitLength = deal.hand(me).suitMask(suit).size
@@ -443,6 +485,9 @@ object BitState:
     */
   private val LeadSingletonPriority = 5000 // rule 1: singleton lead, suit contracts only
   private val LeadPseudoSequencePriority = 4000 // rules 2/3: lead toward a partnership tenace
+  private val LeadUnblockPriority = 4000 // rule 2b: cash my own share first when I'm the shorter
+  // hand -- same tier as LeadPseudoSequencePriority deliberately: the two are mutually
+  // exclusive (gated by which hand is shorter), never actually competing for the same lead.
   private val LeadTrumpPriority = 3000 // rule 4: strip the short-trump hand's ruffing potential
   private val LeadFallbackSuitLengthWeight = 10 // fallback: prefer a longer suit
   private val LeadFallbackSequenceBonus = 100 // fallback: prefer topping a genuine own sequence

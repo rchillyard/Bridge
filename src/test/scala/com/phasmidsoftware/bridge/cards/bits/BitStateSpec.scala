@@ -188,6 +188,22 @@ class BitStateSpec extends flatspec.AnyFlatSpec with should.Matchers {
     state.legalPlays.head should not be TrickPlay(0, 0, 2)
   }
 
+  it should "cash the honor first (not lead low) when I'm the shorter hand: Kx opposite partner's AQxx" in {
+    // N holds just K + a low card (2 cards); partner (S) holds A, Q, and 2 low cards (4
+    // cards) -- N is the SHORTER hand here. Even though N's own share of the combined A-K-Q
+    // run is a lone honor (matching the shape that would normally favor leading low, per the
+    // K642/QJ53 test above), N is shorter than partner, so N should cash the K first to avoid
+    // stranding it -- not lead the low card toward partner's tenace.
+    val n = HandBits.empty.setCard(0, 11).setCard(0, 1) // K, and one low card
+    val s = HandBits.empty.setCard(0, 12).setCard(0, 10).setCard(0, 3).setCard(0, 5) // A, Q, and 2 low cards
+    val w = HandBits.empty.setCard(0, 6) // separates N's own K from N's own low card
+    val state = BitState(
+      deal = DealBits(n, HandBits.empty, s, w),
+      strain = None, leader = 0, trickPlays = Nil, tricks = Tricks.zero
+    )
+    state.legalPlays.head shouldBe TrickPlay(0, 0, 11) // the K, not the low card
+  }
+
   it should "lead trumps when the opponents' trump lengths are unequal and the short side can ruff" in {
     // Trump is suit 3. E (hand 1) holds 3 trumps and 3 cards in plain suit 0 (the "declarer"
     // side, i.e. the longer-trump opponent, with length/losers in suit 0); W (hand 3) holds
