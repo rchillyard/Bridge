@@ -918,6 +918,17 @@ collection boxes a field that a dedicated case class wouldn't, at a point in
 the code executed once per node or once per candidate move — cheap-looking
 in isolation, expensive multiplied across the whole search tree.
 
+**Standard profiling procedure**, used for every round below: `WinchesterSpec`
+(`sbt "IT/testOnly com.phasmidsoftware.bridge.cards.WinchesterSpec"`, all 5
+Winchester boards, board 1 in particular) with a JFR recording temporarily
+added to `build.sbt`'s `IT / javaOptions` --
+`-XX:StartFlightRecording=filename=<path>,settings=profile,dumponexit=true`
+-- then reverted afterward; this flag is never left in the checked-in
+`build.sbt`. `jfr print --events jdk.ObjectAllocationSample <file>` and
+`--events jdk.ExecutionSample` give the raw events to tally by class/method.
+Rerun this after any change that touches `BitState`'s hot path, even a small
+one, to confirm no new boxing or allocation regression crept in.
+
 - **`CacheKey`** (Bridge): was `(Long, Long, Long, Long)`; every transposition-
   table probe/store boxed all four fields. Now a dedicated case class.
   Measured: ~15.7s → ~12.5s on the same benchmark test.
@@ -1049,6 +1060,22 @@ unambiguous (measured, not assumed); the wall-clock effect just isn't
 large enough to separate from noise at this scale. Kept anyway: it's a
 straightforward, low-risk fix in the same family as the others, verified
 correct, even without a clean timing win to point to.
+
+### Follow-up, 2026-07-20 — routine re-check after a minor `legalPlays` edit
+
+A small, purely stylistic edit to `classesInSuit` (binding
+`deal.equivalenceClasses(player, suitIndex)` to a local `val` before mapping,
+instead of chaining directly -- no behavior change) was re-profiled anyway,
+per the standard procedure above, simply because it touches this hot path.
+Confirmed clean: `java.lang.Long` allocation samples remained at 0 (the
+`DealBits` fix still holding), `boxToLong`/`boxToInteger`/`boxToDouble`
+execution samples were 0 of 764 total (even lower than the small residual
+from Gambit's still-unfixed `FlatTTCache.probe` seen in earlier profiles --
+consistent with that being a low-frequency call site, not a new finding),
+and the allocation-by-class ranking matched the same shape as every prior
+profile in this section. Recorded here mainly as a demonstration that the
+routine check-after-any-hot-path-edit habit is cheap and worth keeping, not
+because anything was found.
 
 ---
 

@@ -96,11 +96,13 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
   def legalPlays: Seq[TrickPlay] =
     val player = currentPlayer
 
-    def classesInSuit(suitIndex: Int, score: (TrickPlay, SuitMask) => Int): Seq[ScoredPlay] =
-      deal.equivalenceClasses(player, suitIndex).map { cls =>
+    def classesInSuit(suitIndex: Int, score: (TrickPlay, SuitMask) => Int): Seq[ScoredPlay] = {
+      val suitMasks = deal.equivalenceClasses(player, suitIndex)
+      suitMasks.map { cls =>
         val p = TrickPlay(player, suitIndex, cls.topRank)
         ScoredPlay(p, score(p, cls))
       }.toSeq
+    }
 
     val result =
       if trickPlays.isEmpty then
