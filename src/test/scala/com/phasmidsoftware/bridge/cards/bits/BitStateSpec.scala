@@ -119,16 +119,28 @@ class BitStateSpec extends flatspec.AnyFlatSpec with should.Matchers {
   behavior of "BitState.legalPlays (opening-lead priority scale)"
 
   it should "lead a singleton in a plain suit ahead of a longer suit, in a suit contract" in {
-    // N holds a 3-card suit 0 (no structure) and a singleton in suit 1; trump is suit 2, so
-    // both suit 0 and suit 1 are plain. The singleton should be led first, regardless of the
-    // longer suit's length -- this is the Stiff rule the object-graph engine had and the bit
-    // engine never ported.
-    val n = HandBits.empty.setCard(0, 10).setCard(0, 8).setCard(0, 6).setCard(1, 5)
+    // N holds a 3-card suit 0 (no structure), a singleton in suit 1, and a trump (suit 2) of
+    // its own -- without a trump to ruff with later, leading the stiff wouldn't set up
+    // anything. The singleton should be led first, regardless of the longer suit's length --
+    // this is the Stiff rule the object-graph engine had and the bit engine never ported.
+    val n = HandBits.empty.setCard(0, 10).setCard(0, 8).setCard(0, 6).setCard(1, 5).setCard(2, 3)
     val state = BitState(
       deal = DealBits(n, HandBits.empty, HandBits.empty, HandBits.empty),
       strain = Some(2), leader = 0, trickPlays = Nil, tricks = Tricks.zero
     )
     state.legalPlays.head shouldBe TrickPlay(0, 1, 5)
+  }
+
+  it should "NOT prioritize the singleton if this hand itself holds no trump" in {
+    // Same shape as above, but N holds no trump (suit 2) at all -- there's no ruff to set
+    // up, so the singleton shouldn't be treated as special; it falls back to ordinary
+    // suit-length scoring, which favors the longer suit 0.
+    val n = HandBits.empty.setCard(0, 10).setCard(0, 8).setCard(0, 6).setCard(1, 5)
+    val state = BitState(
+      deal = DealBits(n, HandBits.empty, HandBits.empty, HandBits.empty),
+      strain = Some(2), leader = 0, trickPlays = Nil, tricks = Tricks.zero
+    )
+    state.legalPlays.head should not be TrickPlay(0, 1, 5)
   }
 
   it should "lead low from the pseudo-sequence side (K642 opposite partner's QJ), not the honor" in {

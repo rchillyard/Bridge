@@ -129,9 +129,10 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
     * purpose is signalling, like fourth-best, doesn't obviously carry over; one whose
     * purpose is a genuine tactical property does):
     *
-    *   1. Singleton lead in a plain (non-trump) suit, in a suit contract -- aiming to set
-    *      up a ruff. The bit engine's move-ordering counterpart to the object-graph
-    *      engine's `Stiff` strategy (`Trick.leadStrategy`), which it never ported.
+    *   1. Singleton lead in a plain (non-trump) suit, in a suit contract, PROVIDED this
+    *      hand itself holds at least one trump -- with none, there's no ruff to set up.
+    *      The bit engine's move-ordering counterpart to the object-graph engine's `Stiff`
+    *      strategy (`Trick.leadStrategy`), which it never ported.
     *   2. Pseudo-sequence lead, plain suits only: my hand and partner's hand, combined,
     *      hold a run of equivalent cards spanning both hands -- e.g. my K plus partner's
     *      QJ. Lead the class of MY OWN cards below that combined run (the low spot cards,
@@ -166,7 +167,8 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
     val isPlainSuit = !strain.contains(suit)
 
     def isSingletonPlainSuitLead: Boolean =
-      strain.isDefined && isPlainSuit && deal.hand(me).suitMask(suit).size == 1
+      isPlainSuit && deal.hand(me).suitMask(suit).size == 1 &&
+        strain.exists(t => deal.hand(me).suitMask(t).nonEmpty) // no ruff to set up without a trump myself
 
     // The partnership's combined run in `suit`, tolerating a gap held by the near seat
     // (rule 5): only the far seat's cards (`(me+3)%4`) break the run, the same way
