@@ -201,15 +201,15 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
         }
       }
 
-    if isSingletonPlainSuitLead then 5000 + p.rank
-    else if isPseudoSequenceLead then 4000 + p.rank
-    else if isTrumpLeadCandidate then 3000 + p.rank
+    if isSingletonPlainSuitLead then BitState.LeadSingletonPriority + p.rank
+    else if isPseudoSequenceLead then BitState.LeadPseudoSequencePriority + p.rank
+    else if isTrumpLeadCandidate then BitState.LeadTrumpPriority + p.rank
     else
       val suitLength = deal.hand(me).suitMask(suit).size
       val isRealSequence = cls.size >= 2
-      val isHonor = p.rank >= SuitMask.RanksPerSuit - 5 // top 5 ranks: T, J, Q, K, A
-      val sequenceBonus = if isRealSequence && isHonor then 100 else 0
-      suitLength * 10 + sequenceBonus + p.rank
+      val isHonor = p.rank >= SuitMask.RanksPerSuit - BitState.LeadFallbackHonorThreshold
+      val sequenceBonus = if isRealSequence && isHonor then BitState.LeadFallbackSequenceBonus else 0
+      suitLength * BitState.LeadFallbackSuitLengthWeight + sequenceBonus + p.rank
 
   /**
     * Move-ordering score for following suit; higher is tried first. Ported from
@@ -431,3 +431,19 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
 
 object BitState:
   private val logger = LazyLogger(getClass)
+
+  /**
+    * The opening-lead priority scale (`leadScore`), gathered here so the relative weight of
+    * every consideration can be read off in one place rather than hunting through the method
+    * body. Each named tactical-rule priority outranks every lower one unconditionally, then
+    * falls back to the ordinary suit-length/sequence scoring below them all -- spaced 1000
+    * apart, comfortably wider than both the 0..12 rank tie-break added within a band and the
+    * fallback band's own worst case (`13 * LeadFallbackSuitLengthWeight +
+    * LeadFallbackSequenceBonus + 12` = 242), so bands can never bleed into each other.
+    */
+  private val LeadSingletonPriority = 5000 // rule 1: singleton lead, suit contracts only
+  private val LeadPseudoSequencePriority = 4000 // rules 2/3: lead toward a partnership tenace
+  private val LeadTrumpPriority = 3000 // rule 4: strip the short-trump hand's ruffing potential
+  private val LeadFallbackSuitLengthWeight = 10 // fallback: prefer a longer suit
+  private val LeadFallbackSequenceBonus = 100 // fallback: prefer topping a genuine own sequence
+  private val LeadFallbackHonorThreshold = 5 // fallback: top 5 ranks count as an honor (T,J,Q,K,A)
