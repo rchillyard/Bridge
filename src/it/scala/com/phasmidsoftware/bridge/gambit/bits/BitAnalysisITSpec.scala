@@ -1,5 +1,6 @@
 package com.phasmidsoftware.bridge.gambit.bits
 
+import com.phasmidsoftware.bridge.SlowTest
 import com.phasmidsoftware.bridge.cards.{Clubs, DDResult, Deal, Suit, Whist}
 import org.scalatest.flatspec
 import org.scalatest.matchers.should
@@ -46,7 +47,7 @@ class BitAnalysisITSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   behavior of "BitAnalysis vs the object-graph engine, head-to-head, larger end positions"
 
-  it should "agree with Whist.analyzeDoubleDummy across every target on the ten-card end position" in {
+  it should "agree with Whist.analyzeDoubleDummy across every target on the ten-card end position" taggedAs SlowTest in {
     crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(
       List("AQJ76", "96", "J", "32"),
       List("K32", "QJT5", "T", "J6"),
@@ -54,7 +55,7 @@ class BitAnalysisITSpec extends flatspec.AnyFlatSpec with should.Matchers {
       List("5", "AK3", "97", "KT95"))))
   }
 
-  it should "agree with Whist.analyzeDoubleDummy across every target on the eleven-card end position" in {
+  it should "agree with Whist.analyzeDoubleDummy across every target on the eleven-card end position" taggedAs SlowTest in {
     crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(
       List("AQJ76", "96", "AJ", "32"),
       List("KT32", "QJT5", "T", "J6"),
@@ -62,7 +63,7 @@ class BitAnalysisITSpec extends flatspec.AnyFlatSpec with should.Matchers {
       List("95", "AK3", "97", "KT95"))))
   }
 
-  it should "agree with Whist.analyzeDoubleDummy across every target on the twelve-card end position" in {
+  it should "agree with Whist.analyzeDoubleDummy across every target on the twelve-card end position" taggedAs SlowTest in {
     crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(
       List("AQJ876", "96", "AJ", "32"),
       List("KT32", "QJT5", "KT", "J6"),
@@ -70,7 +71,7 @@ class BitAnalysisITSpec extends flatspec.AnyFlatSpec with should.Matchers {
       List("95", "AK3", "975", "KT95"))))
   }
 
-  it should "agree with Whist.analyzeDoubleDummy across every target on the thirteen-card end position" in {
+  it should "agree with Whist.analyzeDoubleDummy across every target on the thirteen-card end position" taggedAs SlowTest in {
     crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(
       List("AQJ876", "96", "AJ4", "32"),
       List("KT32", "QJT5", "KT3", "J6"),

@@ -4,6 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards
 
+import com.phasmidsoftware.bridge.SlowTest
 import com.phasmidsoftware.bridge.gambit.bits.BitAnalysis
 import com.phasmidsoftware.bridge.pbn.{DealValue, Game, PBN, PBNParser}
 import org.scalatest.flatspec
@@ -69,7 +70,7 @@ class WhistPBNSpec extends flatspec.AnyFlatSpec with should.Matchers {
     analyzeMakableContracts(game)
   }
 
-  it should "analyze deal 6" in pendingUntilFixed {
+  it should "analyze deal 6" taggedAs SlowTest in pendingUntilFixed {
     val game = pbn(5)
     analyzeMakableContracts(game)
   }
