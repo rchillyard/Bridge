@@ -24,6 +24,15 @@ import org.scalatest.matchers.should
   * **Update, 2026-07-20**: the twelve-card case is now resolved too, at the shipped default
   * budget, no bigger TT/margin needed -- the opening-lead priority scale added to
   * `BitState.leadScore` (see `doc/DoubleDummyDesign.md`'s "Move Ordering") closed it.
+  *
+  * **Update, 2026-07-21**: also absorbed the seven/eight/nine-card cross-checks from
+  * `BitAnalysisSpec` (src/test), for a DIFFERENT reason than the ten-thirteen-card ones above --
+  * these still run in a couple of seconds, but the seven-card version hung a real CircleCI job
+  * for 10+ minutes with no console output before being killed, apparently from the old engine's
+  * per-node cost colliding badly with the container's memory limit (see `.circleci/config.yml`
+  * and `build.sbt`'s `forkedHeapXmx` for the actual fix). Moving them here means they simply
+  * don't run in CircleCI at all (nothing currently invokes `IT` there), rather than depending on
+  * a `Slow` tag that would still expose the same job to the same collision later.
   */
 //noinspection ScalaStyle
 class BitAnalysisITSpec extends flatspec.AnyFlatSpec with should.Matchers {
@@ -35,15 +44,45 @@ class BitAnalysisITSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   /** Cross-checks every target from 1 up to the deal's own trick count against the trusted
     * old engine's own live answer, rather than a single hand-derived expected value. */
-  private def crossCheckEveryTarget(target: Deal, leader: Int = 3, strain: Option[Suit] = Some(Clubs)): Unit =
+  private def crossCheckEveryTarget(target: Deal, leader: Int = 3, strain: Option[Suit] = Some(Clubs), useCanonicalKey: Boolean = false): Unit =
     val maxTricks = target.nCards / Deal.CardsPerTrick
     for (neededTricks <- 1 to maxTricks) {
       val oldResult = Whist(target, leader, strain).analyzeDoubleDummy(neededTricks, directionNS = true)
-      val newResult = BitAnalysis.analyzeDoubleDummy(target, leader, strain, neededTricks, directionNS = true)
+      val newResult = BitAnalysis.analyzeDoubleDummy(target, leader, strain, neededTricks, directionNS = true, useCanonicalKey = useCanonicalKey)
       withClue(s"(clue): neededTricks=$neededTricks: old=$oldResult, new=$newResult: ") {
         makesOf(newResult) shouldBe makesOf(oldResult)
       }
     }
+
+  // Moved from BitAnalysisSpec (src/test) -- the seven-card version is a confirmed CircleCI
+  // hang risk (see the class doc comment's 2026-07-21 update), and eight/nine only go deeper.
+  // Measured locally: seven/eight-card stay under 7s either way; nine-card actually crosses
+  // this project's own ~30s Slow threshold (33.8s / 29.8s canonical), tagged accordingly.
+  behavior of "BitAnalysis vs the object-graph engine, head-to-head, small-but-CI-risky end positions"
+
+  it should "agree with Whist.analyzeDoubleDummy across every target on the seven-card end position" in {
+    crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQ76", "9", "J", "3"), List("K32", "QT", "T", "6"), List("4", "87", "Q", "874"), List("5", "AK", "9", "T95"))))
+  }
+
+  it should "agree with Whist.analyzeDoubleDummy across every target on the eight-card end position" in {
+    crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQ76", "9", "J", "32"), List("K32", "QT", "T", "J6"), List("4", "87", "Q", "Q874"), List("5", "AK", "9", "KT95"))))
+  }
+
+  it should "agree with Whist.analyzeDoubleDummy across every target on the nine-card end position" taggedAs SlowTest in {
+    crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQJ76", "9", "J", "32"), List("K32", "QJT", "T", "J6"), List("4", "87", "Q8", "Q874"), List("5", "AK", "97", "KT95"))))
+  }
+
+  it should "agree with Whist.analyzeDoubleDummy across every target on the seven-card end position (canonical key)" in {
+    crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQ76", "9", "J", "3"), List("K32", "QT", "T", "6"), List("4", "87", "Q", "874"), List("5", "AK", "9", "T95"))), useCanonicalKey = true)
+  }
+
+  it should "agree with Whist.analyzeDoubleDummy across every target on the eight-card end position (canonical key)" in {
+    crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQ76", "9", "J", "32"), List("K32", "QT", "T", "J6"), List("4", "87", "Q", "Q874"), List("5", "AK", "9", "KT95"))), useCanonicalKey = true)
+  }
+
+  it should "agree with Whist.analyzeDoubleDummy across every target on the nine-card end position (canonical key)" taggedAs SlowTest in {
+    crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQJ76", "9", "J", "32"), List("K32", "QJT", "T", "J6"), List("4", "87", "Q8", "Q874"), List("5", "AK", "97", "KT95"))), useCanonicalKey = true)
+  }
 
   behavior of "BitAnalysis vs the object-graph engine, head-to-head, larger end positions"
 

@@ -45,17 +45,25 @@ lazy val IT = config("it") extend Test
 lazy val forwardedBridgeProps: Seq[String] =
   sys.props.collect { case (k, v) if k.startsWith("bridge.") => s"-D$k=$v" }.toSeq
 
+// CircleCI sets CIRCLECI=true automatically. The forked Test/IT JVM's heap request needs to
+// leave room alongside the sbt launcher's own JVM (capped separately via CircleCI's own
+// JVM_OPTS) inside whatever the container's resource_class actually provides -- asking for 8g
+// in an 8g (or worse, the 4g default) container starves the launcher and thrashes rather than
+// failing cleanly, which is exactly what caused a real job to sit silent for 10+ minutes and
+// get killed (2026-07-21). 4g leaves comfortable headroom even on a `large` (8g) container.
+lazy val forkedHeapXmx: String = if (sys.env.contains("CIRCLECI")) "4g" else "8g"
+
 lazy val root = project.in(file("."))
   .configs(IT)
   .settings(
     inConfig(IT)(Defaults.testSettings),
     IT / scalaSource := baseDirectory.value / "src" / "it" / "scala",
     IT / fork := true,
-    IT / javaOptions ++= Seq("-Xms512m", "-Xmx8g") ++ forwardedBridgeProps
+    IT / javaOptions ++= Seq("-Xms512m", s"-Xmx$forkedHeapXmx") ++ forwardedBridgeProps
   )
 
 // NOTE: the following does not seem to work.
 run / javaOptions ++= Seq("-Xms512m", "-Xmx8g") ++ forwardedBridgeProps
 run / fork := true
-Test / javaOptions ++= Seq("-Xms512m", "-Xmx8g") ++ forwardedBridgeProps
+Test / javaOptions ++= Seq("-Xms512m", s"-Xmx$forkedHeapXmx") ++ forwardedBridgeProps
 Test / fork := true

@@ -5,6 +5,7 @@ jobs:
   build:
     docker:
       - image: cimg/openjdk:23.0
+    resource_class: large
 
     working_directory: ~/repo
 
@@ -44,6 +45,7 @@ jobs:
   slow-tests:
     docker:
       - image: cimg/openjdk:23.0
+    resource_class: large
 
     working_directory: ~/repo
 
