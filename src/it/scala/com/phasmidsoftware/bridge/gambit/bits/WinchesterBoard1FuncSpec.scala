@@ -1,6 +1,7 @@
 package com.phasmidsoftware.bridge.gambit.bits
 
 import com.phasmidsoftware.bridge.cards.*
+import com.phasmidsoftware.gambit.util.LazyLogger
 import org.scalatest.flatspec
 import org.scalatest.matchers.should
 
@@ -33,6 +34,8 @@ import org.scalatest.matchers.should
 //noinspection ScalaStyle
 class WinchesterBoard1FuncSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
+  private val logger = LazyLogger(getClass)
+
   private val deal: Deal = Deal.fromHandStrings("test", "N", List(
     List("J3", "975", "QT764", "AJ5"),
     List("KQ62", "JT2", "KJ3", "832"),
@@ -48,13 +51,13 @@ class WinchesterBoard1FuncSpec extends flatspec.AnyFlatSpec with should.Matchers
 
   it should "have NS proven to make 2 tricks in NT, per the NEW bitboard engine" in {
     val result = BitAnalysis.analyzeDoubleDummy(deal, Hand.next(0), None, 2, directionNS = true)
-    println(s"NEW engine, NS needing 2 tricks in NT: $result")
+    logger.info(s"NEW engine, NS needing 2 tricks in NT: $result")
     assertProvenMakes(result, true)
   }
 
   it should "have NS proven NOT to make 3 tricks in NT, per the NEW bitboard engine" in pendingUntilFixed {
     val result = BitAnalysis.analyzeDoubleDummy(deal, Hand.next(0), None, 3, directionNS = true)
-    println(s"NEW engine, NS needing 3 tricks in NT: $result")
+    logger.info(s"NEW engine, NS needing 3 tricks in NT: $result")
     assertProvenMakes(result, false)
   }
 }

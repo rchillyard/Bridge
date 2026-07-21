@@ -8,7 +8,7 @@ import com.phasmidsoftware.bridge.cards.DDResult
 import com.phasmidsoftware.bridge.cards.Rank.ranks
 import com.phasmidsoftware.bridge.cards.Suit.suits
 import com.phasmidsoftware.bridge.pbn.Contract
-import com.phasmidsoftware.gambit.util.{Output, Outputable, Shuffle}
+import com.phasmidsoftware.gambit.util.{LazyLogger, Output, Outputable, Shuffle}
 
 import java.io.Writer
 import scala.language.postfixOps
@@ -26,6 +26,8 @@ import scala.language.postfixOps
   */
 case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends Outputable[Unit]
   with Quittable[Deal] with Playable[Deal] with Evaluatable with Validatable {
+
+  private val logger = LazyLogger(getClass)
 
   /**
     * Method to yield the Suit/Holding of the partner of a particular holding.
@@ -61,7 +63,7 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     * @return an eagerly promoted X.
     */
   lazy val adjustForPartnerships: Deal =
-    println(s"Adjusting deal for partnerships: $title")
+    logger.info(s"Adjusting deal for partnerships: $title")
     val result = _cooperate._quit._reprioritize
     result.assertAdjusted()
     result
@@ -131,7 +133,7 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     */
   def analyzeContract(board: Int, leader: Int, strain: Option[Suit], tricks: Int, declarer: Int): DDResult = {
     val result = Whist(this, leader, strain).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0)
-    println(s"analyzeDoubleDummy: board=$board result=$result")
+    logger.info(s"analyzeDoubleDummy: board=$board result=$result")
     result
   }
 

@@ -156,6 +156,7 @@ object Whist:
 
 @main def doubleDummySolver(args: String*): Unit = {
   import scala.io.{Codec, Source}
+  val logger = LazyLogger(classOf[Whist])
   assert(args.nonEmpty, "At least one argument required")
   val filename = args(0)
   val maybeBoard = args.lift(1).flatMap(_.toIntOption)
@@ -168,9 +169,9 @@ object Whist:
         case Some(g) =>
           g.analyzeMakableContracts()
         case None =>
-          System.err.println(s"No game to parse PBN file: $filename ($maybeBoard)")
+          logger.error(s"No game to parse PBN file: $filename ($maybeBoard)")
       }
     case _ =>
-      System.err.println(s"Failed to parse PBN file: $filename")
+      logger.error(s"Failed to parse PBN file: $filename")
   }
 }

@@ -5,6 +5,7 @@
 package com.phasmidsoftware.bridge.pbn
 
 import com.phasmidsoftware.bridge.cards.*
+import com.phasmidsoftware.gambit.util.LazyLogger
 
 /**
   * This class represents the PBN (Portable Bridge Notation) for a set of games.
@@ -33,6 +34,8 @@ case class PBN(games: Seq[Game]) extends Iterable[Game] with (Int => Game) {
   * @param tagPairs a list of tagPairs where each tagPair is a Name->DetailedValue pair.
   */
 case class Game(tagPairs: Seq[(Name, DetailedValue)]) extends Iterable[(Name, DetailedValue)] with (String => DetailedValue) {
+  private val logger = LazyLogger(getClass)
+
   def asMap: Map[String, DetailedValue] = tagPairs.map(mapper.tupled).toMap
 
   def title: String =
@@ -88,15 +91,22 @@ case class Game(tagPairs: Seq[(Name, DetailedValue)]) extends Iterable[(Name, De
     val d = protoDeal.copy(title = title)
     if d.validate then d else throw PBNException(s"deal is invalid: $d")
 
-  def analyzeMakableContractsForGame(max: Int, deal: Deal, contracts: Seq[Contract]): Seq[DDResult] = {
+  /**
+    * Analyze the makable contracts for this Game.
+    *
+    * @param max the maximum number of contracts to analyze (0 indicates all)
+    * @param deal a Deal
+    * @param contracts a sequence of Contract.
+    * @return
+    */
+  def analyzeMakableContractsForGame(max: Int, deal: Deal, contracts: Seq[Contract]): Seq[DDResult] =
     val result = deal.analyzeContracts(board, contracts, max)
     result.foreach {
-      case DDResult.Exact(makes, t) => println(s"  => Exact($t tricks): makes=$makes")
-      case DDResult.Partial(makes, t) => println(s"  => Partial($t tricks, node limit): makes=$makes (qualified)")
-      case DDResult.Inconclusive => println(s"  => Inconclusive (node limit, no iteration completed)")
+      case DDResult.Exact(makes, t) => logger.info(s"  => Exact($t tricks): makes=$makes")
+      case DDResult.Partial(makes, t) => logger.info(s"  => Partial($t tricks, node limit): makes=$makes (qualified)")
+      case DDResult.Inconclusive => logger.info(s"  => Inconclusive (node limit, no iteration completed)")
     }
     result
-  }
 
   def board: Int = apply("Board").toInt
 

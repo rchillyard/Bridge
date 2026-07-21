@@ -1,6 +1,7 @@
 package com.phasmidsoftware.bridge.gambit.bits
 
 import com.phasmidsoftware.bridge.cards.*
+import com.phasmidsoftware.gambit.util.LazyLogger
 import org.scalatest.flatspec
 import org.scalatest.matchers.should
 
@@ -30,6 +31,8 @@ import org.scalatest.matchers.should
 //noinspection ScalaStyle
 class WinchesterBoard12FuncSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
+  private val logger = LazyLogger(getClass)
+
   private val newEngineMaxNodes = 5_000_000 // confirmed safe: ~14s, heap under 2.6GB -- see class doc
 
   // fromHandStrings expects wss in the same rotational order as the PBN string itself (i.e.
@@ -54,13 +57,13 @@ class WinchesterBoard12FuncSpec extends flatspec.AnyFlatSpec with should.Matcher
 
   it should "have NS proven to make 9 tricks in NT, per the NEW bitboard engine" in pendingUntilFixed {
     val result = BitAnalysis.analyzeDoubleDummy(deal, leader, None, 9, directionNS = true, maxNodes = newEngineMaxNodes)
-    println(s"NEW engine, NS needing 9 tricks in NT: $result")
+    logger.info(s"NEW engine, NS needing 9 tricks in NT: $result")
     assertProvenMakes(result, true)
   }
 
   it should "have NS proven NOT to make 10 tricks in NT, per the NEW bitboard engine" in pendingUntilFixed {
     val result = BitAnalysis.analyzeDoubleDummy(deal, leader, None, 10, directionNS = true, maxNodes = newEngineMaxNodes)
-    println(s"NEW engine, NS needing 10 tricks in NT: $result")
+    logger.info(s"NEW engine, NS needing 10 tricks in NT: $result")
     assertProvenMakes(result, false)
   }
 }
