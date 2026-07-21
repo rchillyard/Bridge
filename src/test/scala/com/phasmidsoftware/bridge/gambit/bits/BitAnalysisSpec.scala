@@ -1,5 +1,6 @@
 package com.phasmidsoftware.bridge.gambit.bits
 
+import com.phasmidsoftware.bridge.SlowTest
 import com.phasmidsoftware.bridge.cards.{Clubs, DDResult, Deal, Suit, Whist}
 import org.scalatest.flatspec
 import org.scalatest.matchers.should
@@ -95,7 +96,10 @@ class BitAnalysisSpec extends flatspec.AnyFlatSpec with should.Matchers {
     crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQ6", "9", "J", "3"), List("K32", "T", "T", "6"), List("4", "87", "Q", "87"), List("5", "AK", "9", "T9"))))
   }
 
-  it should "agree with Whist.analyzeDoubleDummy across every target on the seven-card end position" in {
+  // Hangs on CircleCI's constrained container (Whist's search for neededTricks=3 here produced
+  // no output for 10+ minutes and got killed, 2026-07-21) despite completing in ~2s locally --
+  // the old engine's per-node cost interacting badly with a small heap/CPU quota, apparently.
+  it should "agree with Whist.analyzeDoubleDummy across every target on the seven-card end position" taggedAs SlowTest in {
     crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQ76", "9", "J", "3"), List("K32", "QT", "T", "6"), List("4", "87", "Q", "874"), List("5", "AK", "9", "T95"))))
   }
 
@@ -145,7 +149,9 @@ class BitAnalysisSpec extends flatspec.AnyFlatSpec with should.Matchers {
     crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQ6", "9", "J", "3"), List("K32", "T", "T", "6"), List("4", "87", "Q", "87"), List("5", "AK", "9", "T9"))), useCanonicalKey = true)
   }
 
-  it should "agree with Whist.analyzeDoubleDummy across every target on the seven-card end position (canonical key)" in {
+  // Same CircleCI hang as the default-key version above -- the culprit (Whist's neededTricks=3
+  // search on this deal) is called identically here.
+  it should "agree with Whist.analyzeDoubleDummy across every target on the seven-card end position (canonical key)" taggedAs SlowTest in {
     crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQ76", "9", "J", "3"), List("K32", "QT", "T", "6"), List("4", "87", "Q", "874"), List("5", "AK", "9", "T95"))), useCanonicalKey = true)
   }
 

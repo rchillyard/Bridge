@@ -24,8 +24,11 @@ import org.scalatest.matchers.should
   *
   * The complementary "NOT 3 tricks" question is NOT yet provable at the project's shipped
   * settings (`useCanonicalKey` defaults to `false`; the new engine still returns an unproven
-  * `Partial(false,7)` here) -- that assertion stays `pendingUntilFixed`. The old engine's two
-  * tests remain unproven too (old engine reached 5 tricks deep before its node budget ran out).
+  * `Partial(false,7)` here) -- that assertion stays `pendingUntilFixed`.
+  *
+  * **Update, 2026-07-21**: dropped the two old-engine (`Whist`) tests that used to live here --
+  * both were `pendingUntilFixed` and never got further than 5 tricks deep on this full 52-card
+  * deal before running out of node budget, so they were never proving anything.
   */
 //noinspection ScalaStyle
 class WinchesterBoard1Spec extends flatspec.AnyFlatSpec with should.Matchers {
@@ -42,18 +45,6 @@ class WinchesterBoard1Spec extends flatspec.AnyFlatSpec with should.Matchers {
     result match
       case DDResult.Exact(makes, _) => makes shouldBe expected
       case other => fail(s"Not yet proven (got $other, need Exact($expected, _))")
-
-  it should "have NS proven to make 2 tricks in NT, per the OLD engine" in pendingUntilFixed {
-    val result = Whist(deal, Hand.next(0), None).analyzeDoubleDummy(2, directionNS = true)
-    println(s"OLD engine, NS needing 2 tricks in NT: $result")
-    assertProvenMakes(result, true)
-  }
-
-  it should "have NS proven NOT to make 3 tricks in NT, per the OLD engine" in pendingUntilFixed {
-    val result = Whist(deal, Hand.next(0), None).analyzeDoubleDummy(3, directionNS = true)
-    println(s"OLD engine, NS needing 3 tricks in NT: $result")
-    assertProvenMakes(result, false)
-  }
 
   it should "have NS proven to make 2 tricks in NT, per the NEW bitboard engine" in {
     val result = BitAnalysis.analyzeDoubleDummy(deal, Hand.next(0), None, 2, directionNS = true)
