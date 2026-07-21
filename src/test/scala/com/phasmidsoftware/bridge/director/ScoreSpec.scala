@@ -228,8 +228,13 @@ class ScoreSpec extends AnyFlatSpec with should.Matchers {
         |7""".stripMargin
   }
   it should "output from Newton" in {
+    val path = "src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20241001.txt"
+    // This fixture is deliberately .gitignore'd (real club members' names appear below) -- it
+    // only exists on Robin's own machine, so skip cleanly wherever it isn't present (CI, a
+    // fresh clone) rather than failing.
+    assume(new java.io.File(path).exists(), s"skipping: $path is a local-only fixture, not committed")
     val writer = MockWriter(10240)
-    for (o <- Score.doScoreFromFile("src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton20241001.txt", Output(writer))) o.close()
+    for (o <- Score.doScoreFromFile(path, Output(writer))) o.close()
     writer.spillway.substring(0, 2000) shouldBe
       """Newton Oct 1st 2024  f110e305
         |Section A
