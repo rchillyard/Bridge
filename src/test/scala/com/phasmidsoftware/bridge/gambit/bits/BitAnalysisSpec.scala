@@ -96,7 +96,7 @@ class BitAnalysisSpec extends flatspec.AnyFlatSpec with should.Matchers {
   }
 
   // The seven/eight/nine-card cross-checks (and their canonical-key twins, below) moved to
-  // BitAnalysisITSpec (src/it), alongside the ten/eleven/twelve/thirteen-card ones: the
+  // BitAnalysisFuncSpec (src/it), alongside the ten/eleven/twelve/thirteen-card ones: the
   // seven-card version of this test hung a real CircleCI job for 10+ minutes with no output
   // (2026-07-21) despite passing in ~2s locally -- an old-engine-vs-constrained-container
   // problem, not a size/duration one (unlike ten-thirteen, these still run in a couple of
@@ -137,7 +137,7 @@ class BitAnalysisSpec extends flatspec.AnyFlatSpec with should.Matchers {
     crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQ6", "9", "J", "3"), List("K32", "T", "T", "6"), List("4", "87", "Q", "87"), List("5", "AK", "9", "T9"))), useCanonicalKey = true)
   }
 
-  // Seven/eight/nine-card canonical-key cross-checks moved to BitAnalysisITSpec too -- see the
+  // Seven/eight/nine-card canonical-key cross-checks moved to BitAnalysisFuncSpec too -- see the
   // comment above the default-key section for why.
 
   // The exact deal that exposed the evaluateKey collision bug in the object-graph engine --

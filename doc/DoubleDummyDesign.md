@@ -499,8 +499,8 @@ The fix: represent the search state as bitmasks (one `Long` per hand, one
 graph, and run it as a **second, independent engine alongside the first** —
 not a rewrite of it. Every new result is cross-validated against the
 object-graph engine's known-correct answer on the same deal and target before
-being trusted (`BitAnalysisSpec`, `BitAnalysisITSpec`, `WinchesterBoard1Spec`,
-`WinchesterBoard12Spec`). This project deliberately never got to the point of
+being trusted (`BitAnalysisSpec`, `BitAnalysisFuncSpec`, `WinchesterBoard1FuncSpec`,
+`WinchesterBoard12FuncSpec`). This project deliberately never got to the point of
 touching `State`/`WhistGame`/`WhistState` themselves — the additive approach
 was safer and, so far, sufficient to prove out the idea.
 
@@ -580,7 +580,7 @@ without editing the file (e.g. `-Dbridge.nodes-per-iteration=2000000`):
   per-iteration node budget for `withMaxNodes`; both `Whist.analyzeDoubleDummy`
   and `BitAnalysis.analyzeDoubleDummy` also accept an explicit `maxNodes`
   parameter overriding this default for a single call (used by
-  `WinchesterBoard12Spec` to give the two engines very different budgets —
+  `WinchesterBoard12FuncSpec` to give the two engines very different budgets —
   see below).
 - `bridge.aspiration-window` (`aspirationWindow`, default 0.5) — the one free
   parameter; `BridgeConfig.heuristicScale` (used by `BitState.heuristic`) is
@@ -636,8 +636,8 @@ motivated by it:
 - Cross-validation specs were added comparing the two engines' live answers
   against each other (not just against a fixed hand-derived expectation) on
   both small hand-built end positions and real club/tournament deals
-  (`BitAnalysisSpec`/`BitAnalysisITSpec`, `WinchesterBoard1Spec`,
-  `WinchesterBoard12Spec`).
+  (`BitAnalysisSpec`/`BitAnalysisFuncSpec`, `WinchesterBoard1FuncSpec`,
+  `WinchesterBoard12FuncSpec`).
 - The slowest of these — the full-52-card `pendingUntilFixed` Winchester
   board specs, and the ten-through-thirteen-card head-to-head cross-checks —
   were relocated into `IT` once they pushed the default `sbt test` run past
@@ -646,8 +646,8 @@ motivated by it:
   JVM), exhausted the heap. Default `sbt test` is back under a minute.
 - Running the full `IT` suite for what appears to be the first time (per the
   above, it was never wired into sbt before this work) surfaced 25 failures
-  in specs that predate this project (`ProblemSpec`, `WinchesterSpec`,
-  `WhistPBNSpec`, `AnalysisSpec`). Initially parked deliberately rather than
+  in specs that predate this project (`ProblemFuncSpec`, `WinchesterFuncSpec`,
+  `WhistPBNFuncSpec`, `AnalysisFuncSpec`). Initially parked deliberately rather than
   swept under the rug — since resolved; see "Real-Deal Integration Specs
   Rewritten" below for the two real bugs found and the full fix.
 
@@ -663,7 +663,7 @@ result, not a design argument: the bit engine genuinely does not retain
 
 ### Known Open Gap — Update, 2026-07-20: fully resolved, and not for the reason first suspected
 
-The ten/eleven/twelve-card synthetic end positions in `BitAnalysisITSpec`
+The ten/eleven/twelve-card synthetic end positions in `BitAnalysisFuncSpec`
 originally all disagreed with the object-graph engine — the bit engine
 converged to less depth and landed on a wrong `Partial` guess on all three.
 Two rounds of investigation, in order:
@@ -671,7 +671,7 @@ Two rounds of investigation, in order:
 **Round 1 — move ordering (see "Move Ordering", below).** Porting the
 object-graph engine's `Strategy` system to the bit engine, as this section
 originally predicted, fixed the ten-card case outright and measurably
-improved depth elsewhere (`WinchesterBoard1Spec`'s "needing 2 tricks" case:
+improved depth elsewhere (`WinchesterBoard1FuncSpec`'s "needing 2 tricks" case:
 depth 5 → 7). It did **not** fix the eleven- or twelve-card cases — same wrong
 answers, same depths, before and after.
 
@@ -739,7 +739,7 @@ restriction would be the first place this engine trades soundness for speed;
 declined for the same reason as the 4-and-2 question.
 
 **Measured effect** (see "Known Open Gap" above for the fuller story): fixed
-the ten-card `BitAnalysisITSpec` case outright, improved `WinchesterBoard1Spec`
+the ten-card `BitAnalysisFuncSpec` case outright, improved `WinchesterBoard1FuncSpec`
 depth (5 → 7 tricks at the same node budget), did not move the eleven/twelve-
 card cases (those turned out to be budget/TT-size problems, not ordering
 problems). Two related move-ordering ideas were identified but not
@@ -868,7 +868,7 @@ played so far (`tricksPlayed`), the position within the current trick
 this kind of measurement on a real search.
 
 **Measured** (2026-07-19) on a real search -- the nine-card end position
-(see `BitAnalysisITSpec`), target 5 of 9 tricks, `Exact(false,9)`, full
+(see `BitAnalysisFuncSpec`), target 5 of 9 tricks, `Exact(false,9)`, full
 iterative-deepening run to depth 36 -- 335,042 nodes visited in total:
 
 - **Mean branching factor: 1.76** (max 7). Over half of all nodes (54.6%)
@@ -918,8 +918,8 @@ collection boxes a field that a dedicated case class wouldn't, at a point in
 the code executed once per node or once per candidate move — cheap-looking
 in isolation, expensive multiplied across the whole search tree.
 
-**Standard profiling procedure**, used for every round below: `WinchesterSpec`
-(`sbt "IT/testOnly com.phasmidsoftware.bridge.cards.WinchesterSpec"`, all 5
+**Standard profiling procedure**, used for every round below: `WinchesterFuncSpec`
+(`sbt "IT/testOnly com.phasmidsoftware.bridge.cards.WinchesterFuncSpec"`, all 5
 Winchester boards, board 1 in particular) with a JFR recording temporarily
 added to `build.sbt`'s `IT / javaOptions` --
 `-XX:StartFlightRecording=filename=<path>,settings=profile,dumponexit=true`
@@ -958,7 +958,7 @@ one, to confirm no new boxing or allocation regression crept in.
   split into two independent values.
 
 All verified via before/after re-profiles of the same test
-(`WinchesterSpec`'s board 1), not just reasoned about: `boxToInteger`/
+(`WinchesterFuncSpec`'s board 1), not just reasoned about: `boxToInteger`/
 `boxToDouble` were the two hottest methods in the original profile (Robin's
 own IntelliJ snapshot) and are gone entirely from the hot-methods list after
 the `ScoredPlay` fix; a `Tuple3` then appeared (from `orderedMoves`, on
@@ -974,7 +974,7 @@ further simplification needing its own verification.
 
 ### Follow-up round, 2026-07-18 — a fresh profile after the rank-reduction work
 
-A new profile (`WinchesterSpec`'s board 1 again, same test as above) showed
+A new profile (`WinchesterFuncSpec`'s board 1 again, same test as above) showed
 `boxToInteger`/`boxToDouble` back as the top two hottest execution-sample
 methods — apparently contradicting "gone entirely" above. Checked against a
 profile from earlier the same day (well before any of today's changes): the
@@ -1081,7 +1081,7 @@ because anything was found.
 
 ## Real-Deal Integration Specs Rewritten
 
-`AnalysisSpec`, `WhistPBNSpec`, `ProblemSpec`, and `WinchesterSpec` — the
+`AnalysisFuncSpec`, `WhistPBNFuncSpec`, `ProblemFuncSpec`, and `WinchesterFuncSpec` — the
 four specs that produced 25 failures the first time the `IT` suite was ever
 run (see "Test Infrastructure" above) — were rewritten to call `BitAnalysis`
 instead of `Whist`, since none of them had ever been exercised against the
@@ -1090,13 +1090,13 @@ bit engine, and the old engine visibly struggles on real full deals anyway.
 **Two real, pre-existing bugs found and fixed along the way, unrelated to
 either engine's search quality:**
 
-- `WhistPBNSpec` asserted `expected = false` on every declarer/strain/trick
+- `WhistPBNFuncSpec` asserted `expected = false` on every declarer/strain/trick
   combination checked, even though `tricks` is parsed directly from
   `OptimumResultTable` — i.e. it IS the documented double-dummy optimum, so
   the correct expectation was always `true` (matching the other three
   specs' identical convention for the same kind of check). This alone
   explains most of that file's original failures.
-- `ProblemSpec`'s three "modes" computed a `reuse`/`depthTranches` pair that
+- `ProblemFuncSpec`'s three "modes" computed a `reuse`/`depthTranches` pair that
   was printed but never actually passed to `analyzeDoubleDummy` — dead
   parameters from the `depthTranches`/`reuseDeeper` API this document's
   Transposition Table section already noted as removed. All three modes
@@ -1104,7 +1104,7 @@ either engine's search quality:**
 
 **Exact vs. Partial, properly distinguished.** All four specs now use
 `assertProvenMakes` + `pendingUntilFixed` (the same pattern already
-established by `WinchesterBoard1Spec`/`WinchesterBoard12Spec`) instead of the
+established by `WinchesterBoard1FuncSpec`/`WinchesterBoard12FuncSpec`) instead of the
 original `assertMakes`, which treated an unproven `Partial` guess the same as
 a proven `Exact` result for pass/fail purposes. On a full 52-card deal,
 neither engine gets remotely close to a proof within a realistic budget
@@ -1116,7 +1116,7 @@ independent of which engine was used.
 was spot-checked and confirmed correct (first four deals); the Winchester
 fixture had several wrong `OptimumResultTable` entries, corrected, with the
 file trimmed down to exactly the five boards actually tested (1, 2, 3, 7,
-12) — which shifted `WinchesterSpec`'s hardcoded board-7/12 array indices and
+12) — which shifted `WinchesterFuncSpec`'s hardcoded board-7/12 array indices and
 had to be fixed alongside the trim; LEXINGTON's entries were also found
 wrong and corrected.
 
@@ -1241,10 +1241,10 @@ commitments.
    roughly halved, tried promoting `useCanonicalKey` to `true` as
    `BitAnalysis`'s default. Correctness held (no new failures beyond the
    pre-existing benign `pendingUntilFixed`-unexpectedly-passed pattern —
-   see `WinchesterBoard1Spec`, below, one *more* such case even resolved).
+   see `WinchesterBoard1FuncSpec`, below, one *more* such case even resolved).
    But measured across the broader, more typical real-deal IT battery
-   (`ProblemSpec`/`AnalysisSpec`/`WhistPBNSpec`/`WinchesterSpec`/
-   `WinchesterBoard1Spec`/`WinchesterBoard12Spec` together), the total run
+   (`ProblemFuncSpec`/`AnalysisFuncSpec`/`WhistPBNFuncSpec`/`WinchesterFuncSpec`/
+   `WinchesterBoard1FuncSpec`/`WinchesterBoard12FuncSpec` together), the total run
    time went from 369s to 687s — **~1.9x slower overall**, not faster. The
    three stress cases above are pathological, TT-heavy positions where
    canonicalization earns back its cost; most of the broader battery is
@@ -1257,7 +1257,7 @@ commitments.
    change, not this one-line experiment.
 
    One concrete win did fall out of the promotion attempt regardless: with
-   the canonical key active, `WinchesterBoard1Spec`'s new-engine "NS makes 2
+   the canonical key active, `WinchesterBoard1FuncSpec`'s new-engine "NS makes 2
    tricks in NT" case resolved to a proven `Exact(true,13)` — and this
    result turned out to hold under the *shipped* default too (`useCanonicalKey
    = false`), so it's no longer a `pendingUntilFixed` guess: see that spec
@@ -1369,7 +1369,7 @@ close. What's changed since this section was first written is that the
 predicted quick win (move ordering) has actually been tried, and it
 partially confirmed and partially corrected the original prediction: it did
 shrink proof time on some hard positions as expected (the ten-card
-`BitAnalysisITSpec` case, `WinchesterBoard1Spec`'s depth improvement), but it
+`BitAnalysisFuncSpec` case, `WinchesterBoard1FuncSpec`'s depth improvement), but it
 did **not** close the eleven/twelve-card gap the way this section predicted
 — that turned out to be a node-budget/TT-size problem, not a move-ordering
 problem (see "Known Open Gap"). Both things can be true at once: move
@@ -1439,7 +1439,7 @@ does the same work it would do today — nothing is lost.
 **Update**: this recommendation has since been implemented (see "Move
 Ordering" above) — `leadScore`/`followSuitScore`/`discardScore` are exactly
 this, "usually right" preferences expressed as ordering, never as legality.
-It measurably helped (the ten-card case, `WinchesterBoard1Spec`'s depth), but
+It measurably helped (the ten-card case, `WinchesterBoard1FuncSpec`'s depth), but
 it did *not* turn out to be the same missing piece behind the eleven/twelve-
 card gap, which the original version of this paragraph predicted — that gap
 was a node-budget/TT-size problem instead (see "Known Open Gap"). The

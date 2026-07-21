@@ -172,6 +172,5 @@ object Whist:
       }
     case _ =>
       System.err.println(s"Failed to parse PBN file: $filename")
-      return
   }
 }

@@ -7,6 +7,7 @@ package com.phasmidsoftware.bridge.cards
 import com.phasmidsoftware.bridge.cards.DDResult
 import com.phasmidsoftware.bridge.cards.Rank.ranks
 import com.phasmidsoftware.bridge.cards.Suit.suits
+import com.phasmidsoftware.bridge.pbn.Contract
 import com.phasmidsoftware.gambit.util.{Output, Outputable, Shuffle}
 
 import java.io.Writer
@@ -97,7 +98,7 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     * @param max             The maximum number of contracts to analyze. 
     *                        If max is less than or equal to 0, all contracts in the list are analyzed.
     *
-    * @param contractDetails A sequence of tuples representing the contracts to analyze.
+    * @param contracts A sequence of tuples representing the contracts to analyze.
     *                        Each tuple contains the following values:
     *                        - The index of the player who leads the play.
     *                        - An optional value representing the strain (suit or notrump) of the contract.
@@ -110,11 +111,11 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     *         - `Some(false)` if the contract cannot be met.
     *         - `None` if the analysis fails or no result is found for a specific contract.
     */
-  def analyzeContracts(board: Int, contractDetails: Seq[(Int, Option[Suit], Int, Int)], max: Int = 0): Seq[DDResult] = {
-    val work = if max > 0 then contractDetails.take(max) else contractDetails
+  def analyzeContracts(board: Int, contracts: Seq[Contract], max: Int = 0): Seq[DDResult] = {
+    val work = if max > 0 then contracts.take(max) else contracts
     work map {
-      case (leader, strain, tricks, declarer) =>
-        this.analyzeContract(board, leader, strain, tricks, declarer)
+      case Contract(leader, strain, tricks, declarer) =>
+        analyzeContract(board, leader, strain, tricks, declarer)
     }
   }
 

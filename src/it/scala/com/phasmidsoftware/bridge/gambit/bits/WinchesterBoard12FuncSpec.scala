@@ -11,7 +11,7 @@ import org.scalatest.matchers.should
   * this figure -- this file is testing whether either engine can actually PROVE it, not
   * whether the figure itself is right.
   *
-  * Same `Exact`-only structure as `WinchesterBoard1Spec`, but exercising `analyzeDoubleDummy`'s
+  * Same `Exact`-only structure as `WinchesterBoard1FuncSpec`, but exercising `analyzeDoubleDummy`'s
   * `maxNodes` override with a bigger-than-default budget, on Robin's suspicion (from watching
   * this board run manually) that it might resolve with more patience.
   *
@@ -28,7 +28,7 @@ import org.scalatest.matchers.should
   * reliably OOMs, per above), so they were never proving anything either way.
   */
 //noinspection ScalaStyle
-class WinchesterBoard12Spec extends flatspec.AnyFlatSpec with should.Matchers {
+class WinchesterBoard12FuncSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   private val newEngineMaxNodes = 5_000_000 // confirmed safe: ~14s, heap under 2.6GB -- see class doc
 

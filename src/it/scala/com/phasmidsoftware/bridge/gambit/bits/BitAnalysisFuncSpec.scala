@@ -35,7 +35,7 @@ import org.scalatest.matchers.should
   * a `Slow` tag that would still expose the same job to the same collision later.
   */
 //noinspection ScalaStyle
-class BitAnalysisITSpec extends flatspec.AnyFlatSpec with should.Matchers {
+class BitAnalysisFuncSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   private def makesOf(result: DDResult): Boolean = result match
     case DDResult.Exact(makes, _) => makes

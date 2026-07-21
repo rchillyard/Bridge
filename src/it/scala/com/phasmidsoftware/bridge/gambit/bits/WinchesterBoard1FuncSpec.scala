@@ -31,7 +31,7 @@ import org.scalatest.matchers.should
   * deal before running out of node budget, so they were never proving anything.
   */
 //noinspection ScalaStyle
-class WinchesterBoard1Spec extends flatspec.AnyFlatSpec with should.Matchers {
+class WinchesterBoard1FuncSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   private val deal: Deal = Deal.fromHandStrings("test", "N", List(
     List("J3", "975", "QT764", "AJ5"),
