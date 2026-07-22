@@ -4,6 +4,8 @@
 
 package com.phasmidsoftware.bridge.cards.bits
 
+import com.phasmidsoftware.bridge.cards.{Strain, Suit}
+
 /**
   * A single play within a trick, expressed in bitboard terms: which hand played,
   * which suit, and which rank (`SuitMask` bit-position convention: 0 = lowest
@@ -18,7 +20,7 @@ case class TrickPlay(handIndex: Int, suitIndex: Int, rank: Int)
   *
   * Trump is not a per-suit bit concept here, any more than it is on `Card`/`Suit`
   * elsewhere in this codebase -- it is only ever compared as "does this play's suit
-  * equal the optional trump suit," at the point of scoring a trick.
+  * equal the strain's trump suit (if any)," at the point of scoring a trick (see `Strain`).
   */
 object TrickBits:
 
@@ -44,15 +46,15 @@ object TrickBits:
     base + rank
 
   /**
-    * The score of a [[TrickPlay]] given the suit that was led and the trump suit (if any).
+    * The score of a [[TrickPlay]] given the suit that was led and the strain (trump suit, if any).
     */
-  def score(play: TrickPlay, ledSuit: Int, trumpSuit: Option[Int]): Int =
+  def score(play: TrickPlay, ledSuit: Int, strain: Strain): Int =
     val followsSuit = play.suitIndex == ledSuit
-    val isRuff = !followsSuit && trumpSuit.contains(play.suitIndex)
+    val isRuff = !followsSuit && strain.isTrump(play.suitIndex)
     score(play.rank, followsSuit, isRuff)
 
   /**
     * The winning play of a completed trick.
     */
-  def winningPlay(plays: Seq[TrickPlay], ledSuit: Int, trumpSuit: Option[Int]): TrickPlay =
-    plays.maxBy(score(_, ledSuit, trumpSuit))
+  def winningPlay(plays: Seq[TrickPlay], ledSuit: Int, strain: Strain): TrickPlay =
+    plays.maxBy(score(_, ledSuit, strain))

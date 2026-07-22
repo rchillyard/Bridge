@@ -4,6 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards.bits
 
+import com.phasmidsoftware.bridge.cards.Strain
 import org.scalatest.flatspec
 import org.scalatest.matchers.should
 
@@ -36,7 +37,7 @@ class TrickBitsSpec extends flatspec.AnyFlatSpec with should.Matchers {
       TrickPlay(handIndex = 2, suitIndex = 1, rank = 12), // off-suit discard, even though it's the "Ace" of another suit
       TrickPlay(handIndex = 3, suitIndex = 0, rank = 8) // led suit, mid
     )
-    TrickBits.winningPlay(plays, ledSuit = 0, trumpSuit = None) shouldBe plays(0)
+    TrickBits.winningPlay(plays, ledSuit = 0, strain = Strain.NoTrump) shouldBe plays.head
   }
 
   it should "let even the lowest trump beat the highest card of the led suit" in {
@@ -46,7 +47,7 @@ class TrickBitsSpec extends flatspec.AnyFlatSpec with should.Matchers {
       TrickPlay(handIndex = 2, suitIndex = 0, rank = 8),
       TrickPlay(handIndex = 3, suitIndex = 0, rank = 5)
     )
-    TrickBits.winningPlay(plays, ledSuit = 0, trumpSuit = Some(1)) shouldBe plays(1)
+    TrickBits.winningPlay(plays, ledSuit = 0, strain = Strain(1)) shouldBe plays(1)
   }
 
   it should "not treat an off-suit play in the trump suit as a ruff when it's actually the led suit" in {
@@ -55,7 +56,7 @@ class TrickBitsSpec extends flatspec.AnyFlatSpec with should.Matchers {
       TrickPlay(handIndex = 0, suitIndex = 0, rank = 12),
       TrickPlay(handIndex = 1, suitIndex = 0, rank = 5)
     )
-    TrickBits.winningPlay(plays, ledSuit = 0, trumpSuit = Some(0)) shouldBe plays(0)
+    TrickBits.winningPlay(plays, ledSuit = 0, strain = Strain(0)) shouldBe plays(0)
   }
 
   it should "let the higher trump win when both defenders ruff" in {
@@ -64,6 +65,6 @@ class TrickBitsSpec extends flatspec.AnyFlatSpec with should.Matchers {
       TrickPlay(handIndex = 1, suitIndex = 1, rank = 3),
       TrickPlay(handIndex = 2, suitIndex = 1, rank = 7)
     )
-    TrickBits.winningPlay(plays, ledSuit = 0, trumpSuit = Some(1)) shouldBe plays(2)
+    TrickBits.winningPlay(plays, ledSuit = 0, strain = Strain(1)) shouldBe plays(2)
   }
 }

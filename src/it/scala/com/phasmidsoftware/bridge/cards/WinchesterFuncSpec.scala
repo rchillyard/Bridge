@@ -5,7 +5,7 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.gambit.bits.BitAnalysis
-import com.phasmidsoftware.bridge.pbn.{DealValue, Game, PBN, PBNParser}
+import com.phasmidsoftware.bridge.pbn.{PBN, PBNParser}
 import org.scalatest.flatspec
 import org.scalatest.matchers.should
 
@@ -17,10 +17,10 @@ import scala.io.Source
   * and independently corrected/confirmed by Robin -- all five boards checked here are now
   * known-correct ground truth, unlike earlier in this file's history (board 1's original
   * entry was a fixture error, since fixed). Deliberately narrow in scope (these five boards,
-  * South declaring NT only, mirroring `AnalysisSpec`'s filter).
+  * South declaring NT only, mirroring `AnalysisFuncSpec`'s filter).
   *
-  * Uses `assertProvenMakes`, not the looser `assertMakes` used by `AnalysisSpec`/
-  * `WhistPBNSpec`/`ProblemSpec`: only a proven (`Exact`) result settles whether a board's
+  * Uses `assertProvenMakes`, not the looser `assertMakes` used by `AnalysisFuncSpec`/
+  * `WhistPBNFuncSpec`/`ProblemFuncSpec`: only a proven (`Exact`) result settles whether a board's
   * documented contract is right or wrong -- a `Partial` guess, right or wrong, does not, and
   * on a full 52-card deal neither engine gets remotely close to a proof within a realistic
   * budget (observed: depth 6 of 52, i.e. barely past the first trick). Treating a shallow
@@ -28,7 +28,7 @@ import scala.io.Source
   * answer yet; `pendingUntilFixed` reports that honestly instead of failing on it.
   */
 //noinspection ScalaStyle
-class WinchesterSpec extends flatspec.AnyFlatSpec with should.Matchers {
+class WinchesterFuncSpec extends flatspec.AnyFlatSpec with should.Matchers {
 
   /** Only a proven (Exact) result settles the question; a Partial guess -- right or wrong -- does not. */
   private def assertProvenMakes(result: DDResult, expected: Boolean): Unit =
@@ -43,38 +43,22 @@ class WinchesterSpec extends flatspec.AnyFlatSpec with should.Matchers {
   behavior of "double dummy analysis against Winchester club results"
 
   it should "analyze board 1" in {
-    analyzeMakableContracts(pbn.head)
+    BitAnalysis.analyzeMakableContracts(pbn.head) foreach(result => assertProvenMakes(result, true))
   }
 
   it should "analyze board 2" in pendingUntilFixed {
-    analyzeMakableContracts(pbn(1))
+    BitAnalysis.analyzeMakableContracts(pbn(1)) foreach(result => assertProvenMakes(result, true))
   }
 
   it should "analyze board 3" in {
-    analyzeMakableContracts(pbn(2))
+    BitAnalysis.analyzeMakableContracts(pbn(2)) foreach(result => assertProvenMakes(result, true))
   }
 
   it should "analyze board 7" in pendingUntilFixed {
-    analyzeMakableContracts(pbn(3))
+    BitAnalysis.analyzeMakableContracts(pbn(3)) foreach(result => assertProvenMakes(result, true))
   }
 
   it should "analyze board 12" in pendingUntilFixed {
-    analyzeMakableContracts(pbn.last)
-  }
-
-  private def analyzeMakableContracts(game: Game): Unit = {
-    val deal = game("Deal").value.asInstanceOf[DealValue].deal
-    val detail = game("OptimumResultTable").detail
-    val ntContracts = detail.filter(_.contains("NT")).filter(_.startsWith("S"))
-    val declarerTricksR = """([NESW])\s*NT\s*(\d+)""".r
-    ntContracts foreach {
-      case declarerTricksR(l, n) =>
-        val declarer = "NESW".indexOf(l)
-        val leader = Hand.next(declarer)
-        val tricks = n.toInt
-        val result = BitAnalysis.analyzeDoubleDummy(deal, leader, None, tricks, directionNS = declarer % 2 == 0)
-        println(s"analyzeDoubleDummy: tricks=$tricks, declarer=$l, leader=$leader -> $result")
-        assertProvenMakes(result, true)
-    }
+    BitAnalysis.analyzeMakableContracts(pbn.last) foreach(result => assertProvenMakes(result, true))
   }
 }

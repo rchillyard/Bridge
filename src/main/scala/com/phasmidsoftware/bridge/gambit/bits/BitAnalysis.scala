@@ -1,8 +1,10 @@
 package com.phasmidsoftware.bridge.gambit.bits
 
-import com.phasmidsoftware.bridge.cards.bits.{BitConversions, BitState, DealBits, TrickPlay}
-import com.phasmidsoftware.bridge.cards.{BridgeConfig, CacheKey, DDResult, Deal, Suit, Tricks}
-import com.phasmidsoftware.gambit.game.{AlphaBetaPlayer, AlphaBetaWindow, FlatTTCache, State as GState, TTCache}
+import com.phasmidsoftware.bridge.cards.*
+import com.phasmidsoftware.bridge.cards.bits.{BitConversions, BitState, TrickPlay}
+import com.phasmidsoftware.bridge.pbn.Game
+import com.phasmidsoftware.gambit.game.{AlphaBetaPlayer, AlphaBetaWindow, FlatTTCache, TTCache, State as GState}
+import com.phasmidsoftware.gambit.util.LazyLogger
 
 import scala.util.Random
 
@@ -15,14 +17,21 @@ import scala.util.Random
   */
 object BitAnalysis:
 
+  def analyzeMakableContracts(game: Game, predicate: Contract => Boolean = (c => c.strain.isEmpty && c.declarer == 2)): Seq[DDResult] =
+    val deal = game.deal
+    game.makableContracts.filter(predicate) map {
+      case Contract(leader, strain, tricks, declarer) =>
+        analyzeDoubleDummy(deal, leader, strain, tricks, directionNS = declarer % 2 == 0)
+    }
+
   // A trick is always 4 cards -- not a tunable assumption, so unlike nodesPerIteration/
   // aspiration-window (BridgeConfig) this isn't configurable.
   val DEPTH_STEP: Int = Deal.CardsPerTrick
 
   def analyzeDoubleDummy(
-                           deal: DealBits,
+                           deal: Deal,
                            openingLeader: Int,
-                           strain: Option[Int],
+                           strain: Strain,
                            neededTricks: Int,
                            directionNS: Boolean,
                            depth: Int,
@@ -34,6 +43,7 @@ object BitAnalysis:
     given GState[BitState, BitState] = stateTC
     given TTCache[CacheKey] = FlatTTCache(maxSize = BridgeConfig.bitboardTtMaxSize)
 
+    val dealBits = BitConversions.toDealBits(deal)
     val player = new AlphaBetaPlayer[BitState, BitState, TrickPlay, Int, CacheKey](
       me = if directionNS then 0 else 1,
       depth = depth
@@ -41,8 +51,12 @@ object BitAnalysis:
       .withKeyFn(s => if useCanonicalKey then s.evaluateCanonicalKey else s.evaluateKey)
       .withAspirationWindow(AlphaBetaWindow(-BridgeConfig.aspirationWindow, BridgeConfig.aspirationWindow))
 
-    val initialState = BitState(deal, strain, openingLeader, Nil, Tricks.zero)
-    runPlayer(player, directionNS, depth, initialState)
+    val initialState = BitState(dealBits, strain, openingLeader, Nil, Tricks.zero)
+    logger.info(s"analyzeDoubleDummy: deal=${deal.title}, strain=$strain, neededTricks=$neededTricks, leader=$openingLeader")
+    logger.debug(s" directionNS=$directionNS, depth=$depth, maxNodes=$maxNodes, useCanonicalKey=$useCanonicalKey")
+    val result = runPlayer(player, directionNS, depth, initialState)
+    logger.info(s"  result: $result")
+    result
 
   /**
     * Convenience overload accepting a real `Deal`/`Suit`, converting at the boundary.
@@ -52,9 +66,9 @@ object BitAnalysis:
     *                        redundancy) to help substantially on a few TT-heavy stress
     *                        positions (eleven/twelve-card endings, deep Winchester board 12
     *                        searches) but to cost ~1.9x overall across the broader, more
-    *                        typical real-deal IT battery (`ProblemSpec`/`AnalysisSpec`/
-    *                        `WhistPBNSpec`/`WinchesterSpec`/`WinchesterBoard1Spec`/
-    *                        `WinchesterBoard12Spec`: 369s -> 687s) -- most of those are
+    *                        typical real-deal IT battery (`ProblemFuncSpec`/`AnalysisFuncSpec`/
+    *                        `WhistPBNFuncSpec`/`WinchesterFuncSpec`/`WinchesterBoard1FuncSpec`/
+    *                        `WinchesterBoard12FuncSpec`: 369s -> 687s) -- most of those are
     *                        shallow searches on full 52-card deals where canonicalization's
     *                        per-node cost isn't earned back. NOT a good default as-is; see
     *                        `BitState.evaluateCanonicalKey`'s doc for the mechanism itself.
@@ -69,9 +83,9 @@ object BitAnalysis:
                            useCanonicalKey: Boolean = false
                          ): DDResult =
     analyzeDoubleDummy(
-      BitConversions.toDealBits(deal),
+      deal,
       openingLeader,
-      BitConversions.toStrainIndex(strain),
+      Strain(BitConversions.toStrainIndex(strain)),
       neededTricks,
       directionNS,
       depth = math.min(Deal.CardsPerDeal, deal.nCards),
@@ -93,3 +107,5 @@ object BitAnalysis:
         else DDResult.Partial(makes, tricksSearched)
       case None =>
         DDResult.Inconclusive
+
+  private val logger = LazyLogger(getClass)

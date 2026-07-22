@@ -417,8 +417,11 @@ class RecapParserSpec extends AnyFlatSpec with should.Matchers {
   }
 
   it should "handle Windows-style newlines and commas for delimiter" in {
-    val filename = "/Users/rhillyard/IdeaProjects/Bridge/src/test/resources/com/phasmidsoftware/bridge/director/Newton/Newton Scoring 20241119.txt"
-    val ey = RecapParser.readEvent(Source.fromFile(filename), ",")
+    val resource = "Newton/Newton Scoring 20241119.txt"
+    val ey: Try[Event] = Option(getClass.getResourceAsStream(resource)) match {
+      case Some(s) => RecapParser.readEvent(Source.fromInputStream(s), ",")
+      case None => Failure(new Exception(s"doScoreResource: cannot open resource: $resource"))
+    }
     ey should matchPattern { case Success(Event(_, _)) => }
     val event = ey.get
     val sections = event.sections

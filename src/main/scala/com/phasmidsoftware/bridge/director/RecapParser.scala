@@ -3,6 +3,8 @@
  */
 package com.phasmidsoftware.bridge.director
 
+import com.phasmidsoftware.gambit.util.LazyLogger
+
 import scala.io.Source
 import scala.language.postfixOps
 import scala.util.*
@@ -122,6 +124,8 @@ class RecapParser(delimiter: String = "") extends JavaTokenParsers {
 }
 
 object RecapParser {
+  private val logger = LazyLogger(getClass)
+
   def readEvent(s: Source, delimiter: String = ""): Try[Event] = if (s != null) {
     val p = new RecapParser(delimiter)
     try p.parseAll(p.event, s.mkString) match {
@@ -131,7 +135,7 @@ object RecapParser {
     }
     catch {
       // TODO understand why this is a thrown exception instead of a parsing Failure.
-      case exception: Exception => System.err.println(s"RecapParser.readEvent: exception thrown (and not caught) by parseAll on p.event: $exception"); Failure(exception)
+      case exception: Exception => logger.error(s"RecapParser.readEvent: exception thrown (and not caught) by parseAll on p.event: $exception"); Failure(exception)
     }
   }
   else Failure(new Exception("source is null"))
