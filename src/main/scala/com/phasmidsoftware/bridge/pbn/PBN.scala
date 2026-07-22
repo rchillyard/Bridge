@@ -52,6 +52,12 @@ case class Game(tagPairs: Seq[(Name, DetailedValue)]) extends Iterable[(Name, De
 
   def iterator: Iterator[(Name, DetailedValue)] = tagPairs.iterator
 
+  /**
+    * Parses this game's `OptimumResultTable` tag (one line per declarer/strain/trick-count
+    * entry, e.g. "N NT 8") into `Contract` values.
+    *
+    * @throws CardException when a detail line can't be parsed as a contract.
+    */
   def makableContracts: Seq[Contract] =
     val declarerTricksR = """([NESW])\s*(NT|S|H|D|C)\s*(\d+)""".r
     apply("OptimumResultTable").detail map {
@@ -130,8 +136,6 @@ object Game {
   }
 
 }
-
-case class Contract (leader: Int, strain: Option[Suit], tricks: Int, declarer: Int)
 
 case class DetailedValue(value: Value, detail: Seq[String]) extends Value {
   override def toInt: Int = value.toInt

@@ -7,7 +7,6 @@ package com.phasmidsoftware.bridge.cards
 import com.phasmidsoftware.bridge.cards.DDResult
 import com.phasmidsoftware.bridge.cards.Rank.ranks
 import com.phasmidsoftware.bridge.cards.Suit.suits
-import com.phasmidsoftware.bridge.pbn.Contract
 import com.phasmidsoftware.gambit.util.{LazyLogger, Output, Outputable, Shuffle}
 
 import java.io.Writer

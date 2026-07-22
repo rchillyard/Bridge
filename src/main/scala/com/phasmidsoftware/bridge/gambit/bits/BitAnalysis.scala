@@ -1,8 +1,8 @@
 package com.phasmidsoftware.bridge.gambit.bits
 
-import com.phasmidsoftware.bridge.cards.bits.{BitConversions, BitState, DealBits, TrickPlay}
-import com.phasmidsoftware.bridge.cards.{BridgeConfig, CacheKey, DDResult, Deal, Suit, Tricks}
-import com.phasmidsoftware.bridge.pbn.{Contract, Game}
+import com.phasmidsoftware.bridge.cards.*
+import com.phasmidsoftware.bridge.cards.bits.{BitConversions, BitState, TrickPlay}
+import com.phasmidsoftware.bridge.pbn.Game
 import com.phasmidsoftware.gambit.game.{AlphaBetaPlayer, AlphaBetaWindow, FlatTTCache, TTCache, State as GState}
 import com.phasmidsoftware.gambit.util.LazyLogger
 
@@ -31,7 +31,7 @@ object BitAnalysis:
   def analyzeDoubleDummy(
                            deal: Deal,
                            openingLeader: Int,
-                           strain: Option[Int],
+                           strain: Strain,
                            neededTricks: Int,
                            directionNS: Boolean,
                            depth: Int,
@@ -85,7 +85,7 @@ object BitAnalysis:
     analyzeDoubleDummy(
       deal,
       openingLeader,
-      BitConversions.toStrainIndex(strain),
+      Strain(BitConversions.toStrainIndex(strain)),
       neededTricks,
       directionNS,
       depth = math.min(Deal.CardsPerDeal, deal.nCards),

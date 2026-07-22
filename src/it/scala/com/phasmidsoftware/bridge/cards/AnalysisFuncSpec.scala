@@ -5,7 +5,7 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.gambit.bits.BitAnalysis
-import com.phasmidsoftware.bridge.pbn.{Contract, DealValue, Game, PBN, PBNParser, Value}
+import com.phasmidsoftware.bridge.pbn.{PBN, PBNParser}
 import org.scalatest.flatspec
 import org.scalatest.matchers.should
 
