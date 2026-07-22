@@ -6,27 +6,12 @@ package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.cards.Whist.{logger, runPlayer}
 import com.phasmidsoftware.bridge.gambit.{WhistGame, WhistState}
-import com.phasmidsoftware.bridge.pbn.{PBN, PBNParser}
 import com.phasmidsoftware.gambit.game.{AlphaBetaPlayer, AlphaBetaWindow, FlatTTCache, TTCache}
 import com.phasmidsoftware.gambit.util.LazyLogger
 
-import scala.util.{Random, Success}
+import scala.util.Random
 
 type BridgePlayer = AlphaBetaPlayer[State, State, CardPlay, Int, CacheKey]
-
-/**
-  * The result of a double-dummy analysis.
-  *
-  * - [[DDResult.Exact]]       — full search completed; result is definitive.
-  * - [[DDResult.Partial]]     — node limit hit, but one side found a witness line;
-  *   result is a qualified best-effort.
-  * - [[DDResult.Inconclusive]] — node limit hit before either side found a witness;
-  *   no reliable conclusion can be drawn.
-  */
-enum DDResult:
-  case Exact(makes: Boolean, tricks: Int)
-  case Partial(makes: Boolean, tricks: Int)
-  case Inconclusive
 
 /**
   * This class represents a game of Whist.
@@ -153,25 +138,3 @@ object Whist:
   val DEPTH_STEP: Int = Deal.CardsPerTrick // 4: iterate at trick boundaries -- a trick is always 4 cards,
   // not a tunable assumption, so unlike BridgeConfig.nodesPerIteration/aspirationWindow this isn't configurable.
   private val logger = LazyLogger(getClass)
-
-@main def doubleDummySolver(args: String*): Unit = {
-  import scala.io.{Codec, Source}
-  val logger = LazyLogger(classOf[Whist])
-  assert(args.nonEmpty, "At least one argument required")
-  val filename = args(0)
-  val maybeBoard = args.lift(1).flatMap(_.toIntOption)
-
-  given Codec = Codec.UTF8
-
-  PBNParser.parsePBN(Source.fromFile(filename)) match {
-    case Success(PBN(games)) =>
-      (for (x <- maybeBoard; g <- games.lift(x)) yield g) match {
-        case Some(g) =>
-          g.analyzeMakableContracts()
-        case None =>
-          logger.error(s"No game to parse PBN file: $filename ($maybeBoard)")
-      }
-    case _ =>
-      logger.error(s"Failed to parse PBN file: $filename")
-  }
-}

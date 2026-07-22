@@ -4,7 +4,6 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.bridge.cards.DDResult
 import com.phasmidsoftware.bridge.cards.Rank.ranks
 import com.phasmidsoftware.bridge.cards.Suit.suits
 import com.phasmidsoftware.gambit.util.{LazyLogger, Output, Outputable, Shuffle}
@@ -96,7 +95,7 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     * This method evaluates each contract in the provided list and determines
     * whether the declarer can fulfill the specified contract under ideal play.
     *
-    * @param max             The maximum number of contracts to analyze. 
+    * @param max             The maximum number of contracts to analyze.
     *                        If max is less than or equal to 0, all contracts in the list are analyzed.
     *
     * @param contracts A sequence of tuples representing the contracts to analyze.
