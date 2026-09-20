@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards.bits
 
-import com.phasmidsoftware.bridge.cards.Tricks
+import com.phasmidsoftware.bridge.cards.{Strain, Tricks}
 import org.scalatest.flatspec
 import org.scalatest.matchers.should
 
@@ -30,7 +30,7 @@ class BitStateSpec extends flatspec.AnyFlatSpec with should.Matchers {
     def stateWithRemainingRank(rank: Int): BitState =
       BitState(
         deal = DealBits(HandBits.empty, handWithRanks(0, rank), HandBits.empty, HandBits.empty),
-        strain = None,
+        strain = Strain.NoTrump,
         leader = 0,
         trickPlays = Seq(lead),
         tricks = Tricks.zero
@@ -52,7 +52,7 @@ class BitStateSpec extends flatspec.AnyFlatSpec with should.Matchers {
       val (top, second, bottom) = topTwoAndBottom
       BitState(
         deal = DealBits(handWithRanks(0, top, second), handWithRanks(0, bottom), HandBits.empty, HandBits.empty),
-        strain = None,
+        strain = Strain.NoTrump,
         leader = 0,
         trickPlays = Nil,
         tricks = Tricks.zero
@@ -84,7 +84,7 @@ class BitStateSpec extends flatspec.AnyFlatSpec with should.Matchers {
     )
 
     def playBothTricks(nFirst: Int, nSecond: Int): BitState =
-      val initial = BitState(dealFor(nFirst, nSecond), strain = None, leader = 0, trickPlays = Nil, tricks = Tricks.zero)
+      val initial = BitState(dealFor(nFirst, nSecond), strain = Strain.NoTrump, leader = 0, trickPlays = Nil, tricks = Tricks.zero)
       // Trick 1: N leads a suit-0 card; E/S/W follow suit with their only suit-0 card.
       val afterTrick1 = Seq(
         TrickPlay(0, 0, nFirst),
@@ -126,7 +126,7 @@ class BitStateSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val n = HandBits.empty.setCard(0, 10).setCard(0, 8).setCard(0, 6).setCard(1, 5).setCard(2, 3)
     val state = BitState(
       deal = DealBits(n, HandBits.empty, HandBits.empty, HandBits.empty),
-      strain = Some(2), leader = 0, trickPlays = Nil, tricks = Tricks.zero
+      strain = Strain(2), leader = 0, trickPlays = Nil, tricks = Tricks.zero
     )
     state.legalPlays.head shouldBe TrickPlay(0, 1, 5)
   }
@@ -138,7 +138,7 @@ class BitStateSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val n = HandBits.empty.setCard(0, 10).setCard(0, 8).setCard(0, 6).setCard(1, 5)
     val state = BitState(
       deal = DealBits(n, HandBits.empty, HandBits.empty, HandBits.empty),
-      strain = Some(2), leader = 0, trickPlays = Nil, tricks = Tricks.zero
+      strain = Strain(2), leader = 0, trickPlays = Nil, tricks = Tricks.zero
     )
     state.legalPlays.head should not be TrickPlay(0, 1, 5)
   }
@@ -154,7 +154,7 @@ class BitStateSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val w = HandBits.empty.setCard(0, 6) // separates N's own K from N's own low pair
     val state = BitState(
       deal = DealBits(n, e, s, w),
-      strain = None, leader = 0, trickPlays = Nil, tricks = Tricks.zero
+      strain = Strain.NoTrump, leader = 0, trickPlays = Nil, tricks = Tricks.zero
     )
     state.legalPlays.head shouldBe TrickPlay(0, 0, 2) // the low pair's representative, not the K (rank 11)
   }
@@ -169,7 +169,7 @@ class BitStateSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val w = HandBits.empty.setCard(0, 6) // separates N's own K from N's own low pair
     val state = BitState(
       deal = DealBits(n, e, s, w),
-      strain = None, leader = 0, trickPlays = Nil, tricks = Tricks.zero
+      strain = Strain.NoTrump, leader = 0, trickPlays = Nil, tricks = Tricks.zero
     )
     state.legalPlays.head shouldBe TrickPlay(0, 0, 2)
   }
@@ -183,7 +183,7 @@ class BitStateSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val w = HandBits.empty.setCard(0, 10).setCard(0, 6) // far seat holds the gap card (Q) AND the separator
     val state = BitState(
       deal = DealBits(n, HandBits.empty, s, w),
-      strain = None, leader = 0, trickPlays = Nil, tricks = Tricks.zero
+      strain = Strain.NoTrump, leader = 0, trickPlays = Nil, tricks = Tricks.zero
     )
     state.legalPlays.head should not be TrickPlay(0, 0, 2)
   }
@@ -199,7 +199,7 @@ class BitStateSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val w = HandBits.empty.setCard(0, 6) // separates N's own K from N's own low card
     val state = BitState(
       deal = DealBits(n, HandBits.empty, s, w),
-      strain = None, leader = 0, trickPlays = Nil, tricks = Tricks.zero
+      strain = Strain.NoTrump, leader = 0, trickPlays = Nil, tricks = Tricks.zero
     )
     state.legalPlays.head shouldBe TrickPlay(0, 0, 11) // the K, not the low card
   }
@@ -214,7 +214,7 @@ class BitStateSpec extends flatspec.AnyFlatSpec with should.Matchers {
     val w = HandBits.empty.setCard(3, 7)
     val state = BitState(
       deal = DealBits(n, e, HandBits.empty, w),
-      strain = Some(3), leader = 0, trickPlays = Nil, tricks = Tricks.zero
+      strain = Strain(3), leader = 0, trickPlays = Nil, tricks = Tricks.zero
     )
     state.legalPlays.head shouldBe TrickPlay(0, 3, 9)
   }

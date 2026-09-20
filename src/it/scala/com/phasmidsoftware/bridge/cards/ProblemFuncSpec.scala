@@ -5,7 +5,7 @@
 package com.phasmidsoftware.bridge.cards
 
 import com.phasmidsoftware.bridge.gambit.bits.BitAnalysis
-import com.phasmidsoftware.bridge.pbn.{DealValue, Game, PBN, PBNParser}
+import com.phasmidsoftware.bridge.pbn.{PBN, PBNParser}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
 
@@ -23,12 +23,12 @@ import scala.io.Source
   * parameter). All three modes tested the exact same thing three times over; collapsed to
   * one test here.
   *
-  * Uses `assertProvenMakes` + `pendingUntilFixed`, the same pattern as `AnalysisSpec`/
-  * `WinchesterSpec`: a full 52-card deal doesn't get remotely close to a proof within a
+  * Uses `assertProvenMakes` + `pendingUntilFixed`, the same pattern as `AnalysisFuncSpec`/
+  * `WinchesterFuncSpec`: a full 52-card deal doesn't get remotely close to a proof within a
   * realistic node budget, so an unproven `Partial` guess isn't a failure.
   */
 //noinspection ScalaStyle
-class ProblemSpec extends AnyFlatSpec with should.Matchers {
+class ProblemFuncSpec extends AnyFlatSpec with should.Matchers {
 
   /** Only a proven (Exact) result settles the question; a Partial guess -- right or wrong -- does not. */
   private def assertProvenMakes(result: DDResult, expected: Boolean): Unit =
@@ -43,18 +43,6 @@ class ProblemSpec extends AnyFlatSpec with should.Matchers {
   behavior of "double dummy analysis"
   it should "analyze deal 16" in pendingUntilFixed {
     val game = pbn(15)
-    val deal = game("Deal").value.asInstanceOf[DealValue].deal
-    val detail = game("OptimumResultTable").detail
-    val ntContracts = detail.filter(_.contains("NT")).filter(_.startsWith("S"))
-    val declarerTricksR = """([NESW])\s*NT\s*(\d+)""".r
-    ntContracts foreach {
-      case declarerTricksR(l, n) =>
-        val declarer = "NESW".indexOf(l)
-        val leader = Hand.next(declarer)
-        val tricks = n.toInt
-        val result = BitAnalysis.analyzeDoubleDummy(deal, leader, None, tricks, directionNS = declarer % 2 == 0)
-        println(s"analyzeDoubleDummy: tricks=$tricks, declarer=$l, leader=$leader -> $result")
-        assertProvenMakes(result, true)
-    }
+    BitAnalysis.analyzeMakableContracts(game) foreach(result => assertProvenMakes(result, true))
   }
 }

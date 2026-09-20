@@ -6,7 +6,7 @@ package com.phasmidsoftware.bridge.director
 
 import com.phasmidsoftware.bridge.director.Matchpoints.{mpsAsString, rationalToString}
 import com.phasmidsoftware.bridge.director.Score.asPercent
-import com.phasmidsoftware.gambit.util.{Output, Outputable}
+import com.phasmidsoftware.gambit.util.{LazyLogger, Output, Outputable}
 import com.phasmidsoftware.number.core.inner.Rational
 import com.phasmidsoftware.number.core.inner.Rational.{half, zero}
 import com.phasmidsoftware.output.Util
@@ -14,6 +14,10 @@ import com.phasmidsoftware.output.Util
 import scala.annotation.unused
 import scala.language.postfixOps
 import scala.util.*
+
+// Shared by every case class/object in this file -- one logger for the whole director.Event
+// family rather than repeating `private val logger = LazyLogger(getClass)` in each of them.
+private val logger = LazyLogger(classOf[Event])
 
 /**
   * Class to represent an Event.
@@ -25,10 +29,10 @@ case class Event(title: String, sections: Seq[Section]) extends Outputable[Unit]
   private val xs: Seq[Int] = sections map (_.boards) distinct
 
   if (sections.isEmpty)
-    System.err.println("Warning: there are no sections in this event")
+    logger.warn("Warning: there are no sections in this event")
 
   if (xs.size != 1)
-    System.err.println("Warning: sections played different numbers of boards")
+    logger.warn("Warning: sections played different numbers of boards")
 
   lazy val boards: Int = xs.headOption.getOrElse(0)
 
@@ -91,7 +95,7 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler], maybeTop: Optio
     val tops: Seq[(Int, Int)] = for (t <- travelers.sortBy(_.board)) yield (t.board, t.ps.count(p => p.result.exists))
     val theTop = tops.distinctBy(x => x._2)
     if (theTop.size != 1 && maybeTop.isEmpty)
-      System.err.println(s"Warning: not all boards have been played the same number of times. The calculated tops are: $tops")
+      logger.warn(s"Warning: not all boards have been played the same number of times. The calculated tops are: $tops")
     theTop.head._2
   }
 
@@ -104,15 +108,15 @@ case class Section(preamble: Preamble, travelers: Seq[Traveler], maybeTop: Optio
     */
   def output(output: Output, xo: Option[Unit] = None): Output = {
     if (boards > 0)
-      System.out.println(s"Section ${preamble.identifier} has processed $boards boards")
+      logger.info(s"Section ${preamble.identifier} has processed $boards boards")
     else
-      System.err.println(s"Section ${preamble.identifier} has no results (no travelers)")
+      logger.warn(s"Section ${preamble.identifier} has no results (no travelers)")
     travelers.sorted.foldLeft(output :+ s"$preamble\n")((o, t) => o ++ t.output(Output.empty))
   }
 
   lazy val recap: Section = {
     val result = copy(travelers = travelers map { t => t.matchpointIt(top) }).copy(maybeTop = Some(top))
-    if (!result.boardsOK) println("At least one result needs checking")
+    if (!result.boardsOK) logger.warn("At least one result needs checking")
     result
   }
 
@@ -161,7 +165,7 @@ object Section {
   */
 case class Preamble(identifier: String, maybeModifier: Option[String], pairs: Seq[Pair]) {
   if (pairs.isEmpty)
-    System.err.println(s"Warning: there are no players in this section: $identifier")
+    logger.warn(s"Warning: there are no players in this section: $identifier")
 
   if (!pairs.forall(_.valid(maybeModifier))) throw ScoreException("pairs must have direction unless movement is single-winner")
 
@@ -372,7 +376,7 @@ case class Result(tables: Int, isNS: Option[Boolean], top: Int, cards: Map[Int, 
         "SW"
     }
     if (!result)
-      System.err.println(s"Total fractional matchpoints for this $direction section result ($matchpoints) differ from what is expected for $boards boards and $tables tables ($boards * $tables / 2 = $expected)\n   (Note: this may not be a problem if there is a half-table)")
+      logger.warn(s"Total fractional matchpoints for this $direction section result ($matchpoints) differ from what is expected for $boards boards and $tables tables ($boards * $tables / 2 = $expected)\n   (Note: this may not be a problem if there is a half-table)")
     result
   }
 
@@ -538,7 +542,7 @@ case class Traveler(board: Int, ps: Seq[Play], maybeMatchpoints: Option[Seq[Matc
     val expectedTotal = Rational((idealTop + 1) / 2)
 
     if (total != expectedTotal)
-      System.err.println(s"Board $board: has incorrect total matchpoints: $total (expected: $expectedTotal)")
+      logger.warn(s"Board $board: has incorrect total matchpoints: $total (expected: $expectedTotal)")
     result
   }
 }
@@ -549,7 +553,7 @@ case class Traveler(board: Int, ps: Seq[Play], maybeMatchpoints: Option[Seq[Matc
 object Traveler {
   def apply(it: Try[Int], ps: Seq[Play]): Traveler = {
     val tt = for (i <- it) yield Traveler(i, ps, None)
-    tt.recover { case x => System.err.println(s"Exception: $x"); Traveler(0, List(), None) }.get
+    tt.recover { case x => logger.error(s"Exception: $x"); Traveler(0, List(), None) }.get
   }
 }
 
@@ -650,7 +654,7 @@ case class Play(ns: Int, ew: Int, result: PlayResult) {
     */
   def checkScore(board: Int): Boolean = {
     val z = result.checkScore(Vulnerability(board))
-    if (!z) println(s"Board $board needs check on result $result")
+    if (!z) logger.warn(s"Board $board needs check on result $result")
     z
   }
 }
@@ -661,7 +665,7 @@ case class Play(ns: Int, ew: Int, result: PlayResult) {
 object Play {
   def apply(ns: Try[Int], ew: Try[Int], result: PlayResult): Play = {
     val z = for (x <- ns; y <- ew) yield Play(x, y, result)
-    z.recover { case x => System.err.println(s"Exception: $x"); Play(0, 0, Checker.error("no match")) }.get
+    z.recover { case x => logger.error(s"Exception: $x"); Play(0, 0, Checker.error("no match")) }.get
   }
 
   /**

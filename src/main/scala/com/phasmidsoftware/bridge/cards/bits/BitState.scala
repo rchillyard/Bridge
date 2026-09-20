@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.cards.bits
 
-import com.phasmidsoftware.bridge.cards.{BridgeConfig, CacheKey, Tricks}
+import com.phasmidsoftware.bridge.cards.{BridgeConfig, CacheKey, Strain, Tricks}
 import com.phasmidsoftware.gambit.util.LazyLogger
 
 /**
@@ -37,13 +37,13 @@ import com.phasmidsoftware.gambit.util.LazyLogger
   *     ("Exact") result, since `isGoal` overrides the heuristic wherever it fires.
   *
   * @param deal       the live cards remaining in each of the four hands.
-  * @param strain     the trump suit index (0..3), or `None` for notrump.
+  * @param strain     the trump suit for this deal (`Strain.NoTrump` for notrump).
   * @param leader     the hand on lead for the CURRENT trick.
   * @param trickPlays the plays made so far in the current (possibly empty, never complete --
   *                   see `play`) trick.
   * @param tricks     tricks won by NS/EW in tricks completed so far.
   */
-case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays: Seq[TrickPlay], tricks: Tricks):
+case class BitState(deal: DealBits, strain: Strain, leader: Int, trickPlays: Seq[TrickPlay], tricks: Tricks):
 
   /** The hand whose turn it is to play next. */
   def currentPlayer: Int = (leader + trickPlays.size) % 4
@@ -176,11 +176,11 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
   private def leadScore(p: TrickPlay, cls: SuitMask): Int =
     val me = p.handIndex
     val suit = p.suitIndex
-    val isPlainSuit = !strain.contains(suit)
+    val isPlainSuit = strain.isPlainSuit(suit)
 
     def isSingletonPlainSuitLead: Boolean =
       isPlainSuit && deal.hand(me).suitMask(suit).size == 1 &&
-        strain.exists(t => deal.hand(me).suitMask(t).nonEmpty) // no ruff to set up without a trump myself
+        strain.matches(t => deal.hand(me).suitMask(t).nonEmpty) // no ruff to set up without a trump myself
 
     // The partnership's combined run in `suit`, tolerating a gap held by the near seat
     // (rule 5): only the far seat's cards (`(me+3)%4`) break the run, the same way
@@ -231,7 +231,7 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
       }
 
     def isTrumpLeadCandidate: Boolean =
-      strain.contains(suit) && {
+      strain.isTrump(suit) && {
         val oppA = (me + 1) % 4
         val oppB = (me + 3) % 4
         val trumpA = deal.hand(oppA).suitMask(suit).size
@@ -316,7 +316,7 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
     * declaring side's length there is safer than discarding from one where it doesn't.
     */
   private def discardScore(p: TrickPlay): Int =
-    val isRuff = strain.contains(p.suitIndex)
+    val isRuff = strain.isTrump(p.suitIndex)
     val partnerWinning = provisionalWinner.exists(w => w.handIndex % 2 == p.handIndex % 2)
     val ruffBonus = if isRuff && !partnerWinning then 1000 else 0
     val lengthSafety =
@@ -359,7 +359,7 @@ case class BitState(deal: DealBits, strain: Option[Int], leader: Int, trickPlays
       remaining.exists { h =>
         val inSuit = deal.hand(h).suitMask(suit)
         val canBeatInSuit = inSuit.nonEmpty && inSuit.topRank > w.rank
-        val canRuff = strain.exists(trump =>
+        val canRuff = strain.matches(trump =>
           trump != suit && deal.hand(h).suitMask(suit).isEmpty && deal.hand(h).suitMask(trump).nonEmpty)
         canBeatInSuit || canRuff
       }

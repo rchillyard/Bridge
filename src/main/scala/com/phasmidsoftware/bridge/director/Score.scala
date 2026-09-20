@@ -4,7 +4,7 @@
 
 package com.phasmidsoftware.bridge.director
 
-import com.phasmidsoftware.gambit.util.Output
+import com.phasmidsoftware.gambit.util.{LazyLogger, Output}
 import com.phasmidsoftware.number.core.inner.Rational
 import com.phasmidsoftware.output.Using
 
@@ -19,6 +19,7 @@ import scala.util.*
   *
   */
 object Score {
+  private val logger = LazyLogger(getClass)
 
   // ... rest unchanged
   private val outputFile = "output.csv"
@@ -43,8 +44,8 @@ object Score {
           o.close()
           true
         case Failure(x) =>
-          System.err.println(s"Score ${args.mkString}: parsing failed due to an exception:")
-          System.err.println(x.getLocalizedMessage.translateEscapes())
+          logger.error(s"Score ${args.mkString}: parsing failed due to an exception:")
+          logger.error(x.getLocalizedMessage.translateEscapes())
           false
       }
     } else {
@@ -56,7 +57,7 @@ object Score {
   def doScoreFromName(isResource: Boolean, name: String, delimiter: String, output: Output = defaultOutput) = Using(
     if (isResource) Source.fromResource(name) else Source.fromFile(name)
   ) {
-    System.out.println(s"Opened source from $name")
+    logger.info(s"Opened source from $name")
     s => doScore(s, delimiter, output)
   }
 

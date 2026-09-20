@@ -5,6 +5,7 @@ jobs:
   build:
     docker:
       - image: cimg/openjdk:23.0
+    resource_class: large
 
     working_directory: ~/repo
 
@@ -33,11 +34,18 @@ jobs:
 
       - run:
           name: Test (fast)
-          command: sbt "testOnly -- -l org.scalatest.tags.Slow"
+          command: sbt "testOnly * -- -l com.phasmidsoftware.bridge.SlowTest"
+
+      # Not run in CI yet: the `IT` (src/it) suite isn't invoked here at all -- see
+      # doc/DoubleDummyDesign.md, real-deal/larger-end-position tests, minutes each.
+      # - run:
+      #     name: Integration test (fast, excludes Slow-tagged)
+      #     command: sbt "IT/testOnly * -- -l com.phasmidsoftware.bridge.SlowTest"
 
   slow-tests:
     docker:
       - image: cimg/openjdk:23.0
+    resource_class: large
 
     working_directory: ~/repo
 
@@ -54,8 +62,8 @@ jobs:
             - v1-dependencies-
 
       - run:
-          name: Test (slow)
-          command: sbt "testOnly -- -n org.scalatest.tags.Slow"
+          name: Test (Slow-tagged only)
+          command: sbt "testOnly * -- -n com.phasmidsoftware.bridge.SlowTest"
 
 workflows:
   version: 2

@@ -39,10 +39,10 @@ package com.phasmidsoftware.bridge.cards.bits
   * Verified correctness-neutral (380/380 on the default suite) but empirically useless and
   * expensive when it was wired into `BitState.heuristic` in place of the tricks-only
   * estimate:
-  *   - Zero change to the known ten/eleven/twelve/thirteen-card `BitAnalysisITSpec` gap --
+  *   - Zero change to the known ten/eleven/twelve/thirteen-card `BitAnalysisFuncSpec` gap --
   *     identical wrong answers, identical search depths, on the eleven- and twelve-card
   *     cases this was hoped to help with.
-  *   - Severe slowdown: an isolated bit-engine-only benchmark (`WinchesterBoard12Spec`'s
+  *   - Severe slowdown: an isolated bit-engine-only benchmark (`WinchesterBoard12FuncSpec`'s
   *     "NEW engine" cases, normally ~11 seconds) didn't finish in 5+ minutes and had to be
   *     killed.
   *

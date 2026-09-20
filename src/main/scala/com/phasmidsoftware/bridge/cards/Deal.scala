@@ -4,10 +4,9 @@
 
 package com.phasmidsoftware.bridge.cards
 
-import com.phasmidsoftware.bridge.cards.DDResult
 import com.phasmidsoftware.bridge.cards.Rank.ranks
 import com.phasmidsoftware.bridge.cards.Suit.suits
-import com.phasmidsoftware.gambit.util.{Output, Outputable, Shuffle}
+import com.phasmidsoftware.gambit.util.{LazyLogger, Output, Outputable, Shuffle}
 
 import java.io.Writer
 import scala.language.postfixOps
@@ -25,6 +24,8 @@ import scala.language.postfixOps
   */
 case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends Outputable[Unit]
   with Quittable[Deal] with Playable[Deal] with Evaluatable with Validatable {
+
+  private val logger = LazyLogger(getClass)
 
   /**
     * Method to yield the Suit/Holding of the partner of a particular holding.
@@ -60,7 +61,7 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     * @return an eagerly promoted X.
     */
   lazy val adjustForPartnerships: Deal =
-    println(s"Adjusting deal for partnerships: $title")
+    logger.info(s"Adjusting deal for partnerships: $title")
     val result = _cooperate._quit._reprioritize
     result.assertAdjusted()
     result
@@ -94,10 +95,10 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     * This method evaluates each contract in the provided list and determines
     * whether the declarer can fulfill the specified contract under ideal play.
     *
-    * @param max             The maximum number of contracts to analyze. 
+    * @param max             The maximum number of contracts to analyze.
     *                        If max is less than or equal to 0, all contracts in the list are analyzed.
     *
-    * @param contractDetails A sequence of tuples representing the contracts to analyze.
+    * @param contracts A sequence of tuples representing the contracts to analyze.
     *                        Each tuple contains the following values:
     *                        - The index of the player who leads the play.
     *                        - An optional value representing the strain (suit or notrump) of the contract.
@@ -110,11 +111,11 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     *         - `Some(false)` if the contract cannot be met.
     *         - `None` if the analysis fails or no result is found for a specific contract.
     */
-  def analyzeContracts(board: Int, contractDetails: Seq[(Int, Option[Suit], Int, Int)], max: Int = 0): Seq[DDResult] = {
-    val work = if max > 0 then contractDetails.take(max) else contractDetails
+  def analyzeContracts(board: Int, contracts: Seq[Contract], max: Int = 0): Seq[DDResult] = {
+    val work = if max > 0 then contracts.take(max) else contracts
     work map {
-      case (leader, strain, tricks, declarer) =>
-        this.analyzeContract(board, leader, strain, tricks, declarer)
+      case Contract(leader, strain, tricks, declarer) =>
+        analyzeContract(board, leader, strain, tricks, declarer)
     }
   }
 
@@ -130,7 +131,7 @@ case class Deal(title: String, holdings: Map[Int, Map[Suit, Holding]]) extends O
     */
   def analyzeContract(board: Int, leader: Int, strain: Option[Suit], tricks: Int, declarer: Int): DDResult = {
     val result = Whist(this, leader, strain).analyzeDoubleDummy(tricks, directionNS = declarer % 2 == 0)
-    println(s"analyzeDoubleDummy: board=$board result=$result")
+    logger.info(s"analyzeDoubleDummy: board=$board result=$result")
     result
   }
 

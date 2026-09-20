@@ -95,21 +95,13 @@ class BitAnalysisSpec extends flatspec.AnyFlatSpec with should.Matchers {
     crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQ6", "9", "J", "3"), List("K32", "T", "T", "6"), List("4", "87", "Q", "87"), List("5", "AK", "9", "T9"))))
   }
 
-  it should "agree with Whist.analyzeDoubleDummy across every target on the seven-card end position" in {
-    crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQ76", "9", "J", "3"), List("K32", "QT", "T", "6"), List("4", "87", "Q", "874"), List("5", "AK", "9", "T95"))))
-  }
-
-  it should "agree with Whist.analyzeDoubleDummy across every target on the eight-card end position" in {
-    crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQ76", "9", "J", "32"), List("K32", "QT", "T", "J6"), List("4", "87", "Q", "Q874"), List("5", "AK", "9", "KT95"))))
-  }
-
-  it should "agree with Whist.analyzeDoubleDummy across every target on the nine-card end position" in {
-    crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQJ76", "9", "J", "32"), List("K32", "QJT", "T", "J6"), List("4", "87", "Q8", "Q874"), List("5", "AK", "97", "KT95"))))
-  }
-
-  // The ten/eleven/twelve/thirteen-card cross-checks moved to BitAnalysisITSpec (src/it):
-  // full-budget searches on these larger end positions are slow enough (minutes, one
-  // observed IDE run OOM'd) that they don't belong in the default `sbt test` run.
+  // The seven/eight/nine-card cross-checks (and their canonical-key twins, below) moved to
+  // BitAnalysisFuncSpec (src/it), alongside the ten/eleven/twelve/thirteen-card ones: the
+  // seven-card version of this test hung a real CircleCI job for 10+ minutes with no output
+  // (2026-07-21) despite passing in ~2s locally -- an old-engine-vs-constrained-container
+  // problem, not a size/duration one (unlike ten-thirteen, these still run in a couple of
+  // seconds). Since eight and nine only go deeper and more likely have the same problem,
+  // moved them out too rather than wait to rediscover it one card at a time.
 
   // The three-card "automatic squeeze" position from WhistSpec -- the exact deal that exposed
   // the evaluateKey collision bug in the object-graph engine (a proven-makeable squeeze coming
@@ -145,17 +137,8 @@ class BitAnalysisSpec extends flatspec.AnyFlatSpec with should.Matchers {
     crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQ6", "9", "J", "3"), List("K32", "T", "T", "6"), List("4", "87", "Q", "87"), List("5", "AK", "9", "T9"))), useCanonicalKey = true)
   }
 
-  it should "agree with Whist.analyzeDoubleDummy across every target on the seven-card end position (canonical key)" in {
-    crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQ76", "9", "J", "3"), List("K32", "QT", "T", "6"), List("4", "87", "Q", "874"), List("5", "AK", "9", "T95"))), useCanonicalKey = true)
-  }
-
-  it should "agree with Whist.analyzeDoubleDummy across every target on the eight-card end position (canonical key)" in {
-    crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQ76", "9", "J", "32"), List("K32", "QT", "T", "J6"), List("4", "87", "Q", "Q874"), List("5", "AK", "9", "KT95"))), useCanonicalKey = true)
-  }
-
-  it should "agree with Whist.analyzeDoubleDummy across every target on the nine-card end position (canonical key)" in {
-    crossCheckEveryTarget(Deal.fromHandStrings("test", "N", List(List("AQJ76", "9", "J", "32"), List("K32", "QJT", "T", "J6"), List("4", "87", "Q8", "Q874"), List("5", "AK", "97", "KT95"))), useCanonicalKey = true)
-  }
+  // Seven/eight/nine-card canonical-key cross-checks moved to BitAnalysisFuncSpec too -- see the
+  // comment above the default-key section for why.
 
   // The exact deal that exposed the evaluateKey collision bug in the object-graph engine --
   // both engines' TTs get exercised hardest here (trick-in-progress state, NS/EW split),
